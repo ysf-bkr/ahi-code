@@ -1,0 +1,58 @@
+name: Publish VS Code extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketplace-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            webview-ui/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix webview-ui ci
+
+      - name: Validate release tag and publisher secret
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module -e "
+            import { readFileSync } from 'node:fs';
+            const manifest = JSON.parse(readFileSync('package.json', 'utf8'));
+            if (process.env.RELEASE_TAG !== 'v' + manifest.version) {
+              throw new Error('Release tag must match package.json version: v' + manifest.version);
+            }
+            if (!process.env.VSCE_PAT) {
+              throw new Error('Configure the VSCE_PAT repository secret before publishing.');
+            }
+          "
+
+      - name: Test and package
+        run: |
+          npm test
+          npm run package
+
+      - name: Publish to Visual Studio Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: node scripts/extension-lifecycle.mjs publish

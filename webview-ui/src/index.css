@@ -1,0 +1,1623 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+ * AhiCode webview — tek stil dosyası.
+ * Tüm renk, boyut, aralık ve bileşen biçimleri yalnızca burada tanımlanır.
+ * Bileşenler (components/ui/*) bu sınıfları birleştirir; JSX içinde ham renk,
+ * px değeri veya tekrar eden uzun yardımcı sınıf dizisi bulunmamalıdır.
+ *
+ * Bölümler: 1) Jetonlar  2) Taban  3) Tipografi  4) Yerleşim  5) Yüzeyler
+ *           6) Formlar  7) Düğmeler  8) Gezinme  9) Başlık  10) Sohbet
+ *           11) Katmanlar  12) Duyarlılık (responsive)
+ * ========================================================================== */
+
+/* ---- 1) Jetonlar ---------------------------------------------------------- */
+:root {
+  color-scheme: light dark;
+  font-size: var(--vscode-font-size, 13px);
+
+  /*
+   * rem, em değil: webview kök yazı boyutu kullanıcının VS Code yazı boyutudur;
+   * iç içe `em` değerleri çarpılıp metni editör boyutundan uzaklaştırırdı.
+   */
+  --ahi-text-2xs: 0.75rem;
+  --ahi-text-xs: 0.85rem;
+  --ahi-text-sm: 0.92rem;
+  --ahi-text-md: 1rem;
+  --ahi-text-lg: 1.15rem;
+
+  --ahi-radius-sm: 4px;
+  --ahi-radius-md: 8px;
+  --ahi-radius-lg: 12px;
+  --ahi-radius-full: 999px;
+
+  /* Aralık ölçeği (4px tabanlı) */
+  --ahi-space-1: 4px;
+  --ahi-space-2: 6px;
+  --ahi-space-3: 8px;
+  --ahi-space-4: 12px;
+  --ahi-space-5: 16px;
+  --ahi-space-6: 24px;
+
+  --ahi-control-height: 26px;
+  --ahi-control-height-lg: 30px;
+  --ahi-icon-size: 26px;
+  --ahi-icon-size-sm: 22px;
+
+  --ahi-card-padding: 12px;
+  --ahi-section-gap: 18px;
+
+  /* Sayfa kenar boşluğu ekran genişliğine göre 8px ile 20px arasında akar. */
+  --ahi-gutter: clamp(8px, 3.4vw, 20px);
+  --ahi-content-max: 54rem;
+
+  --ahi-nav-rail: 46px;
+  --ahi-nav-wide: 12.5rem;
+
+  --ahi-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ahi-fast: 0.14s;
+  --ahi-base: 0.2s;
+
+  --ahi-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.12);
+  --ahi-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.22);
+  --ahi-shadow-lg: 0 10px 32px rgba(0, 0, 0, 0.38);
+
+  --ahi-surface: var(--vscode-editorWidget-background, rgba(128, 128, 128, 0.08));
+  --ahi-surface-border: var(--vscode-editorWidget-border, rgba(128, 128, 128, 0.18));
+  --ahi-surface-subtle: color-mix(in srgb, var(--vscode-editorWidget-background, #2a2d2e) 60%, transparent);
+  --ahi-input-bg: var(--vscode-input-background, rgba(0, 0, 0, 0.2));
+  --ahi-input-border: var(--vscode-input-border, rgba(128, 128, 128, 0.28));
+  --ahi-input-fg: var(--vscode-input-foreground, inherit);
+  --ahi-muted-fg: var(--vscode-descriptionForeground, rgba(128, 128, 128, 0.9));
+  --ahi-fg: var(--vscode-foreground, #cccccc);
+  --ahi-border: var(--vscode-sideBar-border, rgba(128, 128, 128, 0.2));
+
+  /*
+   * AhiCode marka paleti:
+   * Ana renk: Lacivert / derin çini mavisi (güven ve gelenek).
+   * Vurgu rengi: Selçuklu turkuazı (Osmanlı ve Selçuklu çinilerinden ilham).
+   * Zanaat rengi: Ahilik altını ve bakır (ustalık, kalite ve disiplin).
+   * Hem koyu hem açık temada yüksek okunabilirlik (WCAG AA/AAA).
+   */
+  --ahi-navy: #0c2340;
+  --ahi-gold: #f59e0b;
+  --ahi-gold-soft: rgba(245, 158, 11, 0.15);
+  --ahi-copper: #fb923c;
+  --ahi-surface-accent: rgba(14, 165, 233, 0.08);
+
+  --ahi-brand-700: #0369a1;
+  --ahi-brand-600: #0284c7;
+  --ahi-brand-500: #0ea5e9;
+  --ahi-brand-400: #06b6d4;
+  --ahi-brand-300: #67e8f9;
+  --ahi-brand-soft: rgba(6, 182, 212, 0.14);
+
+  /* Geriye dönük uyumluluk takma adları */
+  --ahi-brand-700: var(--ahi-brand-700);
+  --ahi-brand-600: var(--ahi-brand-600);
+  --ahi-brand-500: var(--ahi-brand-500);
+  --ahi-brand-400: var(--ahi-brand-400);
+  --ahi-brand-300: var(--ahi-brand-300);
+  --ahi-brand-soft: var(--ahi-brand-soft);
+
+  --ahi-accent-bg: var(--ahi-brand-500);
+  --ahi-accent-fg: #ffffff;
+  --ahi-accent-hover: var(--ahi-brand-600);
+  --ahi-focus: var(--ahi-brand-400);
+  --ahi-hover-bg: var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.12));
+
+  /* Durum jetonları (koyu ve yüksek karşıtlık temaları) */
+  --status-info-bg: rgba(148, 163, 184, 0.14);
+  --status-info-fg: #cbd5e1;
+  --status-info-border: rgba(148, 163, 184, 0.3);
+
+  --status-success-bg: rgba(52, 211, 153, 0.12);
+  --status-success-fg: var(--vscode-testing-iconPassed, #34d399);
+  --status-success-border: rgba(52, 211, 153, 0.25);
+
+  --status-warning-bg: rgba(251, 191, 36, 0.12);
+  --status-warning-fg: var(--vscode-editorWarning-foreground, #fbbf24);
+  --status-warning-border: rgba(251, 191, 36, 0.25);
+
+  --status-error-bg: rgba(248, 113, 113, 0.12);
+  --status-error-fg: var(--vscode-errorForeground, #f87171);
+  --status-error-border: rgba(248, 113, 113, 0.25);
+}
+
+/* Açık tema: AhiCode yüksek karşıtlıklı çini mavisi ve turkuaz */
+body.vscode-light,
+.vscode-light {
+  --ahi-navy: #082f49;
+  --ahi-gold: #d97706;
+  --ahi-copper: #ea580c;
+
+  --ahi-brand-700: #0c4a6e;
+  --ahi-brand-600: #0369a1;
+  --ahi-brand-500: #0284c7;
+  --ahi-brand-400: #0891b2;
+  --ahi-brand-300: #0e7490;
+  --ahi-brand-soft: rgba(8, 145, 178, 0.12);
+
+  --ahi-brand-700: var(--ahi-brand-700);
+  --ahi-brand-600: var(--ahi-brand-600);
+  --ahi-brand-500: var(--ahi-brand-500);
+  --ahi-brand-400: var(--ahi-brand-400);
+  --ahi-brand-300: var(--ahi-brand-300);
+  --ahi-brand-soft: var(--ahi-brand-soft);
+
+  --ahi-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --ahi-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.12);
+  --ahi-shadow-lg: 0 10px 32px rgba(0, 0, 0, 0.2);
+
+  --status-info-bg: rgba(71, 85, 105, 0.12);
+  --status-info-fg: #334155;
+  --status-info-border: rgba(71, 85, 105, 0.3);
+
+  --status-success-bg: rgba(22, 163, 74, 0.12);
+  --status-success-fg: var(--vscode-testing-iconPassed, #15803d);
+  --status-success-border: rgba(22, 163, 74, 0.28);
+
+  --status-warning-bg: rgba(217, 119, 6, 0.12);
+  --status-warning-fg: var(--vscode-editorWarning-foreground, #b45309);
+  --status-warning-border: rgba(217, 119, 6, 0.28);
+
+  --status-error-bg: rgba(220, 38, 38, 0.12);
+  --status-error-fg: var(--vscode-errorForeground, #b91c1c);
+  --status-error-border: rgba(220, 38, 38, 0.28);
+}
+
+/* ---- 2) Taban ------------------------------------------------------------- */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  font-weight: var(--vscode-font-weight, 400);
+  line-height: 1.5;
+  background-color: var(--vscode-sideBar-background, var(--vscode-editor-background, #1e1e1e));
+  color: var(--vscode-sideBar-foreground, var(--vscode-foreground, #cccccc));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Form denetimleri kullanıcının VS Code yazı tipini devralır */
+input,
+textarea,
+select,
+button {
+  font-family: var(--vscode-font-family, inherit);
+  font-size: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* Kod, terminal ve tek aralıklı öğeler editör yazı ayarlarına uyar */
+code,
+pre,
+kbd,
+samp,
+.font-mono {
+  font-family: var(--vscode-user-editor-font-family, var(--vscode-editor-font-family, 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace)) !important;
+  font-size: var(--vscode-user-editor-font-size, var(--vscode-editor-font-size, 0.92em));
+  font-weight: var(--vscode-user-editor-font-weight, var(--vscode-editor-font-weight, normal));
+}
+
+pre,
+.terminal-output {
+  font-family: var(--vscode-user-terminal-font-family, var(--vscode-user-editor-font-family, var(--vscode-editor-font-family, monospace))) !important;
+  font-size: var(--vscode-user-terminal-font-size, var(--vscode-editor-font-size, 0.9em));
+}
+
+::selection {
+  background: var(--vscode-editor-selectionBackground, rgba(56, 189, 248, 0.3));
+}
+
+/* Klavye odağı her etkileşimli öğede aynı, görünür halka ile gösterilir */
+:focus-visible {
+  outline: 2px solid var(--ahi-focus);
+  outline-offset: 1px;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline-offset: -1px;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--vscode-scrollbarSlider-background, rgba(128, 128, 128, 0.25));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vscode-scrollbarSlider-hoverBackground, rgba(128, 128, 128, 0.4));
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--vscode-scrollbarSlider-activeBackground, rgba(128, 128, 128, 0.6));
+}
+
+/* Hareket azaltma tercihi olan kullanıcılar için animasyonlar kapatılır */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Uzun sohbetlerde görünüm dışındaki mesajların çizim maliyetini azaltır */
+.ahi-message {
+  content-visibility: auto;
+  contain-intrinsic-size: 96px;
+}
+
+@keyframes ahi-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ahi-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+}
+
+.ahi-animate-in {
+  animation: ahi-fade-in 0.18s ease-out;
+}
+
+.ahi-pulse {
+  animation: ahi-pulse 1.6s ease-in-out infinite;
+}
+
+/* Marka tonlu yüzeyler (opaklık değiştiricileri CSS değişkenleriyle çalışmaz) */
+.ahi-user-bubble {
+  background-color: color-mix(in srgb, var(--ahi-brand-500) 12%, transparent);
+  border-color: color-mix(in srgb, var(--ahi-brand-500) 32%, transparent);
+}
+
+.ahi-question-card {
+  border-color: color-mix(in srgb, var(--ahi-brand-400) 45%, transparent);
+}
+
+.ahi-badge-soft {
+  background-color: color-mix(in srgb, var(--ahi-brand-500) 18%, transparent);
+}
+
+.ahi-soft-card {
+  background-color: var(--ahi-surface-subtle);
+}
+
+/* ==========================================================================
+ * Bileşen katmanı
+ * ========================================================================== */
+@layer components {
+  /* ---- 3) Tipografi ---- */
+  .ahi-heading {
+    font-size: var(--ahi-text-md);
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    color: var(--ahi-fg);
+  }
+
+  .ahi-title {
+    font-size: var(--ahi-text-sm);
+    font-weight: 600;
+    color: var(--ahi-fg);
+  }
+
+  .ahi-label {
+    display: block;
+    font-size: var(--ahi-text-xs);
+    font-weight: 500;
+    color: var(--ahi-fg);
+  }
+
+  .ahi-caption,
+  .ahi-hint {
+    font-size: var(--ahi-text-2xs);
+    line-height: 1.5;
+    color: var(--ahi-muted-fg);
+  }
+
+  .ahi-error-text {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+    font-size: var(--ahi-text-2xs);
+    line-height: 1.5;
+    color: var(--status-error-fg);
+  }
+
+  .ahi-overline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--ahi-text-2xs);
+    font-weight: 650;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ahi-muted-fg);
+  }
+
+  .ahi-code-inline {
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: 0.92rem;
+    padding: 1px 4px;
+    border-radius: var(--ahi-radius-sm);
+    background-color: var(--vscode-textCodeBlock-background, rgba(0, 0, 0, 0.3));
+  }
+
+  /* ---- 4) Yerleşim ---- */
+  .ahi-app {
+    position: relative;
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    flex-direction: column;
+    overflow: hidden;
+    background-color: var(--vscode-sideBar-background);
+    color: var(--vscode-sideBar-foreground);
+  }
+
+  .ahi-app__body {
+    display: flex;
+    min-height: 0;
+    width: 100%;
+    flex: 1 1 0;
+    overflow: hidden;
+  }
+
+  .ahi-main {
+    position: relative;
+    display: flex;
+    min-height: 0;
+    min-width: 0;
+    flex: 1 1 0;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .ahi-screen {
+    display: flex;
+    height: 100%;
+    flex-direction: column;
+    background-color: var(--vscode-sideBar-background);
+    color: var(--vscode-sideBar-foreground);
+  }
+
+  /*
+   * Geniş ekranda içerik okunabilir bir sütunda ortalanır: kenar boşluğu
+   * max(gutter, (genişlik - azami genişlik) / 2) ile hesaplanır, ek kapsayıcı gerekmez.
+   */
+  .ahi-screen-body {
+    width: 100%;
+    min-height: 0;
+    flex: 1 1 0;
+    overflow-y: auto;
+    padding: var(--ahi-space-3) var(--ahi-gutter) 28px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--ahi-section-gap);
+  }
+
+  .ahi-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ahi-space-3);
+  }
+
+  /* Kartlar geniş alanda sütunlara bölünür, dar alanda tek sütun olur */
+  .ahi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+    gap: var(--ahi-space-3);
+  }
+
+  .ahi-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ahi-space-3);
+  }
+
+  .ahi-row {
+    display: flex;
+    align-items: center;
+    gap: var(--ahi-space-3);
+    min-width: 0;
+  }
+
+  .ahi-row--between {
+    justify-content: space-between;
+  }
+
+  .ahi-row--wrap {
+    flex-wrap: wrap;
+  }
+
+  .ahi-fill {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .ahi-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ahi-screen-header {
+    width: 100%;
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ahi-space-3);
+    min-height: 44px;
+    padding: var(--ahi-space-2) var(--ahi-gutter);
+    border-bottom: 1px solid var(--ahi-border);
+    background-color: var(--vscode-sideBarSectionHeader-background, var(--vscode-sideBar-background));
+  }
+
+  .ahi-screen-header__text {
+    min-width: 0;
+  }
+
+  .ahi-screen-header__actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--ahi-space-1);
+  }
+
+  /* ---- 5) Yüzeyler ---- */
+  .ahi-card {
+    border: 1px solid var(--ahi-surface-border);
+    border-radius: var(--ahi-radius-lg);
+    background-color: var(--ahi-surface);
+    padding: var(--ahi-card-padding);
+  }
+
+  .ahi-card--muted {
+    background-color: var(--ahi-surface-subtle);
+  }
+
+  .ahi-card--interactive {
+    text-align: left;
+    width: 100%;
+    transition: border-color var(--ahi-fast) ease, background-color var(--ahi-fast) ease;
+  }
+
+  .ahi-card--interactive:hover {
+    border-color: var(--ahi-focus);
+  }
+
+  .ahi-card--active {
+    border-color: var(--ahi-focus);
+    background-color: var(--vscode-list-activeSelectionBackground, var(--ahi-surface));
+  }
+
+  .ahi-list-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--ahi-surface-border);
+    border-radius: var(--ahi-radius-md);
+    background-color: var(--ahi-surface);
+    text-align: left;
+    transition: border-color var(--ahi-fast) ease, background-color var(--ahi-fast) ease,
+      transform var(--ahi-fast) ease;
+  }
+
+  button.ahi-list-item:hover,
+  .ahi-list-item--hover:hover {
+    border-color: var(--ahi-focus);
+    background-color: var(--ahi-hover-bg);
+  }
+
+  button.ahi-list-item:active {
+    transform: scale(0.995);
+  }
+
+  .ahi-list-item--active {
+    border-color: var(--ahi-focus);
+    background-color: var(--vscode-list-activeSelectionBackground, var(--ahi-surface));
+  }
+
+  /* Çerçevesiz satır: akordeon başlıkları ve açılır liste girdileri */
+  .ahi-list-item--flat {
+    border-color: transparent;
+    border-radius: var(--ahi-radius-sm);
+    background-color: transparent;
+    padding: 6px 8px;
+  }
+
+  button.ahi-list-item--flat:hover {
+    border-color: transparent;
+    background-color: var(--ahi-hover-bg);
+  }
+
+  .ahi-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--ahi-space-3);
+    padding: 32px 16px;
+    text-align: center;
+    border: 1px dashed var(--ahi-surface-border);
+    border-radius: var(--ahi-radius-lg);
+  }
+
+  .ahi-divider {
+    height: 1px;
+    border: 0;
+    background-color: var(--ahi-border);
+  }
+
+  /* Ek bilgi satırları: anahtar solda, değer sağda */
+  .ahi-kv {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--ahi-space-4);
+    font-size: var(--ahi-text-xs);
+  }
+
+  .ahi-kv__key {
+    color: var(--ahi-muted-fg);
+  }
+
+  .ahi-kv__value {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: right;
+    color: var(--ahi-fg);
+  }
+
+  /* ---- Açılır bölüm (details/summary) ---- */
+  .ahi-disclosure {
+    border-radius: var(--ahi-radius-md);
+  }
+
+  .ahi-disclosure--card {
+    border: 1px solid var(--ahi-surface-border);
+    background-color: var(--ahi-surface-subtle);
+    padding: 0 var(--ahi-space-4);
+  }
+
+  .ahi-disclosure--dashed {
+    border: 1px dashed var(--ahi-surface-border);
+    background-color: var(--ahi-surface-subtle);
+    padding: 0 var(--ahi-space-4);
+  }
+
+  .ahi-disclosure__summary {
+    display: flex;
+    cursor: pointer;
+    list-style: none;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 0;
+    font-size: var(--ahi-text-xs);
+    font-weight: 500;
+    color: var(--ahi-muted-fg);
+    user-select: none;
+    transition: color var(--ahi-fast) ease;
+  }
+
+  .ahi-disclosure__summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .ahi-disclosure__summary:hover {
+    color: var(--ahi-fg);
+  }
+
+  .ahi-disclosure__chevron {
+    flex-shrink: 0;
+    transition: transform var(--ahi-fast) ease;
+  }
+
+  .ahi-disclosure[open] > .ahi-disclosure__summary .ahi-disclosure__chevron {
+    transform: rotate(90deg);
+  }
+
+  .ahi-disclosure__body {
+    padding-bottom: var(--ahi-space-3);
+  }
+
+  /* ---- 6) Formlar ---- */
+  .ahi-input,
+  .ahi-select,
+  .ahi-textarea {
+    width: 100%;
+    border: 1px solid var(--ahi-input-border);
+    border-radius: var(--ahi-radius-md);
+    background-color: var(--ahi-input-bg);
+    color: var(--ahi-input-fg);
+    padding: 6px 10px;
+    font-size: var(--ahi-text-xs);
+    line-height: 1.45;
+    outline: none;
+    transition: border-color var(--ahi-fast) ease, box-shadow var(--ahi-fast) ease;
+  }
+
+  .ahi-input,
+  .ahi-select {
+    min-height: var(--ahi-control-height-lg);
+  }
+
+  .ahi-input:hover,
+  .ahi-select:hover,
+  .ahi-textarea:hover {
+    border-color: color-mix(in srgb, var(--ahi-focus) 45%, var(--ahi-input-border));
+  }
+
+  .ahi-input:focus,
+  .ahi-select:focus,
+  .ahi-textarea:focus {
+    border-color: var(--ahi-focus);
+    box-shadow: 0 0 0 1px var(--ahi-focus);
+  }
+
+  .ahi-input::placeholder,
+  .ahi-textarea::placeholder {
+    color: var(--vscode-input-placeholderForeground, rgba(128, 128, 128, 0.6));
+  }
+
+  .ahi-input:disabled,
+  .ahi-select:disabled,
+  .ahi-textarea:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .ahi-input[aria-invalid='true'],
+  .ahi-select[aria-invalid='true'],
+  .ahi-textarea[aria-invalid='true'] {
+    border-color: var(--status-error-fg);
+  }
+
+  .ahi-input--mono,
+  .ahi-select--mono,
+  .ahi-textarea--mono {
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-size: var(--ahi-text-2xs);
+  }
+
+  .ahi-textarea {
+    resize: vertical;
+    min-height: 56px;
+  }
+
+  .ahi-textarea--fixed {
+    resize: none;
+  }
+
+  /* Mesaj kutusu: çerçeve kapsayıcıda olduğu için alanın kendisi çıplaktır */
+  .ahi-textarea--composer {
+    display: block;
+    max-height: 180px;
+    min-height: 56px;
+    resize: none;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 12px 14px 6px;
+    font-size: var(--ahi-text-sm);
+    line-height: 1.55;
+    box-shadow: none;
+  }
+
+  .ahi-textarea--composer:hover,
+  .ahi-textarea--composer:focus {
+    border: 0;
+    box-shadow: none;
+  }
+
+  .ahi-field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ahi-space-1);
+  }
+
+  .ahi-input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .ahi-input-group .ahi-input {
+    padding-right: 34px;
+  }
+
+  .ahi-input-group--leading .ahi-input {
+    padding-left: 30px;
+  }
+
+  .ahi-input-group__action {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .ahi-input-group__icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    display: flex;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--ahi-muted-fg);
+  }
+
+  /* Arama alanındaki tarayıcı çarpısı kendi temizleme düğmemizle çakışmasın */
+  .ahi-input[type='search']::-webkit-search-cancel-button {
+    display: none;
+  }
+
+  /* Onay kutusu */
+  .ahi-check {
+    display: inline-flex;
+    cursor: pointer;
+    align-items: flex-start;
+    gap: var(--ahi-space-3);
+    font-size: var(--ahi-text-xs);
+    line-height: 1.45;
+    color: var(--ahi-fg);
+  }
+
+  .ahi-check--disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+
+  .ahi-check__box {
+    appearance: none;
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin: 1px 0 0;
+    border: 1px solid var(--ahi-input-border);
+    border-radius: var(--ahi-radius-sm);
+    background-color: var(--ahi-input-bg);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 12px;
+    transition: background-color var(--ahi-fast) ease, border-color var(--ahi-fast) ease;
+  }
+
+  .ahi-check__box:hover:not(:disabled) {
+    border-color: var(--ahi-focus);
+  }
+
+  .ahi-check__box:checked {
+    border-color: var(--ahi-accent-bg);
+    background-color: var(--ahi-accent-bg);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+  }
+
+  /* ---- 7) Düğmeler ---- */
+  .ahi-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: var(--ahi-control-height);
+    border: 1px solid transparent;
+    border-radius: var(--ahi-radius-md);
+    font-size: var(--ahi-text-xs);
+    font-weight: 550;
+    line-height: 1;
+    padding: 6px 12px;
+    transition: background-color var(--ahi-fast) ease, border-color var(--ahi-fast) ease,
+      color var(--ahi-fast) ease, transform var(--ahi-fast) ease;
+    white-space: nowrap;
+  }
+
+  .ahi-btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .ahi-btn:disabled {
+    opacity: 0.4;
+  }
+
+  .ahi-btn--primary {
+    background-color: var(--ahi-accent-bg);
+    color: var(--ahi-accent-fg);
+    box-shadow: var(--ahi-shadow-sm);
+  }
+
+  .ahi-btn--primary:hover:not(:disabled) {
+    background-color: var(--ahi-accent-hover);
+  }
+
+  .ahi-btn--secondary {
+    border-color: var(--ahi-input-border);
+    color: var(--ahi-fg);
+    background-color: transparent;
+  }
+
+  .ahi-btn--secondary:hover:not(:disabled) {
+    background-color: var(--ahi-hover-bg);
+    border-color: var(--ahi-muted-fg);
+  }
+
+  .ahi-btn--ghost {
+    color: var(--ahi-muted-fg);
+    background-color: transparent;
+  }
+
+  .ahi-btn--ghost:hover:not(:disabled) {
+    background-color: var(--ahi-hover-bg);
+    color: var(--ahi-fg);
+  }
+
+  .ahi-btn--danger {
+    color: var(--status-error-fg);
+    border-color: var(--ahi-input-border);
+    background-color: transparent;
+  }
+
+  .ahi-btn--danger:hover:not(:disabled) {
+    background-color: var(--status-error-bg);
+    border-color: var(--status-error-border);
+  }
+
+  .ahi-btn--xs {
+    min-height: 22px;
+    padding: 4px 8px;
+    font-size: var(--ahi-text-2xs);
+  }
+
+  .ahi-btn--block {
+    width: 100%;
+  }
+
+  .ahi-btn--start {
+    justify-content: flex-start;
+  }
+
+  .ahi-btn--square {
+    height: var(--ahi-control-height-lg);
+    width: var(--ahi-control-height-lg);
+    padding: 0;
+  }
+
+  .ahi-btn--square-sm {
+    height: var(--ahi-icon-size);
+    width: var(--ahi-icon-size);
+    min-height: 0;
+    padding: 0;
+    border-radius: var(--ahi-radius-md);
+  }
+
+  .ahi-btn--stop {
+    background-color: var(--status-error-fg);
+    color: #ffffff;
+  }
+
+  .ahi-btn--stop:hover:not(:disabled) {
+    opacity: 0.9;
+    background-color: var(--status-error-fg);
+  }
+
+  .ahi-icon-btn {
+    display: inline-flex;
+    height: var(--ahi-icon-size);
+    width: var(--ahi-icon-size);
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ahi-radius-md);
+    color: var(--ahi-muted-fg);
+    transition: background-color var(--ahi-fast) ease, color var(--ahi-fast) ease;
+  }
+
+  .ahi-icon-btn:hover:not(:disabled) {
+    background-color: var(--vscode-toolbar-hoverBackground, var(--ahi-hover-bg));
+    color: var(--ahi-fg);
+  }
+
+  .ahi-icon-btn:disabled {
+    opacity: 0.4;
+  }
+
+  .ahi-icon-btn--sm {
+    height: var(--ahi-icon-size-sm);
+    width: var(--ahi-icon-size-sm);
+  }
+
+  .ahi-icon-btn--active {
+    background-color: var(--vscode-toolbar-activeBackground, rgba(128, 128, 128, 0.2));
+    color: var(--ahi-fg);
+  }
+
+  /* Metin gibi görünen düğme (e-posta, dosya yolu) */
+  .ahi-link {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    color: var(--ahi-brand-400);
+    text-underline-offset: 3px;
+  }
+
+  .ahi-link:hover {
+    text-decoration: underline;
+  }
+
+  .ahi-link--plain {
+    color: inherit;
+  }
+
+  /* Seçilebilir hap: filtre ve sıralama */
+  .ahi-chip {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+    min-height: 24px;
+    padding: 3px 10px;
+    border: 1px solid var(--ahi-surface-border);
+    border-radius: var(--ahi-radius-full);
+    background-color: var(--ahi-surface);
+    font-size: var(--ahi-text-2xs);
+    font-weight: 550;
+    line-height: 1;
+    color: var(--ahi-muted-fg);
+    transition: background-color var(--ahi-fast) ease, border-color var(--ahi-fast) ease,
+      color var(--ahi-fast) ease;
+  }
+
+  .ahi-chip:hover {
+    border-color: var(--ahi-brand-400);
+    color: var(--ahi-fg);
+  }
+
+  .ahi-chip--active {
+    border-color: var(--ahi-brand-500);
+    background-color: var(--ahi-brand-500);
+    color: #ffffff;
+  }
+
+  .ahi-chip--active:hover {
+    color: #ffffff;
+  }
+
+  /* Bölümlü denetim */
+  .ahi-segmented {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 2px;
+    border: 1px solid var(--ahi-surface-border);
+    border-radius: var(--ahi-radius-md);
+    background-color: var(--ahi-surface);
+    padding: 2px;
+  }
+
+  .ahi-segmented__item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: var(--ahi-text-xs);
+    font-weight: 550;
+    color: var(--ahi-muted-fg);
+    transition: background-color var(--ahi-fast) ease, color var(--ahi-fast) ease;
+  }
+
+  .ahi-segmented__item:hover:not(:disabled) {
+    color: var(--ahi-fg);
+  }
+
+  .ahi-segmented__item--active,
+  .ahi-segmented__item--active:hover:not(:disabled) {
+    background-color: var(--ahi-accent-bg);
+    color: var(--ahi-accent-fg);
+  }
+
+  .ahi-segmented__item:disabled {
+    opacity: 0.4;
+  }
+
+  /* Anahtar satırı */
+  .ahi-toggle-row {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--ahi-surface-border);
+    border-radius: var(--ahi-radius-md);
+    background-color: var(--ahi-surface);
+    text-align: left;
+    transition: border-color var(--ahi-fast) ease;
+  }
+
+  .ahi-toggle-row:hover {
+    border-color: var(--ahi-focus);
+  }
+
+  .ahi-toggle-row__icon {
+    display: flex;
+    height: 26px;
+    width: 26px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ahi-radius-md);
+    background-color: var(--vscode-sideBar-background);
+  }
+
+  .ahi-switch {
+    position: relative;
+    height: 18px;
+    width: 32px;
+    flex-shrink: 0;
+    border-radius: var(--ahi-radius-full);
+    background-color: var(--vscode-disabledForeground, #6b7280);
+    transition: background-color var(--ahi-fast) ease;
+  }
+
+  .ahi-switch--on {
+    background-color: var(--ahi-accent-bg);
+  }
+
+  .ahi-switch__thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    height: 14px;
+    width: 14px;
+    border-radius: var(--ahi-radius-full);
+    background-color: #fff;
+    box-shadow: var(--ahi-shadow-sm);
+    transition: left var(--ahi-fast) var(--ahi-ease);
+  }
+
+  .ahi-switch--on .ahi-switch__thumb {
+    left: 16px;
+  }
+
+  /* Rozet */
+  .ahi-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid transparent;
+    border-radius: var(--ahi-radius-full);
+    padding: 1px 8px;
+    font-size: var(--ahi-text-2xs);
+    font-weight: 550;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  .ahi-badge--neutral {
+    border-color: var(--ahi-surface-border);
+    background-color: var(--ahi-surface);
+    color: var(--ahi-fg);
+  }
+
+  .ahi-badge--muted {
+    background-color: var(--ahi-surface-subtle);
+    color: var(--ahi-muted-fg);
+  }
+
+  .ahi-badge--brand {
+    background-color: var(--ahi-brand-500);
+    color: #ffffff;
+  }
+
+  .ahi-badge--info {
+    border-color: var(--status-info-border);
+    background-color: var(--status-info-bg);
+    color: var(--status-info-fg);
+  }
+
+  .ahi-badge--success {
+    border-color: var(--status-success-border);
+    background-color: var(--status-success-bg);
+    color: var(--status-success-fg);
+  }
+
+  .ahi-badge--warning {
+    border-color: var(--status-warning-border);
+    background-color: var(--status-warning-bg);
+    color: var(--status-warning-fg);
+  }
+
+  .ahi-badge--error {
+    border-color: var(--status-error-border);
+    background-color: var(--status-error-bg);
+    color: var(--status-error-fg);
+  }
+
+  .ahi-badge--mono {
+    font-family: var(--vscode-editor-font-family, monospace);
+    font-weight: 450;
+  }
+
+  .ahi-badge--truncate {
+    max-width: 9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ---- 8) Gezinme (sabit, daralıp genişleyen yan menü) ---- */
+  .ahi-nav {
+    position: relative;
+    flex-shrink: 0;
+    width: var(--ahi-nav-rail);
+    border-left: 1px solid var(--ahi-border);
+    background-color: var(--vscode-sideBar-background);
+    transition: width var(--ahi-base) var(--ahi-ease);
+  }
+
+  .ahi-nav--open {
+    width: var(--ahi-nav-wide);
+  }
+
+  .ahi-nav__panel {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    background-color: var(--vscode-sideBar-background);
+  }
+
+  .ahi-nav__list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .ahi-nav__footer {
+    display: flex;
+    padding: 6px;
+    border-top: 1px solid var(--ahi-border);
+  }
+
+  .ahi-nav__item {
+    position: relative;
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 34px;
+    padding: 6px;
+    border-radius: var(--ahi-radius-md);
+    font-size: var(--ahi-text-xs);
+    color: var(--ahi-muted-fg);
+    transition: background-color var(--ahi-fast) ease, color var(--ahi-fast) ease;
+  }
+
+  .ahi-nav--open .ahi-nav__item {
+    justify-content: flex-start;
+    padding-inline: 10px;
+  }
+
+  .ahi-nav__item:hover {
+    background-color: var(--ahi-hover-bg);
+    color: var(--ahi-fg);
+  }
+
+  .ahi-nav__item--active,
+  .ahi-nav__item--active:hover {
+    background-color: var(--ahi-brand-soft);
+    color: var(--ahi-brand-300);
+    font-weight: 600;
+  }
+
+  /* Etkin ekran, içeriğe bakan kenarda ince bir çizgiyle işaretlenir */
+  .ahi-nav__item--active::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 7px;
+    bottom: 7px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background-color: var(--ahi-brand-400);
+  }
+
+  .ahi-nav__icon {
+    position: relative;
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  .ahi-nav__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ahi-nav__badge {
+    position: absolute;
+    top: -5px;
+    right: -7px;
+    display: flex;
+    height: 14px;
+    min-width: 14px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    border-radius: var(--ahi-radius-full);
+    background-color: var(--status-warning-fg);
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #000000;
+  }
+
+  /* ---- 9) Başlık ---- */
+  .ahi-header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-shrink: 0;
+    flex-direction: column;
+    border-bottom: 1px solid var(--ahi-border);
+    background-color: var(--vscode-sideBar-background);
+    color: var(--vscode-sideBar-foreground);
+    user-select: none;
+  }
+
+  .ahi-header__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ahi-space-3);
+    min-height: 42px;
+    padding: 6px var(--ahi-gutter);
+  }
+
+  .ahi-header__actions {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--ahi-space-1);
+  }
+
+  .ahi-header__stats {
+    display: flex;
+    align-items: center;
+    gap: var(--ahi-space-2);
+    padding: 5px var(--ahi-gutter);
+    overflow-x: auto;
+    border-top: 1px solid var(--ahi-border);
+    background-color: var(--ahi-surface-subtle);
+  }
+
+  /* Logo çıplaktır: arka plan ve ek boşluk yok */
+  .ahi-brand {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: var(--ahi-space-3);
+  }
+
+  .ahi-brand__logo {
+    height: 22px;
+    width: 22px;
+    flex-shrink: 0;
+  }
+
+  .ahi-brand__name {
+    font-size: var(--ahi-text-sm);
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+
+  .ahi-divider-v {
+    height: 14px;
+    width: 1px;
+    flex-shrink: 0;
+    margin-inline: 2px;
+    background-color: var(--ahi-border);
+  }
+
+  .ahi-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--ahi-text-2xs);
+    font-weight: 550;
+    white-space: nowrap;
+  }
+
+  .ahi-status--info {
+    color: var(--status-info-fg);
+  }
+
+  .ahi-status--success {
+    color: var(--status-success-fg);
+  }
+
+  .ahi-status--warning {
+    color: var(--status-warning-fg);
+  }
+
+  .ahi-status--error {
+    color: var(--status-error-fg);
+  }
+
+  .ahi-status--muted {
+    color: var(--ahi-muted-fg);
+  }
+
+  /* ---- 10) Sohbet ---- */
+  .ahi-chat {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .ahi-messages {
+    width: 100%;
+    min-height: 0;
+    flex: 1 1 0;
+    overflow-y: auto;
+    padding: var(--ahi-space-3) var(--ahi-gutter);
+  }
+
+  .ahi-composer {
+    width: 100%;
+    flex-shrink: 0;
+    border-top: 1px solid var(--ahi-border);
+    background-color: var(--vscode-sideBar-background);
+    padding: var(--ahi-space-2) var(--ahi-gutter) var(--ahi-space-3);
+  }
+
+  .ahi-composer__box {
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--ahi-input-border);
+    border-radius: var(--ahi-radius-lg);
+    background-color: var(--ahi-input-bg);
+    box-shadow: var(--ahi-shadow-sm);
+    transition: border-color var(--ahi-fast) ease, box-shadow var(--ahi-fast) ease;
+  }
+
+  .ahi-composer__box:focus-within {
+    border-color: var(--ahi-focus);
+    box-shadow: 0 0 0 1px var(--ahi-focus);
+  }
+
+  .ahi-composer__bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ahi-space-3);
+    border-top: 1px solid var(--ahi-surface-border);
+    padding: 6px 8px;
+  }
+
+  .ahi-composer__hint {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: var(--ahi-text-2xs);
+    color: var(--ahi-muted-fg);
+  }
+
+  .ahi-toast-anchor {
+    position: absolute;
+    bottom: 100%;
+    left: var(--ahi-gutter);
+    right: var(--ahi-gutter);
+    z-index: 50;
+    margin-bottom: 4px;
+  }
+
+  .ahi-toast-floating {
+    pointer-events: none;
+    position: absolute;
+    bottom: var(--ahi-space-3);
+    left: var(--ahi-gutter);
+    right: var(--ahi-gutter);
+    z-index: 50;
+  }
+
+  .ahi-toast-floating > * {
+    pointer-events: auto;
+  }
+
+  /* ---- 11) Katmanlar ---- */
+  .ahi-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(1px);
+  }
+
+  .ahi-drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: flex;
+    width: 18rem;
+    max-width: 88vw;
+    flex-direction: column;
+    border-left: 1px solid var(--ahi-border);
+    background-color: var(--vscode-sideBar-background);
+    box-shadow: var(--ahi-shadow-lg);
+    animation: ahi-fade-in 0.16s ease-out;
+  }
+
+  .ahi-popover {
+    position: absolute;
+    right: var(--ahi-gutter);
+    top: 100%;
+    z-index: 30;
+    margin-top: 4px;
+    width: min(18rem, calc(100vw - 2 * var(--ahi-gutter)));
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    border: 1px solid var(--ahi-surface-border);
+    border-radius: var(--ahi-radius-lg);
+    background-color: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+    box-shadow: var(--ahi-shadow-md);
+    animation: ahi-fade-in 0.14s ease-out;
+  }
+
+  .ahi-popover__title {
+    padding: 2px 6px 6px;
+    margin-bottom: 2px;
+    border-bottom: 1px solid var(--ahi-border);
+    font-size: var(--ahi-text-2xs);
+    font-weight: 650;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ahi-muted-fg);
+  }
+
+  .ahi-popover__scroll {
+    display: flex;
+    max-height: 13rem;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+  }
+
+  /* ---- 12) Duyarlılık ----
+   * Webview genişliği yan panelde ~200px ile editör alanında 900px+ arasında
+   * değişir. Eşikler: 360px (dar), 480px (yan menü yer değiştirir), 720px (geniş).
+   */
+  .ahi-show-sm,
+  .ahi-show-md {
+    display: none;
+  }
+
+  @media (min-width: 360px) {
+    .ahi-show-sm {
+      display: inline-flex;
+    }
+  }
+
+  @media (min-width: 480px) {
+    .ahi-composer__hint {
+      display: flex;
+    }
+  }
+
+  @media (min-width: 560px) {
+    .ahi-show-md {
+      display: inline-flex;
+    }
+  }
+
+  /* Çok dar: marka adı gizlenir, mod etiketleri yalnızca simge olur */
+  @media (max-width: 319px) {
+    .ahi-brand__name,
+    .ahi-segmented__label {
+      display: none;
+    }
+
+    .ahi-segmented__item {
+      padding-inline: 8px;
+    }
+  }
+
+  /* Dar: açılan yan menü içeriği daraltmak yerine üstüne biner */
+  @media (max-width: 479px) {
+    .ahi-nav--open {
+      width: var(--ahi-nav-rail);
+    }
+
+    .ahi-nav--open .ahi-nav__panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 45;
+      width: var(--ahi-nav-wide);
+      border-left: 1px solid var(--ahi-border);
+      box-shadow: var(--ahi-shadow-lg);
+    }
+  }
+
+  /* Geniş: daha ferah aralık ve kartlar için daha büyük dolgu */
+  @media (min-width: 720px) {
+    :root {
+      --ahi-card-padding: 14px;
+      --ahi-section-gap: 22px;
+    }
+
+    .ahi-brand__logo {
+      height: 24px;
+      width: 24px;
+    }
+  }
+}

@@ -1,0 +1,50 @@
+name: Feature request
+description: Suggest a capability or a change in behaviour.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        AhiCode deliberately follows a guided workflow: a spec and a plan are
+        approved before code is written. Requests that bypass that gate are
+        unlikely to be accepted.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can you not do today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Guided workflow (spec / plan)
+        - Knowledge base
+        - Agent loop and tools
+        - Security and permissions
+        - Editor integration
+        - MCP
+        - CLI / headless
+        - User interface
+        - Documentation
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-flight checks
+      options:
+        - label: I searched existing issues first.
+          required: true

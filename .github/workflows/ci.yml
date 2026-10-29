@@ -1,0 +1,93 @@
+name: CI
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            webview-ui/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix webview-ui ci
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Test type check
+        run: npm run typecheck:test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Language policy (src comments)
+        run: npm run check:language
+
+      - name: Unit tests
+        run: npm test
+
+      # Node's built-in coverage, gated by a line-coverage floor.
+      - name: Coverage gate
+        run: npm run check:coverage
+
+      - name: Package VSIX (pre-publish build)
+        run: npm run package
+
+  e2e:
+    name: VS Code integration (VS Code ${{ matrix.vscode }})
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        vscode: ['stable', '1.106.0']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            webview-ui/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix webview-ui ci
+
+      # Electron needs a display server on headless Linux runners.
+      - name: Install xvfb
+        run: sudo apt-get update && sudo apt-get install -y xvfb libasound2t64
+
+      - name: Build extension and webview
+        run: npm run build
+
+      - name: Run VS Code integration tests
+        env:
+          VSCODE_TEST_VERSION: ${{ matrix.vscode }}
+        run: xvfb-run -a npm run test:e2e:only
