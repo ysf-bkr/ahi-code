@@ -1,0 +1,291 @@
+{
+  "name": "ahi-code",
+  "displayName": "AhiCode — Yazılım Geliştirme",
+  "description": "Autonomous AI coding agent for VS Code. Ahilik zanaat disiplini ve mühendislik titizliğiyle mimari analiz, kod düzenleme ve test desteği.",
+  "version": "0.0.1",
+  "publisher": "ysf-bkr",
+  "author": {
+    "name": "Yusuf BEKAR",
+    "email": "ybekar@msn.com"
+  },
+  "contributors": [
+    {
+      "name": "Yusuf BEKAR",
+      "email": "ybekar@msn.com"
+    }
+  ],
+  "icon": "resources/icon.png",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ysf-bkr/ahi-code.git"
+  },
+  "engines": {
+    "vscode": "^1.106.0",
+    "node": ">=22.0.0"
+  },
+  "galleryBanner": {
+    "color": "#0d1117",
+    "theme": "dark"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages",
+    "Testing",
+    "Linters",
+    "Education"
+  ],
+  "main": "./dist/extension.js",
+  "bin": {
+    "ahi-code": "./dist/cli.js"
+  },
+  "activationEvents": [
+    "onView:ahi-code.SidebarProvider"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "secondarySidebar": [
+        {
+          "id": "ahi-code-sidebar-view",
+          "title": "AhiCode",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "ahi-code-sidebar-view": [
+        {
+          "type": "webview",
+          "id": "ahi-code.SidebarProvider",
+          "name": "AhiCode Asistanı",
+          "visibility": "visible"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "ahi-code.openSidebar",
+        "title": "AhiCode: Sohbeti Aç"
+      },
+      {
+        "command": "ahi-code.newTask",
+        "title": "AhiCode: Yeni Görev Başlat"
+      }
+    ],
+    "configuration": {
+      "title": "AhiCode Ayarları",
+      "properties": {
+        "ahiCode.selectedProvider": {
+          "type": "string",
+          "enum": [
+            "ollama",
+            "evren",
+            "openrouter",
+            "openai-compatible"
+          ],
+          "default": "ollama",
+          "description": "Varsayılan LLM model sağlayıcısı. Varsayılan yerel çalışmadır (Ollama) ve API anahtarı gerektirmez; EVREN LLM, OpenRouter ve OpenAI uyumlu uç noktalar isteğe bağlıdır."
+        },
+        "ahiCode.selectedModel": {
+          "type": "string",
+          "default": "llama3.1",
+          "description": "Kullanılacak varsayılan model kimliği. Yerel ve kendi barındırdığınız uç noktalarda somut bir model kimliği gerekir; \"auto\" yalnızca OpenRouter için anlamlıdır."
+        },
+        "ahiCode.autonomy": {
+          "type": "string",
+          "enum": [
+            "manual",
+            "guided",
+            "auto"
+          ],
+          "default": "manual",
+          "enumDescriptions": [
+            "Her spec ve plan için onay ister; turlar kullanıcıyla ilerler.",
+            "Spec ve plan otomatik onaylanır; yazma ve komut izinleri yine sorulur.",
+            "Spec ve plan otomatik onaylanır, görev bitene kadar turlar kendiliğinden sürer. Yazma ve komut izinleri yine sorulur."
+          ],
+          "description": "Ajanın kendi başına ilerleme düzeyi. Güvenlik onayları (dosya yazma, komut çalıştırma) bu ayardan bağımsız olarak her zaman geçerlidir."
+        },
+        "ahiCode.autoVerify": {
+          "type": "boolean",
+          "default": true,
+          "description": "Kod değişikliklerinden sonra testleri, lint ve tip denetimlerini otomatik çalıştır."
+        },
+        "ahiCode.captureBaseline": {
+          "type": "boolean",
+          "default": false,
+          "description": "Yeni hataları önceden var olanlardan ayırmak için görev başındaki test durumunu kaydet."
+        },
+        "ahiCode.maxRepairAttempts": {
+          "type": "number",
+          "default": 2,
+          "description": "Otomatik doğrulama başarısız olduğunda modele verilecek en fazla onarım denemesi."
+        },
+        "ahiCode.maxStepsPerTask": {
+          "type": "number",
+          "default": 25,
+          "description": "Bir görev bölümünde çalıştırılabilecek en fazla ajan adımı (varsayılan: 25). Sınıra ulaşıldığında görev onay veya yeni bölüm gerektirir; kontrolsüz döngüleri ve harcamaları sınırlar."
+        },
+        "ahiCode.maxTokensPerTask": {
+          "type": "number",
+          "default": 0,
+          "description": "Bir görevde harcanabilecek en fazla toplam token sınırı (0: sınırsız). Sınıra ulaşıldığında ajan bir sonraki model çağrısından önce duraklatılır ve kullanıcıya bildirilir; sürdürmek için sınırı yükseltin. Not: Yalnızca sağlayıcı kullanım (usage) bilgisi döndürüyorsa uygulanır."
+        },
+        "ahiCode.maxContinuations": {
+          "type": "number",
+          "default": 12,
+          "description": "Otonom modda ('auto') peş peşe izin verilen en fazla otomatik devam turu (varsayılan: 12)."
+        },
+        "ahiCode.modelRoutingEnabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Göreve göre hızlı, derin akıl yürütme veya inceleme modelini otomatik seç."
+        },
+        "ahiCode.fastModel": {
+          "type": "string",
+          "default": "",
+          "description": "Basit görevler için hızlı model kimliği (model yönlendirme etkin olduğunda)."
+        },
+        "ahiCode.deepModel": {
+          "type": "string",
+          "default": "",
+          "description": "Karmaşık görevler için güçlü akıl yürütme modeli kimliği."
+        },
+        "ahiCode.reviewModel": {
+          "type": "string",
+          "default": "",
+          "description": "Kod inceleme görevleri için bağımsız model kimliği."
+        },
+        "ahiCode.autoAcceptTerms": {
+          "type": "boolean",
+          "default": false,
+          "description": "EVREN LLM kullanım koşullarını kullanıcı adına otomatik kabul et. Varsayılan olarak devre dışıdır."
+        },
+        "ahiCode.sandboxMode": {
+          "type": "string",
+          "enum": [
+            "none",
+            "docker"
+          ],
+          "default": "none",
+          "description": "Komutları Docker kapsayıcısında çalıştır. Varsayılan: ana makine (none)."
+        },
+        "ahiCode.sandboxImage": {
+          "type": "string",
+          "default": "node:20-bookworm",
+          "description": "Docker yalıtılmış ortamında kullanılacak imaj."
+        },
+        "ahiCode.sandboxNetwork": {
+          "type": "boolean",
+          "default": false,
+          "description": "Docker yalıtılmış ortamı kapsayıcısı için ağ erişimine izin ver."
+        },
+        "ahiCode.useIntegratedTerminal": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ajan komutlarını gizli süreç yerine VS Code tümleşik terminalinde çalıştırır; çıktı yine ajana iletilir."
+        },
+        "ahiCode.showDiffBeforeWrite": {
+          "type": "boolean",
+          "default": true,
+          "description": "Ajan bir dosyayı yazmadan veya düzenlemeden önce değişikliği editörde diff olarak açar; otomatik onay açık olsa bile kıyaslama yapılabilir."
+        },
+        "ahiCode.promptCaching": {
+          "type": "boolean",
+          "default": true,
+          "description": "Sistem prompt'u ve araç şemalarını sağlayıcı tarafında önbelleğe al. Destekleyen sağlayıcılarda tekrarlanan ön ek daha düşük ücretle faturalanır; desteklemeyen sunucular bu alanı yok sayar."
+        },
+        "ahiCode.knowledgeEmbeddings": {
+          "type": "boolean",
+          "default": false,
+          "description": "Bilgi tabanı aramasında yerel anlamsal eşleştirme (Ollama embedding) kullan. Varsayılan kapalıdır; Ollama üzerinde bir embedding modeli (örn. nomic-embed-text) gerektirir. Her şey kullanıcının makinesinde kalır."
+        },
+        "ahiCode.callGraphEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Fonksiyon çağrı ilişkilerini dil sunucusundan çıkarıp .ahi/callgraph.json altında tutar. Ajan bu haritayı çağıranları, çağrılanları ve etki alanını bulmak için kullanır. Kapalıyken araçlar \"kapalı\" cevabı verir."
+        },
+        "ahiCode.embeddingModel": {
+          "type": "string",
+          "default": "nomic-embed-text",
+          "description": "Bilgi tabanı anlamsal araması için kullanılacak Ollama embedding modeli."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "build:ui": "npm --prefix webview-ui run build",
+    "watch:ui": "npm --prefix webview-ui run watch",
+    "build:cli": "node scripts/build-cli.mjs",
+    "build": "npm run check:version && npm run format:check && npm run typecheck && npm run typecheck:test && npm run lint && npm run build:ui && node esbuild.js --production && npm run build:cli",
+    "package": "node scripts/extension-lifecycle.mjs package",
+    "install:ext": "npm run package && node scripts/extension-lifecycle.mjs install",
+    "publish:ext": "npm run package && node scripts/extension-lifecycle.mjs publish",
+    "uninstall:ext": "node scripts/extension-lifecycle.mjs uninstall",
+    "dev": "npm run build && code --extensionDevelopmentPath=. .",
+    "typecheck": "tsc --noEmit",
+    "typecheck:test": "tsc --noEmit --project tsconfig.test.json",
+    "lint": "eslint src test scripts esbuild.js",
+    "test": "tsx --import ./test/support/register-vscode.mjs --test test/unit/**/*.test.ts && npm run test:ui",
+    "test:coverage": "node --experimental-test-coverage --import tsx --import ./test/support/register-vscode.mjs --test test/unit/**/*.test.ts",
+    "check:coverage": "node scripts/check-coverage.mjs",
+    "test:ui": "npm --prefix webview-ui run test",
+    "build:e2e": "node scripts/build-e2e.mjs",
+    "test:e2e": "npm run build && npm run build:e2e && tsx test/e2e/runTest.ts",
+    "test:e2e:only": "npm run build:e2e && tsx test/e2e/runTest.ts",
+    "cli": "tsx src/cli.ts",
+    "check:version": "node scripts/check-version.mjs",
+    "clean": "node scripts/clean.mjs",
+    "clean:cache": "node scripts/clean.mjs --cache",
+    "clean:all": "node scripts/clean.mjs --all",
+    "check:test-isolation": "node scripts/check-test-isolation.mjs",
+    "check:language": "node scripts/check-language.mjs",
+    "audit:verify": "tsx src/core/audit/verify.ts",
+    "pretest": "npm run check:version && npm run check:test-isolation && npm run check:language",
+    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"scripts/**/*.mjs\" \"*.js\" \"*.json\" \"webview-ui/src/**/*.{ts,tsx}\" \"webview-ui/test/**/*.{ts,tsx}\" \"webview-ui/*.{js,json,ts}\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"scripts/**/*.mjs\" \"*.js\" \"*.json\" \"webview-ui/src/**/*.{ts,tsx}\" \"webview-ui/test/**/*.{ts,tsx}\" \"webview-ui/*.{js,json,ts}\"",
+    "check": "npm run format:check && npm run typecheck && npm run typecheck:test && npm run lint && npm run check:language && npm test && npm run check:coverage"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "@types/vscode": "1.106.0",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.13.0",
+    "globals": "^17.13.0",
+    "prettier": "3.6.2",
+    "tsx": "^4.23.15",
+    "typescript": "^5.4.5",
+    "typescript-eslint": "^8.72.0"
+  },
+  "//overridesComment": "@vscode/vsce bağımlılığı olan @azure/identity'nin güvenlik açıklı msal-node 6.x sürümünü düzeltmek içindir.",
+  "overrides": {
+    "@azure/msal-node": "^7.1.1"
+  },
+  "homepage": "https://github.com/ysf-bkr/ahi-code#readme",
+  "bugs": {
+    "url": "https://github.com/ysf-bkr/ahi-code/issues"
+  },
+  "keywords": [
+    "ai",
+    "coding-agent",
+    "code-assistant",
+    "autonomous-agent",
+    "developer-tools",
+    "openai-compatible",
+    "ollama",
+    "vscode",
+    "mcp",
+    "llm",
+    "agent",
+    "typescript",
+    "turkish",
+    "turkce",
+    "yapay-zeka"
+  ]
+}

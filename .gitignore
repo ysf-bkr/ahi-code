@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+webview-ui/node_modules/
+
+# Build outputs
+dist/
+out/
+webview-ui/dist/
+*.vsix
+
+# Logs & temp
+*.log
+# Hook komutları repo üzerinden başka kullanıcıların workspace'inde çalışmasın
+.ahi/hooks.json
+.ahi/audit.log
+.ahi/memory.md
+.ahi/checkpoints/
+.ahi/snapshots/
+.ahi/worktrees/
+.ahi/verification-baseline.json
+.ahi/memory.jsonl
+.ahi/knowledge/map.jsonl
+.ahi/knowledge/symbols.jsonl
+.ahi/knowledge/index-state.json
+.ahi/knowledge/embeddings.jsonl
+.ahi/knowledge/modules/
+.ahi/knowledge/notes.md
+.ahi/callgraph.json
+.ahi/callgraph.json.tmp
+.ahi/specs/
+# MCP yapılandırması zamanla env var/token taşıyabilir; örnek dosya takipte kalır
+.ahi/mcp_config.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+
+# Environment & secrets
+.env
+.env.*
+*.local
+
+# VS Code integration test download cache
+.vscode-test/
+test/e2e/fixture/.vscode/
+# Agent artifacts written into the e2e fixture while it runs
+test/e2e/fixture/.ahi/

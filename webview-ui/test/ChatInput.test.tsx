@@ -1,0 +1,210 @@
+import './setupDom';
+import { afterEach, describe, it } from 'node:test';
+import { strict as assert } from 'node:assert';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { TaskState, UserSettings } from '@shared/types';
+import { vscode } from '../src/utils/vscode';
+import { ChatInput } from '../src/components/ChatInput';
+import { TaskHeader } from '../src/components/TaskHeader';
+
+const originalPostMessage = vscode.postMessage;
+
+afterEach(() => {
+  cleanup();
+  vscode.postMessage = originalPostMessage;
+});
+
+function createTaskState(overrides: Partial<TaskState> = {}): TaskState {
+  return {
+    id: 'task-1',
+    prompt: '',
+    mode: 'code',
+    status: 'idle',
+    messages: [],
+    stats: {
+      totalTokens: 0,
+      stepsCount: 0,
+      filesModified: []
+    },
+    ...overrides
+  };
+}
+
+const settings: UserSettings = {
+  selectedProvider: 'ollama',
+  selectedModel: 'llama3.1',
+  apiKeys: {},
+  autoApprove: {
+    readFiles: true,
+    writeFiles: false,
+    executeCommands: false
+  }
+};
+
+describe('ChatInput', () => {
+  it('trims and sends a message when submitted', () => {
+    const sentMessages: string[] = [];
+    render(
+      <ChatInput
+        state={createTaskState()}
+        onSend={(text) => sentMessages.push(text)}
+        onModeChange={() => {}}
+      />
+    );
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '  Fix the build  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Mesajı gönder' }));
+
+    assert.deepEqual(sentMessages, ['Fix the build']);
+    assert.equal((screen.getByRole('textbox') as HTMLTextAreaElement).value, '');
+  });
+
+  it('preserves Shift+Enter and submits with Enter', () => {
+    const sentMessages: string[] = [];
+    render(
+      <ChatInput
+        state={createTaskState()}
+        onSend={(text) => sentMessages.push(text)}
+        onModeChange={() => {}}
+      />
+    );
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'A message' } });
+
+    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true });
+    assert.deepEqual(sentMessages, []);
+    assert.equal((input as HTMLTextAreaElement).value, 'A message');
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    assert.deepEqual(sentMessages, ['A message']);
+  });
+
+  it('asks the agent a question instead of cancelling while waiting for input', () => {
+    const messages: unknown[] = [];
+    const sentMessages: string[] = [];
+    vscode.postMessage = (message) => messages.push(message);
+    render(
+      <ChatInput
+        state={createTaskState({
+          status: 'waiting_user_input',
+          pendingQuestion: { toolCallId: 'q1', question: 'Hangi veritabanı?' }
+        })}
+        onSend={(text) => sentMessages.push(text)}
+        onModeChange={() => {}}
+      />
+    );
+
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'PostgreSQL' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+
+    assert.deepEqual(sentMessages, ['PostgreSQL'], 'cevap mesaj olarak gönderilmeli');
+    assert.deepEqual(messages, [], 'görev iptal edilmemeli');
+  });
+
+  it('does not cancel while a tool approval is pending', () => {
+    const messages: unknown[] = [];
+    vscode.postMessage = (message) => messages.push(message);
+    render(
+      <ChatInput
+        state={createTaskState({
+          status: 'waiting_approval',
+          pendingToolCall: {
+            id: 'tc1',
+            name: 'write_file',
+            args: { path: 'a.ts' },
+            requiresApproval: true,
+            status: 'pending'
+          }
+        })}
+        onSend={() => assert.fail('Onay beklerken mesaj gönderilmemeli')}
+        onModeChange={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Önce onay kartını yanıtlayın' }));
+    assert.deepEqual(messages, [], 'araç onayı beklerken iptal edilmemeli');
+  });
+
+  it('disables mode switching and cancels the active task', () => {
+    const messages: unknown[] = [];
+    const onModeChange = () => assert.fail('Mode changes should be disabled while a task is running');
+    vscode.postMessage = (message) => messages.push(message);
+    render(
+      <ChatInput
+        state={createTaskState({ status: 'running' })}
+        onSend={() => assert.fail('A running task should not submit a new message')}
+        onModeChange={onModeChange}
+      />
+    );
+
+    assert.equal((screen.getByRole('button', { name: 'Kodlama' }) as HTMLButtonElement).disabled, true);
+    fireEvent.click(screen.getByRole('button', { name: 'Görevi durdur' }));
+
+    assert.deepEqual(messages, [{ type: 'CANCEL_TASK' }]);
+  });
+});
+
+describe('TaskHeader menu', () => {
+  it('shows the active mode independently from the selected model', () => {
+    const { rerender } = render(
+      <TaskHeader
+        state={createTaskState({ mode: 'code' })}
+        settings={settings}
+        changedFileCount={0}
+        onSelectMenu={() => {}}
+      />
+    );
+
+    assert.ok(screen.getByLabelText('Görev modu: Kodlama'));
+    assert.ok(screen.getByText(settings.selectedModel));
+
+    rerender(
+      <TaskHeader
+        state={createTaskState({ mode: 'plan' })}
+        settings={settings}
+        changedFileCount={0}
+        onSelectMenu={() => {}}
+      />
+    );
+
+    assert.ok(screen.getByLabelText('Görev modu: Planlama'));
+    assert.ok(screen.getByText(settings.selectedModel));
+  });
+
+  it('opens the menu and closes it after a destination is selected', () => {
+    const selections: string[] = [];
+    render(
+      <TaskHeader
+        state={createTaskState()}
+        settings={settings}
+        changedFileCount={2}
+        onSelectMenu={(destination) => selections.push(destination)}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Menüyü aç' }));
+    assert.ok(screen.getByRole('menu'));
+    assert.ok(screen.getByText('2'));
+
+    fireEvent.click(screen.getByRole('menuitem', { name: /Ayarlar/ }));
+    assert.deepEqual(selections, ['settings']);
+    assert.equal(screen.queryByRole('menu'), null);
+  });
+
+  it('closes the menu when Escape is pressed', () => {
+    render(
+      <TaskHeader
+        state={createTaskState()}
+        settings={settings}
+        changedFileCount={0}
+        onSelectMenu={() => {}}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Menüyü aç' }));
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    assert.equal(screen.queryByRole('menu'), null);
+  });
+});

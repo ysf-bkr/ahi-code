@@ -1,0 +1,10 @@
+dist
+out
+node_modules
+.vscode-test
+coverage
+package-lock.json
+webview-ui/package-lock.json
+webview-ui/dist
+CHANGELOG.md
+LICENSE
