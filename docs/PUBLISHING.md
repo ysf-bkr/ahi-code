@@ -29,6 +29,13 @@ Marketplace sayfası için kurulum adımları, sağlayıcı/veri akışı, gerek
 README'de bulunmalıdır. Bu başlıklar kök README'ye eklenmiştir; yayın öncesinde açıklama, publisher,
 simge ve lisansın doğru olduğunu tekrar kontrol edin.
 
+### Bağımlılık güvenliği: `@azure/msal-node` override'ı
+
+`package.json` içindeki `overrides` bloğunda yer alan `@azure/msal-node: ^7.1.1` kaydı,
+`@vscode/vsce` paketleyicisinin bağımlılığı olan `@azure/identity` paketinin çektiği
+güvenlik açıklı eski 6.x sürümünü düzeltmek içindir (`npm audit` temizliği).
+Proje çalışma zamanında doğrudan Azure servislerini kullanmaz.
+
 ## İlk yayın öncesi
 
 1. Visual Studio Marketplace Publisher yönetiminde bir publisher oluşturun veya mevcut publisher'ı doğrulayın.

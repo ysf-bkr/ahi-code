@@ -1,7 +1,7 @@
 {
   "name": "ahi-code",
   "displayName": "AhiCode — Yazılım Geliştirme",
-  "description": "VS Code için Türkçe yapay zekâ kodlama ajanı: Ahilik zanaat disiplini ve mühendislik titizliğiyle mimari analiz, kod düzenleme ve test desteği.",
+  "description": "Autonomous AI coding agent for VS Code. Ahilik zanaat disiplini ve mühendislik titizliğiyle mimari analiz, kod düzenleme ve test desteği.",
   "version": "0.0.1",
   "publisher": "ysf-bkr",
   "author": {
@@ -24,9 +24,15 @@
     "vscode": "^1.106.0",
     "node": ">=22.0.0"
   },
+  "galleryBanner": {
+    "color": "#0d1117",
+    "theme": "dark"
+  },
   "categories": [
     "AI",
     "Programming Languages",
+    "Testing",
+    "Linters",
     "Education"
   ],
   "main": "./dist/extension.js",
@@ -118,7 +124,7 @@
         "ahiCode.maxStepsPerTask": {
           "type": "number",
           "default": 25,
-          "description": "Bir görev bölümünde çalıştırılabilecek en fazla ajan adımı. Sınıra ulaşıldığında görev otomatik olarak yeni bir bölümle devam eder; token veya maliyet sınırı yoktur."
+          "description": "Bir görev bölümünde çalıştırılabilecek en fazla ajan adımı (varsayılan: 25). Sınıra ulaşıldığında görev onay veya yeni bölüm gerektirir; kontrolsüz döngüleri ve harcamaları sınırlar."
         },
         "ahiCode.modelRoutingEnabled": {
           "type": "boolean",
@@ -247,6 +253,7 @@
     "typescript": "^5.4.5",
     "typescript-eslint": "^8.72.0"
   },
+  "//overridesComment": "@vscode/vsce bağımlılığı olan @azure/identity'nin güvenlik açıklı msal-node 6.x sürümünü düzeltmek içindir.",
   "overrides": {
     "@azure/msal-node": "^7.1.1"
   },
@@ -258,13 +265,17 @@
     "ai",
     "coding-agent",
     "code-assistant",
+    "autonomous-agent",
+    "developer-tools",
     "openai-compatible",
     "ollama",
     "vscode",
     "mcp",
     "llm",
     "agent",
-    "react",
-    "typescript"
+    "typescript",
+    "turkish",
+    "turkce",
+    "yapay-zeka"
   ]
 }

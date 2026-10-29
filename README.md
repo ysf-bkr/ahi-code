@@ -239,11 +239,10 @@ Kurallar:
 - Kabul kriterlerinden biri işaretsizken ajan görevi "bitti" ilan edemez.
 - Plan onayından sonra aşamalar **otomatik ilerler**: uygulama turu bitince inceleme, ardından
   doğrulama ve koşullar sağlanırsa bitiş. İlerlenemiyorsa akış çubuğunda nedeni yazılır (ör. kabul
-  kriteri işaretsiz). Önceden akış "Uygulama"da takılı kalıyordu.
+  kriteri işaretsiz).
 - Planlama modunda plan onayı görevi doğrudan **Bitti** aşamasına taşır; spec zorunlu değildir.
 - Mod değiştirildiğinde kod-only bir aşamadaysanız akış otomatik olarak geçerli bir aşamaya taşınır.
-- Sohbet alanı **temizdir**: aşama şeridi ve adım adım sayaçlar kaldırıldı. Yalnızca giriş altında
-  **tek bir durum satırı** kalır: `Uygulama · Yanıt bekleniyor…`.
+- Sohbet alanı **sadedir**: Yalnızca giriş altında **tek bir durum satırı** (`Uygulama · Yanıt bekleniyor…`) yer alır.
 - Yazma alanının hemen üstünde **sabit bir blok** (`ComposerDock`) vardır:
   - **Plan çubuğu** — `Projeyi incele · 1/3 adım · %33 · devam ediyor`. Tıklayınca plan adımları
     sırayla, her adımın durumuyla listelenir; tekrar tıklanınca kapanır.
@@ -487,8 +486,7 @@ karşıtlık modu ayrı ayrı ele alınmak zorunda kalmaz.
 - Boyutlar `rem` cinsindendir: webview kök yazı tipi kullanıcının VS Code ayarıdır,
   bu yüzden arayüz editörle aynı oranda büyür (`0.75em × 0.92em` çarpım kayması olmaz).
 - Tek bir adlandırma şeması vardır: Tailwind `text-2xs` … `text-base` yardımcı
-  sınıfları doğrudan token'lara bağlanır. `2xs`'ten küçük boyut **yoktur** — 10 px
-  altı metin okunaksız olduğu için kaldırıldı.
+  sınıfları doğrudan token'lara bağlanır. Okunabilirliği korumak için `2xs`'ten (10 px) küçük boyut kullanılmaz.
 - Renkler `--ahi-brand-*` (çini mavisi, Selçuklu turkuazı, zanaat altını/bakırı) ve `--vscode-*` değişkenlerinden gelir;
   hata durumu marka renginden daha parlak bir kırmızı kullanır.
 
@@ -639,12 +637,13 @@ Bu proje dört kaldıraç uygular:
 | **Erken geçmiş özetleme**    | 8 adımdan sonra tüketilmiş araç çıktılarını işaretle sıkıştırır               | Ek ~%22                                 |
 | **Prompt önbelleği**         | Sabit ön eki `cache_control` ile işaretler                                    | Faturalanan token'da ~%30               |
 
-Ölçüm: 1.14M token → ~210K token (%82 azalma).
+Ölçüm: 25 adımlık örnek bir mimari/refactoring görevinde ölçülen referans değer: 1.14M token → ~210K token (~%82 azalma). Gerçek tasarruf oranı görevin niteliğine, dosya boyutlarına ve model sağlayıcısına göre değişebilir.
 
-> **Sınır yok.** Görevler token veya maliyet bütçesi nedeniyle durdurulmaz; arayüzde yalnızca
-> kullanılan token sayısı gösterilir. Tasarruf, görevi kesmekle değil yukarıdaki dört kaldıraçla
-> sağlanır. Bağlam yönetimi yalnızca isteğin sağlayıcı penceresine sığması için sessizce kısaltır;
-> bu bir harcama sınırı değildir.
+> **Döngü ve bütçe güvenliği:** Görevler yapay parasal limitler yerine somut güvenlik sınırlarıyla korunur:
+> - Tek bir turda en fazla `maxStepsPerTask` (varsayılan: 25 adım) araç çağrısı çalıştırılabilir.
+> - Otonom modda (`autonomy: auto`) kontrolsüz döngüleri önlemek için en fazla 12 otomatik devam turu (`MAX_AUTO_CONTINUATIONS = 12`) sınırı vardır.
+> - Bulut sağlayıcı (OpenRouter vb.) kullanırken maliyeti kontrol altında tutmak için `maxStepsPerTask` değerini küçültebilir veya otonomi seviyesini `guided` tutarak onayları kontrol edebilirsiniz.
+> - Arayüzde kullanılan token miktarı şeffafça gösterilir.
 
 > Araç şemalarını budamak yalnızca ~%4 kazandırır: asıl yük çıktılarda ve geçmişte.
 > Kendi MCP sunucusu **token azaltmaz** (her araç şeması prompt'a eklenir, ~110 token/araç)
@@ -723,8 +722,7 @@ Varsayılan sağlayıcı **Ollama**'dır; hiçbir sağlayıcı seçilmeden yerel
 
 Bu değerler arayüzdeki Ayarlar ekranıyla senkronize edilir.
 
-> Token ve maliyet sınırı **yoktur**. Arayüzde yalnızca kullanılan token sayısı gösterilir;
-> tahmini maliyet hesaplanmaz. Tasarruf için [Token ekonomisi](#token-ekonomisi) bölümüne bakın.
+> **Bütçe ve adım kontrolü:** Harcama kontrolü adım sınırı (`maxStepsPerTask`) ve otonomi devam limiti (`MAX_AUTO_CONTINUATIONS`) ile sağlanır. Arayüzde kullanılan token miktarı gösterilir. Tasarruf için [Token ekonomisi](#token-ekonomisi) bölümüne bakın.
 
 ### Otomatik izinler
 
@@ -1019,8 +1017,11 @@ Komutlar tek bir merkezî politikayla (`src/shared/commandPolicy.ts`) üç sın�
 | **Riskli**     | `rm`, `git reset --hard`, `git checkout --`, `sed -i`, `find -delete`, `npm install`, `node -e`, yönlendirme (`>`), zincirleme (`&&`, `;`, `\  | `)                               | Otomatik onay açık olsa ve proje allowlist'inde yer alsa bile **her zaman açık onay** ister. |
 | **Güvenli**    | `npm test`, `npm run lint`, `npm run build`, `git status`, `git diff`                                                                          | Normal izin kurallarına tabidir. |
 
-> Bu politika bir kum havuzu değildir; yalnızca kullanıcıyı yanlışlıkla yıkıcı işlemlerden koruyan bir
-> UX katmanıdır. Gerçek yalıtım için Docker sandbox kullanılmalıdır.
+> **Allowlist mantığı ve sezgisel yaklaşım:** Politika allowlist tabanlı bir regex sezgiselidir:
+> Yalnızca bilinen güvenli kalıplar otomatikleşebilir; listede yer almayan yeni araçlar, bilinmeyen komutlar
+> veya kabuk metakarakteri içeren her çağrı varsayılan olarak **riskli** sınıfına düşer ve kullanıcı onayı ister.
+> Bu katman karmaşık kabuk syntax hilelerine karşı tam bir kabuk ayrıştırıcısı (AST/tokenizer) değildir;
+> güvenilmeyen projelerde tam yalıtım için Docker sandbox kullanılmalıdır.
 
 > [!IMPORTANT]
 > **Geri alma (undo) kapsamı**
@@ -1317,7 +1318,7 @@ Kapsanan alanlar:
 | `webview-ui/test/AgentsView.test.tsx`       | Ajan ve yetenek ekranı                                                             |
 | `webview-ui/test/ChangesView.test.tsx`      | Git değişiklikleri ekranı                                                          |
 
-Mevcut durum: **452 çekirdek, 72 arayüz ve 18 VS Code entegrasyon testi, tamamı geçiyor.**
+Mevcut durum: **50'den fazla test süitinde çekirdek mimari, güvenlik, iş akışı ve webview bileşenlerini kapsayan 550+ testin tamamı geçmektedir.** Testlerin anlık dökümü ve kapsamı için `npm run check` çalıştırılabilir.
 
 ### VS Code entegrasyon testleri
 

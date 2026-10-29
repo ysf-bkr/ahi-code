@@ -65,6 +65,13 @@ Known limitation: snapshots and checkpoints only cover files changed directly by
 `write_file` / `edit_file`. Files created or modified by `execute_command` cannot
 be reverted by the undo feature.
 
+## Dependency security
+
+- Development dependencies are pinned and regularly audited.
+- The `overrides` entry for `@azure/msal-node: ^7.1.1` in `package.json` mitigates known
+  vulnerabilities in older 6.x versions pulled transitively by `@vscode/vsce` via `@azure/identity`.
+  The project does not consume Azure services at runtime.
+
 ## Supported versions
 
 Only the latest published version receives security fixes. If you are running
