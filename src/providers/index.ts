@@ -14,6 +14,8 @@ function modelFor(settings: UserSettings, fallback: string): string {
 }
 
 export function createModelProvider(settings: UserSettings): ModelProvider {
+  const timeoutMs = (settings.requestTimeoutSeconds ?? 180) * 1000;
+
   switch (settings.selectedProvider) {
     case 'evren':
       return new EvrenModelProvider(
@@ -21,7 +23,8 @@ export function createModelProvider(settings: UserSettings): ModelProvider {
         settings.customBaseUrl || undefined,
         settings.selectedModel || 'auto',
         settings.autoAcceptTerms === true,
-        settings.promptCaching !== false
+        settings.promptCaching !== false,
+        timeoutMs
       );
 
     case 'openrouter':
@@ -37,7 +40,8 @@ export function createModelProvider(settings: UserSettings): ModelProvider {
         },
         promptCaching: settings.promptCaching !== false,
         promptCachingStyle: 'cache_control',
-        streamUsage: true
+        streamUsage: true,
+        timeoutMs
       });
 
     case 'ollama':
@@ -50,7 +54,8 @@ export function createModelProvider(settings: UserSettings): ModelProvider {
         baseURL: `${normalizeBaseUrl(settings.ollamaBaseUrl || DEFAULT_PROVIDER_URLS.ollama, ['/v1'])}/v1`,
         model: modelFor(settings, 'llama3.1'),
         requiresConcreteModel: true,
-        promptCaching: false
+        promptCaching: false,
+        timeoutMs
       });
 
     case 'openai-compatible':
@@ -63,7 +68,8 @@ export function createModelProvider(settings: UserSettings): ModelProvider {
         requiresApiKey: false,
         requiresConcreteModel: true,
         promptCaching: false,
-        streamUsage: true
+        streamUsage: true,
+        timeoutMs
       });
 
     default:

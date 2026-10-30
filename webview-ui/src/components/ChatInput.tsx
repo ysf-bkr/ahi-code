@@ -9,14 +9,28 @@ interface ChatInputProps {
   onSend: (text: string) => void;
   onModeChange: (mode: AgentMode) => void;
   initialValue?: string;
+  isConfigured?: boolean;
+  onOpenSettings?: () => void;
+  /** Gönderilmiş bir mesaj düzenleniyor: gönderim yeni mesaj eklemek yerine turu yeniler. */
+  editing?: boolean;
+  onCancelEdit?: () => void;
 }
 
 const MODES: Array<{ id: AgentMode; label: string; icon: React.ReactNode }> = [
-  { id: 'code', label: 'Kodlama', icon: <Code2 className="h-3 w-3" /> },
-  { id: 'plan', label: 'Planlama', icon: <Compass className="h-3 w-3" /> }
+  { id: 'code', label: 'Kodlama', icon: <Code2 className="ahi-icon-xs" /> },
+  { id: 'plan', label: 'Planlama', icon: <Compass className="ahi-icon-xs" /> }
 ];
 
-export const ChatInput: React.FC<ChatInputProps> = ({ state, onSend, onModeChange, initialValue = '' }) => {
+export const ChatInput: React.FC<ChatInputProps> = ({
+  state,
+  onSend,
+  onModeChange,
+  initialValue = '',
+  isConfigured = true,
+  onOpenSettings,
+  editing = false,
+  onCancelEdit
+}) => {
   const [input, setInput] = useState(initialValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -48,6 +62,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ state, onSend, onModeChang
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
 
+    // Ayarlar yapılmadıysa görevi başlatma; ayarlar ekranına yönlendir.
+    if (!isConfigured) {
+      onOpenSettings?.();
+      return;
+    }
+
     // Bir onay kartı engelleyiciyken kullanıcı onu kabul etmeli veya reddetmeli;
     // iptal etmek görevi sessizce düşürürdü.
     if (isBlockedByApproval) return;
@@ -73,22 +93,49 @@ export const ChatInput: React.FC<ChatInputProps> = ({ state, onSend, onModeChang
     }
   };
 
-  const placeholder = isBlockedByApproval
-    ? 'Onay bekleniyor: yukarıdaki onay kartını kullanın'
-    : isWaitingForAnswer
-      ? 'Ajanın sorusunu buraya yazıp Enter’a basın'
-      : isRunning
-        ? 'Ajan çalışıyor... Durdurmak için tıklayın'
-        : state.mode === 'plan'
-          ? 'Bir hedef tanımlayın veya soru sorun...'
-          : 'Soru sorun veya bir görev tanımlayın...';
+  const placeholder = !isConfigured
+    ? 'Sohbete başlamak için lütfen önce Ayarlar ekranından bir model sağlayıcısı yapılandırın...'
+    : editing
+      ? 'Mesajı düzenleyin; göndermek bu turu yeniden çalıştırır'
+      : isBlockedByApproval
+        ? 'Onay bekleniyor: yukarıdaki onay kartını kullanın'
+        : isWaitingForAnswer
+          ? 'Ajanın sorusunu buraya yazıp Enter’a basın'
+          : isRunning
+            ? 'Ajan çalışıyor... Durdurmak için tıklayın'
+            : state.mode === 'plan'
+              ? 'Bir hedef tanımlayın veya soru sorun...'
+              : 'Soru sorun veya bir görev tanımlayın...';
 
   return (
     <div className="ahi-composer">
+      {editing && (
+        <div className="flex items-center justify-between gap-2 px-3 py-1.5 mb-2 rounded border ahi-border-brand ahi-bg-brand-soft text-xs ahi-text-brand">
+          <span>Bir mesajı düzenliyorsunuz. Gönderim, o mesajdan sonraki yanıtı yeniden üretir.</span>
+          {onCancelEdit && (
+            <button type="button" onClick={onCancelEdit} className="font-medium underline hover:opacity-80">
+              Vazgeç
+            </button>
+          )}
+        </div>
+      )}
+
+      {!isConfigured && (
+        <div className="flex items-center justify-between gap-2 px-3 py-1.5 mb-2 rounded border ahi-border-warning ahi-bg-warning text-xs ahi-text-warning">
+          <span>Model sağlayıcı ayarları henüz yapılmadı.</span>
+          {onOpenSettings && (
+            <button type="button" onClick={onOpenSettings} className="font-medium underline hover:opacity-80">
+              Ayarları Yapılandır
+            </button>
+          )}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="ahi-composer__box">
         <Textarea
           ref={textareaRef}
           value={input}
+          disabled={!isConfigured}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
@@ -103,7 +150,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ state, onSend, onModeChang
               aria-label="Görev modu"
               value={state.mode}
               onChange={onModeChange}
-              disabled={isRunning}
+              disabled={isRunning || !isConfigured}
               items={MODES.map((mode) => ({
                 id: mode.id,
                 label: mode.label,
@@ -112,7 +159,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ state, onSend, onModeChang
               }))}
             />
             <span className="ahi-composer__hint">
-              <CornerDownLeft className="h-2.5 w-2.5" />
+              <CornerDownLeft className="ahi-icon-xs" />
               Göndermek için Enter · Yeni satır için Shift+Enter
             </span>
           </div>
@@ -120,28 +167,32 @@ export const ChatInput: React.FC<ChatInputProps> = ({ state, onSend, onModeChang
           <Button
             type="submit"
             variant={isRunning ? 'danger' : 'primary'}
-            disabled={isBlockedByApproval ? true : !isRunning && !input.trim()}
+            disabled={!isConfigured ? true : isBlockedByApproval ? true : !isRunning && !input.trim()}
             className={`ahi-btn--square ${isRunning ? 'ahi-btn--stop' : ''}`}
             title={
-              isBlockedByApproval
-                ? 'Önce onay kartını yanıtlayın'
-                : isRunning
-                  ? 'Görevi durdur'
-                  : isWaitingForAnswer
-                    ? 'Yanıtı gönder'
-                    : 'Mesajı gönder'
+              !isConfigured
+                ? 'Önce ayarları yapılandırın'
+                : isBlockedByApproval
+                  ? 'Önce onay kartını yanıtlayın'
+                  : isRunning
+                    ? 'Görevi durdur'
+                    : isWaitingForAnswer
+                      ? 'Yanıtı gönder'
+                      : 'Mesajı gönder'
             }
             aria-label={
-              isBlockedByApproval
-                ? 'Önce onay kartını yanıtlayın'
-                : isRunning
-                  ? 'Görevi durdur'
-                  : isWaitingForAnswer
-                    ? 'Yanıtı gönder'
-                    : 'Mesajı gönder'
+              !isConfigured
+                ? 'Önce ayarları yapılandırın'
+                : isBlockedByApproval
+                  ? 'Önce onay kartını yanıtlayın'
+                  : isRunning
+                    ? 'Görevi durdur'
+                    : isWaitingForAnswer
+                      ? 'Yanıtı gönder'
+                      : 'Mesajı gönder'
             }
           >
-            {isRunning ? <Square className="h-3.5 w-3.5 fill-current" /> : <Send className="h-3.5 w-3.5" />}
+            {isRunning ? <Square className="ahi-icon-sm fill-current" /> : <Send className="ahi-icon-sm" />}
           </Button>
         </div>
       </form>

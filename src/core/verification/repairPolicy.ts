@@ -7,8 +7,6 @@
  * eklenti ana bilgisayarı olmadan test edilebilir.
  */
 
-export type RepairAction = 'retry' | 'abort' | 'proceed';
-
 export interface RepairDecisionInput {
   /** Bu koşunun doğrulama sonucu. */
   status: 'passed' | 'failed' | 'skipped';

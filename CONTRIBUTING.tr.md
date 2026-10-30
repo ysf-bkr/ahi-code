@@ -40,7 +40,7 @@ Faydalı tekil komutlar:
 | `npm run typecheck:test` | Test tip denetimi |
 | `npm run lint` | ESLint |
 | `npm test` | Çekirdek + webview testleri |
-| `npm run dev` | Eklenti Geliştirme Sunucusu başlatır |
+| `npm run dev` | Extension Development Host penceresi açıp eklentiyi çalıştırır |
 | `npm run cli -- --prompt "..."` | Başsız CLI'ı çalıştırır |
 
 ## Kod yönergeleri
@@ -59,14 +59,16 @@ Faydalı tekil komutlar:
 
 - Ajan yönergeleri İngilizce kalır: `AGENTS.md` ve `.agents/**` altındaki tüm
   `.md` dosyaları.
-- `README.md`, `CHANGELOG.md`, `docs/**` altındaki dosyalar, kod yorumları ve
-  kullanıcıya görünen arayüz (VS Code ayar açıklamaları dahil) Türkçedir.
+- Proje belgeleri iki dillidir: İngilizce asıl dosyalar (`README.md`,
+  `docs/*.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`)
+  GitHub/Marketplace otomatik tanıması için standart adlarını korur; Türkçe
+  karşılıkları (`*.tr.md`) yanlarında yer alır.
+- `CHANGELOG.md`, kod yorumları ve kullanıcıya görünen arayüz (VS Code ayar
+  açıklamaları dahil) Türkçedir.
 - Kod tanımlayıcıları, testler, loglar ve dosya adları İngilizce kalır; böylece
   araçlar, otomasyon ve güvenlik kanalları tutarlı kalır.
-- Kök dizindeki topluluk belgeleri iki dillidir: İngilizce asıl dosya
-  (`SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` — GitHub'ın bu
-  adlarla otomatik bağlantı kurması için) ve Türkçe karşılıkları
-  (`SECURITY.tr.md`, `CONTRIBUTING.tr.md`, `CODE_OF_CONDUCT.tr.md`).
+- İki dilli bir çiftin iki tarafını birlikte güncelleyin; çelişki olduğunda
+  İngilizce asıl dosya doğruluk kaynağıdır.
 
 ## Commit mesajları
 

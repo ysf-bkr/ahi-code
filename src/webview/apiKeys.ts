@@ -1,7 +1,7 @@
 import { UserSettings } from '../shared/types';
+import { MASKED_KEY } from '../shared/constants';
 
-/** Webview'a gerçek API anahtarı yerine gönderilen yer tutucu. */
-export const MASKED_KEY = '••••••••••••••••';
+export { MASKED_KEY };
 
 export type ApiKeyProvider = keyof UserSettings['apiKeys'];
 

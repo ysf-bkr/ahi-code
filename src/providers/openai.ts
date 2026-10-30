@@ -44,6 +44,10 @@ export interface OpenAICompatibleConfig {
   promptCachingStyle?: 'cache_control' | 'none';
   /** Akış sonunda sunucudan token kullanımı döndürmesini iste. */
   streamUsage?: boolean;
+  /** İstek başlık zaman aşımı (ms cinsinden; varsayılan: 180_000). */
+  timeoutMs?: number;
+  /** Akış sırasında parçalar arası azami sessizlik süresi (ms cinsinden; varsayılan: 180_000). */
+  stallTimeoutMs?: number;
 }
 
 /** Başlıkları bekleme süresi; sonrasında vazgeçilir. */
@@ -88,6 +92,8 @@ export class OpenAICompatibleProvider implements ModelProvider {
   protected promptCaching: boolean;
   protected promptCachingStyle: 'cache_control' | 'none';
   protected streamUsage: boolean;
+  protected timeoutMs: number;
+  protected stallTimeoutMs: number;
 
   constructor(config: OpenAICompatibleConfig) {
     this.id = config.id;
@@ -101,6 +107,8 @@ export class OpenAICompatibleProvider implements ModelProvider {
     this.promptCaching = config.promptCaching ?? true;
     this.promptCachingStyle = config.promptCachingStyle ?? 'none';
     this.streamUsage = config.streamUsage ?? false;
+    this.timeoutMs = config.timeoutMs ?? 180_000;
+    this.stallTimeoutMs = config.stallTimeoutMs ?? Math.max(this.timeoutMs, 180_000);
   }
 
   /** Sunucuya gerçekten gönderilen model kimliği. */
@@ -183,7 +191,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
       });
 
     try {
-      armStallTimer(HEADER_TIMEOUT_MS);
+      armStallTimer(this.timeoutMs);
       let response: Response | undefined;
       let attempts = 0;
       const maxAttempts = 3;
@@ -206,9 +214,10 @@ export class OpenAICompatibleProvider implements ModelProvider {
             throw new Error('Request cancelled by the user.', { cause: err });
           }
           if (timedOut) {
-            throw new Error(`Model request timed out (${Math.round(HEADER_TIMEOUT_MS / 1000)} sec).`, {
-              cause: err
-            });
+            throw new Error(
+              `Model request timed out (${Math.round(this.timeoutMs / 1000)} sec). For slower models, increase connection timeout in Settings.`,
+              { cause: err }
+            );
           }
           if (attempts >= maxAttempts) throw err;
           await wait(1200 * attempts);
@@ -389,7 +398,7 @@ export class OpenAICompatibleProvider implements ModelProvider {
           await reader.cancel().catch(() => {});
           throw new Error('Request cancelled by the user.');
         }
-        armStallTimer(STREAM_STALL_TIMEOUT_MS);
+        armStallTimer(this.stallTimeoutMs);
 
         let chunk: Awaited<ReturnType<typeof reader.read>>;
         try {

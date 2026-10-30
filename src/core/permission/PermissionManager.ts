@@ -342,7 +342,7 @@ export class PermissionManager {
       toolName === 'run_verification'
     ) {
       const cmd = String(args.command || '').trim();
-      const assessment = assessCommand(cmd);
+      const assessment = assessCommand(cmd, this.workspaceRoot);
       if (assessment.risk === 'blocked') {
         return {
           blocked: true,
@@ -447,14 +447,13 @@ export class PermissionManager {
 
       case 'command': {
         const cmd = String(args.command || '');
-        const assessment = assessCommand(cmd);
+        const assessment = assessCommand(cmd, this.workspaceRoot);
 
         // Komut politikası allow listesi tabanlıdır: bilinen güvenli olmayan her
         // komut (yıkıcı, zincirlenmiş, `bash -c "rm -rf ~"` gibi alıntı hileleri ya
         // da tamamen bilinmeyen) otomatik onay ya da proje allow listesi açık olsa
         // bile açık, komut bazlı onay ister.
-        // allowlist is enabled.
-        if (assessment.risk === 'risky' || assessment.risk === 'blocked') {
+        if (assessment.risk === 'blocked') {
           return true;
         }
 
@@ -465,14 +464,17 @@ export class PermissionManager {
         if (!autoCmd) {
           return true;
         }
+
+        if (assessment.risk === 'risky') {
+          return true;
+        }
+
         // Proje allow listesi hangi güvenli komutların otomatik çalışacağını
         // daraltabilir; kullanıcının elle onayını asla geri açamaz.
         const usable = (allow?.commands || []).filter((pattern) => !isBroadPattern(pattern));
         if (usable.length > 0 && !usable.some((pattern) => matchCommandPattern(pattern, cmd))) {
           return true;
         }
-        // Allow listesi tabanlı komut politikası, güvenli olmayan her şeyi zaten
-        // yukarıda dönen `risky` olarak sınıflandırır.
         return false;
       }
 
@@ -521,7 +523,7 @@ export class PermissionManager {
     }
 
     if (isCommandTool) {
-      const assessment = assessCommand(String(args.command || ''));
+      const assessment = assessCommand(String(args.command || ''), this.workspaceRoot);
       if (assessment.risk === 'risky' || assessment.risk === 'blocked') {
         return 'Riskli komutlar güvenlik için her zaman açık onay ister.';
       }
@@ -566,6 +568,8 @@ export class PermissionManager {
         return 'Verify changes by running tests, lint, and type checks.';
       case 'update_plan':
         return 'Update the task plan.';
+      case 'update_module_plan':
+        return 'Split the work into layered modules (layer, paths, responsibility, dependencies, owner role).';
       case 'get_references':
         return 'Find all references to a symbol.';
       case 'get_workspace_symbols':

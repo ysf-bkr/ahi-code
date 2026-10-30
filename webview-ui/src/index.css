@@ -22,11 +22,12 @@
    * rem, em değil: webview kök yazı boyutu kullanıcının VS Code yazı boyutudur;
    * iç içe `em` değerleri çarpılıp metni editör boyutundan uzaklaştırırdı.
    */
-  --ahi-text-2xs: 0.75rem;
-  --ahi-text-xs: 0.85rem;
-  --ahi-text-sm: 0.92rem;
+  --ahi-text-2xs: 0.82rem;
+  --ahi-text-xs: 0.88rem;
+  --ahi-text-sm: 0.96rem;
   --ahi-text-md: 1rem;
-  --ahi-text-lg: 1.15rem;
+  --ahi-text-lg: 1.18rem;
+  --ahi-text-xl: 1.35rem;
 
   --ahi-radius-sm: 4px;
   --ahi-radius-md: 8px;
@@ -46,8 +47,27 @@
   --ahi-icon-size: 26px;
   --ahi-icon-size-sm: 22px;
 
+  /* Avatar ölçeği: sohbet, başlık ve tanıtım yuvarlakları aynı basamakları kullanır */
+  --ahi-avatar-xs: 20px;
+  --ahi-avatar-sm: 24px;
+  --ahi-avatar-md: 32px;
+  --ahi-avatar-lg: 40px;
+  --ahi-avatar-xl: 56px;
+
+  /*
+   * Simge ölçeği. Tüm lucide simgeleri bu beş boyuttan birini kullanır;
+   * böylece satır içi, düğme ve başlık simgeleri ekranlar arasında aynı kalır.
+   */
+  --ahi-icon-xs: 12px;
+  --ahi-icon-sm: 14px;
+  --ahi-icon-md: 16px;
+  --ahi-icon-lg: 20px;
+  --ahi-icon-xl: 24px;
+  --ahi-icon-2xl: 32px;
+
   --ahi-card-padding: 12px;
   --ahi-section-gap: 18px;
+  --ahi-header-height: 44px;
 
   /* Sayfa kenar boşluğu ekran genişliğine göre 8px ile 20px arasında akar. */
   --ahi-gutter: clamp(8px, 3.4vw, 20px);
@@ -75,97 +95,110 @@
   --ahi-border: var(--vscode-sideBar-border, rgba(128, 128, 128, 0.2));
 
   /*
-   * AhiCode marka paleti:
-   * Ana renk: Lacivert / derin çini mavisi (güven ve gelenek).
-   * Vurgu rengi: Selçuklu turkuazı (Osmanlı ve Selçuklu çinilerinden ilham).
-   * Zanaat rengi: Ahilik altını ve bakır (ustalık, kalite ve disiplin).
-   * Hem koyu hem açık temada yüksek okunabilirlik (WCAG AA/AAA).
+   * AhiCode logo ve marka renk paleti:
+   * --primary: #0051F1 (Ana elektrik mavisi)
+   * --secondary: #0092FA (Canlı açık mavi)
+   * --accent: #0073F9 (Vurgu mavisi)
+   * --navy: #05123D (Derin gece laciverti)
+   * --background: #FFFFFF (Açık arka plan)
+   * --dark-background: #000000 (Koyu arka plan)
+   * --text-light: #E6EDF3 (Açık metin)
+   * --brand-gradient: linear-gradient(110deg, #0092FA, #0073F9, #0051F1, #003CCD)
+   *
+   * Marka renkleri yalnızca logo ve tanıtım yüzeylerinde kullanılır. Gezinti,
+   * bağlantı, odak ve birincil düğme renkleri kullanıcının VS Code temasından
+   * gelir; böylece kırmızı, yeşil ya da yüksek karşıtlıklı bir tema seçildiğinde
+   * arayüz maviye zorlanmaz.
    */
-  --ahi-navy: #0c2340;
+  --primary: #0051F1;
+  --secondary: #0092FA;
+  --accent: #0073F9;
+  --navy: #05123D;
+  --background: #FFFFFF;
+  --dark-background: #000000;
+  --text-light: #E6EDF3;
+  --brand-gradient: linear-gradient(110deg, #0092FA, #0073F9, #0051F1, #003CCD);
+
+  --ahi-primary: var(--primary);
+  --ahi-secondary: var(--secondary);
+  --ahi-accent: var(--accent);
+  --ahi-navy: var(--navy);
+  --ahi-brand-gradient: var(--brand-gradient);
   --ahi-gold: #f59e0b;
   --ahi-gold-soft: rgba(245, 158, 11, 0.15);
   --ahi-copper: #fb923c;
-  --ahi-surface-accent: rgba(14, 165, 233, 0.08);
+  --ahi-surface-accent: rgba(0, 115, 249, 0.1);
 
-  --ahi-brand-700: #0369a1;
-  --ahi-brand-600: #0284c7;
-  --ahi-brand-500: #0ea5e9;
-  --ahi-brand-400: #06b6d4;
-  --ahi-brand-300: #67e8f9;
-  --ahi-brand-soft: rgba(6, 182, 212, 0.14);
+  --ahi-brand-700: var(--vscode-textLink-activeForeground, #003CCD);
+  --ahi-brand-600: var(--vscode-textLink-foreground, var(--primary));
+  --ahi-brand-500: var(--vscode-button-background, var(--accent));
+  --ahi-brand-400: var(--vscode-textLink-foreground, var(--secondary));
+  --ahi-brand-300: var(--vscode-textLink-activeForeground, #67bdfa);
+  --ahi-brand-soft: color-mix(in srgb, var(--ahi-brand-400) 14%, transparent);
 
-  /* Geriye dönük uyumluluk takma adları */
-  --ahi-brand-700: var(--ahi-brand-700);
-  --ahi-brand-600: var(--ahi-brand-600);
-  --ahi-brand-500: var(--ahi-brand-500);
-  --ahi-brand-400: var(--ahi-brand-400);
-  --ahi-brand-300: var(--ahi-brand-300);
-  --ahi-brand-soft: var(--ahi-brand-soft);
+  --ahi-accent-bg: var(--vscode-button-background, var(--primary));
+  --ahi-accent-fg: var(--vscode-button-foreground, #ffffff);
+  --ahi-accent-hover: var(--vscode-button-hoverBackground, var(--ahi-brand-700));
+  --ahi-focus: var(--vscode-focusBorder, var(--secondary));
+  --ahi-hover-bg: var(--vscode-list-hoverBackground, rgba(0, 115, 249, 0.12));
 
-  --ahi-accent-bg: var(--ahi-brand-500);
-  --ahi-accent-fg: #ffffff;
-  --ahi-accent-hover: var(--ahi-brand-600);
-  --ahi-focus: var(--ahi-brand-400);
-  --ahi-hover-bg: var(--vscode-list-hoverBackground, rgba(128, 128, 128, 0.12));
+  /* Durum jetonları: VS Code tema değişkenlerine bağlı dinamik renkler */
+  --status-info-bg: color-mix(in srgb, var(--vscode-editorInfo-foreground, #38bdf8) 12%, transparent);
+  --status-info-fg: var(--vscode-editorInfo-foreground, #38bdf8);
+  --status-info-border: color-mix(in srgb, var(--vscode-editorInfo-foreground, #38bdf8) 25%, transparent);
 
-  /* Durum jetonları (koyu ve yüksek karşıtlık temaları) */
-  --status-info-bg: rgba(148, 163, 184, 0.14);
-  --status-info-fg: #cbd5e1;
-  --status-info-border: rgba(148, 163, 184, 0.3);
+  --status-success-bg: color-mix(in srgb, var(--vscode-testing-iconPassed, #22c55e) 12%, transparent);
+  --status-success-fg: var(--vscode-testing-iconPassed, var(--vscode-terminal-ansiGreen, #22c55e));
+  --status-success-border: color-mix(in srgb, var(--vscode-testing-iconPassed, #22c55e) 25%, transparent);
 
-  --status-success-bg: rgba(52, 211, 153, 0.12);
-  --status-success-fg: var(--vscode-testing-iconPassed, #34d399);
-  --status-success-border: rgba(52, 211, 153, 0.25);
+  --status-warning-bg: color-mix(in srgb, var(--vscode-editorWarning-foreground, #f59e0b) 12%, transparent);
+  --status-warning-fg: var(--vscode-editorWarning-foreground, var(--vscode-terminal-ansiYellow, #f59e0b));
+  --status-warning-border: color-mix(in srgb, var(--vscode-editorWarning-foreground, #f59e0b) 25%, transparent);
 
-  --status-warning-bg: rgba(251, 191, 36, 0.12);
-  --status-warning-fg: var(--vscode-editorWarning-foreground, #fbbf24);
-  --status-warning-border: rgba(251, 191, 36, 0.25);
-
-  --status-error-bg: rgba(248, 113, 113, 0.12);
-  --status-error-fg: var(--vscode-errorForeground, #f87171);
-  --status-error-border: rgba(248, 113, 113, 0.25);
+  --status-error-bg: color-mix(in srgb, var(--vscode-errorForeground, #ef4444) 12%, transparent);
+  --status-error-fg: var(--vscode-errorForeground, var(--vscode-terminal-ansiRed, #ef4444));
+  --status-error-border: color-mix(in srgb, var(--vscode-errorForeground, #ef4444) 25%, transparent);
 }
 
-/* Açık tema: AhiCode yüksek karşıtlıklı çini mavisi ve turkuaz */
+/* Açık tema: yalnızca gerçekten farklılaşan jetonlar yeniden tanımlanır.
+   Marka ve durum renkleri tema değişkenlerine bağlı olduğu için burada tekrarlanmaz. */
 body.vscode-light,
 .vscode-light {
-  --ahi-navy: #082f49;
   --ahi-gold: #d97706;
   --ahi-copper: #ea580c;
-
-  --ahi-brand-700: #0c4a6e;
-  --ahi-brand-600: #0369a1;
-  --ahi-brand-500: #0284c7;
-  --ahi-brand-400: #0891b2;
-  --ahi-brand-300: #0e7490;
-  --ahi-brand-soft: rgba(8, 145, 178, 0.12);
-
-  --ahi-brand-700: var(--ahi-brand-700);
-  --ahi-brand-600: var(--ahi-brand-600);
-  --ahi-brand-500: var(--ahi-brand-500);
-  --ahi-brand-400: var(--ahi-brand-400);
-  --ahi-brand-300: var(--ahi-brand-300);
-  --ahi-brand-soft: var(--ahi-brand-soft);
 
   --ahi-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
   --ahi-shadow-md: 0 4px 14px rgba(0, 0, 0, 0.12);
   --ahi-shadow-lg: 0 10px 32px rgba(0, 0, 0, 0.2);
 
-  --status-info-bg: rgba(71, 85, 105, 0.12);
-  --status-info-fg: #334155;
-  --status-info-border: rgba(71, 85, 105, 0.3);
+  --status-info-bg: color-mix(in srgb, var(--vscode-editorInfo-foreground, #0284c7) 12%, transparent);
+  --status-info-fg: var(--vscode-editorInfo-foreground, #0284c7);
+  --status-info-border: color-mix(in srgb, var(--vscode-editorInfo-foreground, #0284c7) 25%, transparent);
 
-  --status-success-bg: rgba(22, 163, 74, 0.12);
-  --status-success-fg: var(--vscode-testing-iconPassed, #15803d);
-  --status-success-border: rgba(22, 163, 74, 0.28);
+  --status-success-bg: color-mix(in srgb, var(--vscode-testing-iconPassed, #16a34a) 12%, transparent);
+  --status-success-fg: var(--vscode-testing-iconPassed, #16a34a);
+  --status-success-border: color-mix(in srgb, var(--vscode-testing-iconPassed, #16a34a) 25%, transparent);
 
-  --status-warning-bg: rgba(217, 119, 6, 0.12);
-  --status-warning-fg: var(--vscode-editorWarning-foreground, #b45309);
-  --status-warning-border: rgba(217, 119, 6, 0.28);
+  --status-warning-bg: color-mix(in srgb, var(--vscode-editorWarning-foreground, #d97706) 12%, transparent);
+  --status-warning-fg: var(--vscode-editorWarning-foreground, #d97706);
+  --status-warning-border: color-mix(in srgb, var(--vscode-editorWarning-foreground, #d97706) 25%, transparent);
 
-  --status-error-bg: rgba(220, 38, 38, 0.12);
-  --status-error-fg: var(--vscode-errorForeground, #b91c1c);
-  --status-error-border: rgba(220, 38, 38, 0.28);
+  --status-error-bg: color-mix(in srgb, var(--vscode-errorForeground, #dc2626) 12%, transparent);
+  --status-error-fg: var(--vscode-errorForeground, #dc2626);
+  --status-error-border: color-mix(in srgb, var(--vscode-errorForeground, #dc2626) 25%, transparent);
+}
+
+/* Yüksek karşıtlık temaları: VS Code kontrast kurallarına tam uyum */
+body.vscode-high-contrast,
+.vscode-high-contrast,
+body.vscode-high-contrast-light,
+.vscode-high-contrast-light {
+  --ahi-surface-border: var(--vscode-contrastBorder, #ffffff);
+  --ahi-input-border: var(--vscode-contrastBorder, #ffffff);
+  --status-info-border: var(--vscode-contrastBorder, #ffffff);
+  --status-success-border: var(--vscode-contrastBorder, #ffffff);
+  --status-warning-border: var(--vscode-contrastBorder, #ffffff);
+  --status-error-border: var(--vscode-contrastBorder, #ffffff);
 }
 
 /* ---- 2) Taban ------------------------------------------------------------- */
@@ -208,6 +241,17 @@ kbd,
 samp,
 .font-mono {
   font-family: var(--vscode-user-editor-font-family, var(--vscode-editor-font-family, 'SF Mono', Monaco, Menlo, Consolas, 'Courier New', monospace)) !important;
+}
+
+/* Satır içi kod parçaları kapsayıcı metnin boyutuna orantılı (0.9em) ölçeklenir */
+code:not(pre code) {
+  font-size: 0.9em;
+}
+
+/* Kod blokları ve terminal çıktıları editör yazı tipi boyutuna uyar */
+pre,
+pre code {
+  font-family: var(--vscode-user-editor-font-family, var(--vscode-editor-font-family, monospace)) !important;
   font-size: var(--vscode-user-editor-font-size, var(--vscode-editor-font-size, 0.92em));
   font-weight: var(--vscode-user-editor-font-weight, var(--vscode-editor-font-weight, normal));
 }
@@ -293,30 +337,71 @@ select:focus-visible {
   }
 }
 
-@keyframes ahi-pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.55;
-    transform: scale(0.92);
-  }
-}
-
 .ahi-animate-in {
   animation: ahi-fade-in 0.18s ease-out;
 }
 
-.ahi-pulse {
-  animation: ahi-pulse 1.6s ease-in-out infinite;
+/* Sohbet balonu: kullanıcı ve asistan aynı yarıçap, dolgu ve metin ölçeğini paylaşır */
+.ahi-bubble {
+  max-width: 94%;
+  padding: var(--ahi-space-2) var(--ahi-space-4);
+  border: 1px solid var(--ahi-surface-border);
+  border-radius: var(--ahi-radius-lg);
+  border-top-left-radius: var(--ahi-radius-sm);
+  background-color: var(--vscode-editorWidget-background, var(--ahi-surface));
+  font-size: var(--ahi-text-md);
+  line-height: 1.6;
+  overflow-wrap: break-word;
 }
 
-/* Marka tonlu yüzeyler (opaklık değiştiricileri CSS değişkenleriyle çalışmaz) */
-.ahi-user-bubble {
-  background-color: color-mix(in srgb, var(--ahi-brand-500) 12%, transparent);
-  border-color: color-mix(in srgb, var(--ahi-brand-500) 32%, transparent);
+.ahi-bubble--user {
+  border-top-left-radius: var(--ahi-radius-lg);
+  border-top-right-radius: var(--ahi-radius-sm);
+  /* Kullanıcı balonu temanın vurgu rengini tonlar; sabit marka mavisi kullanmaz. */
+  background-color: color-mix(in srgb, var(--ahi-accent-bg) 14%, transparent);
+  border-color: color-mix(in srgb, var(--ahi-accent-bg) 32%, transparent);
+}
+
+/* Asistan/logo yuvarlağı; eskiden tanımsız kaldığı için çerçevesiz görünüyordu. */
+.ahi-avatar-soft {
+  border-color: color-mix(in srgb, var(--ahi-brand-400) 38%, transparent);
+  background-color: var(--ahi-brand-soft);
+}
+
+/* Yuvarlak simge/logo kabı: boyut yalnızca bu ölçekten seçilir. */
+.ahi-avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--ahi-surface-border);
+  border-radius: var(--ahi-radius-full);
+}
+
+.ahi-avatar--xs {
+  width: var(--ahi-avatar-xs);
+  height: var(--ahi-avatar-xs);
+}
+
+.ahi-avatar--sm {
+  width: var(--ahi-avatar-sm);
+  height: var(--ahi-avatar-sm);
+}
+
+.ahi-avatar--md {
+  width: var(--ahi-avatar-md);
+  height: var(--ahi-avatar-md);
+}
+
+.ahi-avatar--lg {
+  width: var(--ahi-avatar-lg);
+  height: var(--ahi-avatar-lg);
+}
+
+.ahi-avatar--xl {
+  width: var(--ahi-avatar-xl);
+  height: var(--ahi-avatar-xl);
+  border-radius: var(--ahi-radius-lg);
 }
 
 .ahi-question-card {
@@ -335,10 +420,224 @@ select:focus-visible {
  * Bileşen katmanı
  * ========================================================================== */
 @layer components {
+  /* ---- 3a) Simge ve renk yardımcıları ----------------------------------
+   * Bileşenler ham `var(--...)` dizileri yerine bu anlamsal sınıfları kullanır.
+   * Simge boyutu böylece tek ölçekten (--ahi-icon-*) yönetilir.
+   */
+  .ahi-icon-xs,
+  .ahi-icon-sm,
+  .ahi-icon-md,
+  .ahi-icon-lg,
+  .ahi-icon-xl,
+  .ahi-icon-2xl {
+    flex-shrink: 0;
+  }
+
+  .ahi-icon-xs {
+    width: var(--ahi-icon-xs);
+    height: var(--ahi-icon-xs);
+  }
+
+  .ahi-icon-sm {
+    width: var(--ahi-icon-sm);
+    height: var(--ahi-icon-sm);
+  }
+
+  .ahi-icon-md {
+    width: var(--ahi-icon-md);
+    height: var(--ahi-icon-md);
+  }
+
+  .ahi-icon-lg {
+    width: var(--ahi-icon-lg);
+    height: var(--ahi-icon-lg);
+  }
+
+  .ahi-icon-xl {
+    width: var(--ahi-icon-xl);
+    height: var(--ahi-icon-xl);
+  }
+
+  .ahi-icon-2xl {
+    width: var(--ahi-icon-2xl);
+    height: var(--ahi-icon-2xl);
+  }
+
+  .ahi-text-fg {
+    color: var(--ahi-fg);
+  }
+
+  .ahi-text-muted {
+    color: var(--ahi-muted-fg);
+  }
+
+  .ahi-text-brand {
+    color: var(--ahi-brand-400);
+  }
+
+  .ahi-text-info {
+    color: var(--status-info-fg);
+  }
+
+  .ahi-text-success {
+    color: var(--status-success-fg);
+  }
+
+  .ahi-text-warning {
+    color: var(--status-warning-fg);
+  }
+
+  .ahi-text-error {
+    color: var(--status-error-fg);
+  }
+
+  .ahi-text-on-accent {
+    color: var(--ahi-accent-fg);
+  }
+
+  .ahi-bg-base {
+    background-color: var(--vscode-sideBar-background, var(--vscode-editor-background));
+  }
+
+  .ahi-bg-raised {
+    background-color: var(--vscode-editorWidget-background, var(--vscode-sideBar-background));
+  }
+
+  .ahi-bg-section {
+    background-color: var(--vscode-sideBarSectionHeader-background, var(--vscode-sideBar-background));
+  }
+
+  .ahi-bg-surface {
+    background-color: var(--ahi-surface);
+  }
+
+  .ahi-bg-input {
+    background-color: var(--ahi-input-bg);
+  }
+
+  .ahi-bg-brand-soft {
+    background-color: var(--ahi-brand-soft);
+  }
+
+  .ahi-bg-muted {
+    background-color: var(--vscode-disabledForeground, var(--ahi-muted-fg));
+  }
+
+  .ahi-bg-hover {
+    background-color: var(--ahi-hover-bg);
+  }
+
+  .ahi-bg-code {
+    background-color: var(--vscode-textCodeBlock-background, rgba(0, 0, 0, 0.3));
+  }
+
+  .ahi-bg-focus {
+    background-color: var(--ahi-focus);
+  }
+
+  .ahi-bg-brand {
+    background-color: var(--ahi-brand-400);
+  }
+
+  .ahi-bg-track {
+    background-color: var(--ahi-surface-border);
+  }
+
+  .ahi-bg-badge {
+    background-color: var(--vscode-badge-background, var(--ahi-brand-soft));
+    color: var(--vscode-badge-foreground, var(--ahi-fg));
+  }
+
+  .ahi-shadow-sm {
+    box-shadow: var(--ahi-shadow-sm);
+  }
+
+  .ahi-shadow-md {
+    box-shadow: var(--ahi-shadow-md);
+  }
+
+  .ahi-shadow-lg {
+    box-shadow: var(--ahi-shadow-lg);
+  }
+
+  .ahi-border-base {
+    border-color: var(--ahi-border);
+  }
+
+  .ahi-border-surface {
+    border-color: var(--ahi-surface-border);
+  }
+
+  .ahi-border-brand {
+    border-color: var(--ahi-brand-400);
+  }
+
+  .ahi-border-focus {
+    border-color: var(--ahi-focus);
+  }
+
+  .ahi-bg-info {
+    background-color: var(--status-info-bg);
+  }
+
+  .ahi-bg-success {
+    background-color: var(--status-success-bg);
+  }
+
+  .ahi-bg-warning {
+    background-color: var(--status-warning-bg);
+  }
+
+  .ahi-bg-error {
+    background-color: var(--status-error-bg);
+  }
+
+  .ahi-bg-error-solid {
+    background-color: var(--status-error-fg);
+  }
+
+  .ahi-bg-success-solid {
+    background-color: var(--status-success-fg);
+  }
+
+  .ahi-bg-accent {
+    background-color: var(--ahi-accent-bg);
+  }
+
+  .ahi-border-info {
+    border-color: var(--status-info-border);
+  }
+
+  .ahi-border-success {
+    border-color: var(--status-success-border);
+  }
+
+  .ahi-border-warning {
+    border-color: var(--status-warning-border);
+  }
+
+  .ahi-border-error {
+    border-color: var(--status-error-border);
+  }
+
+  /* İnce ayırıcı: yatay bölüm çizgisi ya da dikey araç çubuğu çizgisi */
+  .ahi-divider {
+    width: 100%;
+    height: 1px;
+    border: 0;
+    background-color: var(--ahi-border);
+  }
+
+  .ahi-divider--vertical {
+    width: 1px;
+    height: 14px;
+    flex-shrink: 0;
+  }
+
   /* ---- 3) Tipografi ---- */
   .ahi-heading {
     font-size: var(--ahi-text-md);
-    font-weight: 650;
+    font-weight: 600;
     letter-spacing: -0.01em;
     line-height: 1.3;
     color: var(--ahi-fg);
@@ -378,18 +677,67 @@ select:focus-visible {
     align-items: center;
     gap: 6px;
     font-size: var(--ahi-text-2xs);
-    font-weight: 650;
+    font-weight: 600;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--ahi-muted-fg);
   }
 
   .ahi-code-inline {
-    font-family: var(--vscode-editor-font-family, monospace);
-    font-size: 0.92rem;
+    font-family: var(--vscode-user-editor-font-family, var(--vscode-editor-font-family, monospace));
+    font-size: 0.9em;
     padding: 1px 4px;
     border-radius: var(--ahi-radius-sm);
     background-color: var(--vscode-textCodeBlock-background, rgba(0, 0, 0, 0.3));
+  }
+
+  /* Sohbet gövdesi: birincil okuma metni tek bir ölçekten gelir */
+  .ahi-prose {
+    font-size: var(--ahi-text-md);
+    line-height: 1.6;
+    color: var(--ahi-fg);
+    overflow-wrap: break-word;
+  }
+
+  /* Markdown başlıkları: seviye arttıkça ağırlık ve boyut kademeli azalır */
+  .ahi-md-h1,
+  .ahi-md-h2,
+  .ahi-md-h3,
+  .ahi-md-h4,
+  .ahi-md-h5,
+  .ahi-md-h6 {
+    color: var(--ahi-fg);
+    line-height: 1.3;
+  }
+
+  .ahi-md-h1 {
+    margin: 16px 0 8px;
+    font-size: var(--ahi-text-lg);
+    font-weight: 700;
+  }
+
+  .ahi-md-h2 {
+    margin: 14px 0 6px;
+    font-size: var(--ahi-text-md);
+    font-weight: 600;
+  }
+
+  .ahi-md-h3,
+  .ahi-md-h4,
+  .ahi-md-h5,
+  .ahi-md-h6 {
+    margin: 12px 0 4px;
+    font-size: var(--ahi-text-sm);
+  }
+
+  .ahi-md-h3 {
+    font-weight: 600;
+  }
+
+  .ahi-md-h4,
+  .ahi-md-h5,
+  .ahi-md-h6 {
+    font-weight: 600;
   }
 
   /* ---- 4) Yerleşim ---- */
@@ -497,7 +845,7 @@ select:focus-visible {
     align-items: center;
     justify-content: space-between;
     gap: var(--ahi-space-3);
-    min-height: 44px;
+    min-height: var(--ahi-header-height);
     padding: var(--ahi-space-2) var(--ahi-gutter);
     border-bottom: 1px solid var(--ahi-border);
     background-color: var(--vscode-sideBarSectionHeader-background, var(--vscode-sideBar-background));
@@ -592,12 +940,6 @@ select:focus-visible {
     text-align: center;
     border: 1px dashed var(--ahi-surface-border);
     border-radius: var(--ahi-radius-lg);
-  }
-
-  .ahi-divider {
-    height: 1px;
-    border: 0;
-    background-color: var(--ahi-border);
   }
 
   /* Ek bilgi satırları: anahtar solda, değer sağda */
@@ -729,8 +1071,8 @@ select:focus-visible {
   .ahi-input--mono,
   .ahi-select--mono,
   .ahi-textarea--mono {
-    font-family: var(--vscode-editor-font-family, monospace);
-    font-size: var(--ahi-text-2xs);
+    font-family: var(--vscode-user-editor-font-family, var(--vscode-editor-font-family, monospace));
+    font-size: var(--ahi-text-xs);
   }
 
   .ahi-textarea {
@@ -777,6 +1119,10 @@ select:focus-visible {
 
   .ahi-input-group .ahi-input {
     padding-right: 34px;
+  }
+
+  .ahi-input-group:has(.ahi-input-group__action > div) .ahi-input {
+    padding-right: 110px;
   }
 
   .ahi-input-group--leading .ahi-input {
@@ -856,7 +1202,7 @@ select:focus-visible {
     border: 1px solid transparent;
     border-radius: var(--ahi-radius-md);
     font-size: var(--ahi-text-xs);
-    font-weight: 550;
+    font-weight: 500;
     line-height: 1;
     padding: 6px 12px;
     transition: background-color var(--ahi-fast) ease, border-color var(--ahi-fast) ease,
@@ -1013,7 +1359,7 @@ select:focus-visible {
     border-radius: var(--ahi-radius-full);
     background-color: var(--ahi-surface);
     font-size: var(--ahi-text-2xs);
-    font-weight: 550;
+    font-weight: 500;
     line-height: 1;
     color: var(--ahi-muted-fg);
     transition: background-color var(--ahi-fast) ease, border-color var(--ahi-fast) ease,
@@ -1026,13 +1372,19 @@ select:focus-visible {
   }
 
   .ahi-chip--active {
-    border-color: var(--ahi-brand-500);
-    background-color: var(--ahi-brand-500);
-    color: #ffffff;
+    border-color: var(--ahi-accent-bg);
+    background-color: var(--ahi-accent-bg);
+    color: var(--ahi-accent-fg);
   }
 
   .ahi-chip--active:hover {
-    color: #ffffff;
+    color: var(--ahi-accent-fg);
+  }
+
+  .ahi-chip__count {
+    font-family: var(--vscode-user-editor-font-family, var(--vscode-editor-font-family, monospace));
+    font-size: var(--ahi-text-2xs);
+    opacity: 0.75;
   }
 
   /* Bölümlü denetim */
@@ -1054,7 +1406,7 @@ select:focus-visible {
     border-radius: 6px;
     padding: 4px 10px;
     font-size: var(--ahi-text-xs);
-    font-weight: 550;
+    font-weight: 500;
     color: var(--ahi-muted-fg);
     transition: background-color var(--ahi-fast) ease, color var(--ahi-fast) ease;
   }
@@ -1141,7 +1493,7 @@ select:focus-visible {
     border-radius: var(--ahi-radius-full);
     padding: 1px 8px;
     font-size: var(--ahi-text-2xs);
-    font-weight: 550;
+    font-weight: 500;
     line-height: 1.5;
     white-space: nowrap;
   }
@@ -1158,8 +1510,8 @@ select:focus-visible {
   }
 
   .ahi-badge--brand {
-    background-color: var(--ahi-brand-500);
-    color: #ffffff;
+    background-color: var(--ahi-accent-bg);
+    color: var(--ahi-accent-fg);
   }
 
   .ahi-badge--info {
@@ -1187,7 +1539,7 @@ select:focus-visible {
   }
 
   .ahi-badge--mono {
-    font-family: var(--vscode-editor-font-family, monospace);
+    font-family: var(--vscode-user-editor-font-family, var(--vscode-editor-font-family, monospace));
     font-weight: 450;
   }
 
@@ -1329,7 +1681,7 @@ select:focus-visible {
     align-items: center;
     justify-content: space-between;
     gap: var(--ahi-space-3);
-    min-height: 42px;
+    min-height: var(--ahi-header-height);
     padding: 6px var(--ahi-gutter);
   }
 
@@ -1340,96 +1692,12 @@ select:focus-visible {
     gap: var(--ahi-space-1);
   }
 
-  .ahi-header__stats {
-    display: flex;
-    align-items: center;
-    gap: var(--ahi-space-2);
-    padding: 5px var(--ahi-gutter);
-    overflow-x: auto;
-    border-top: 1px solid var(--ahi-border);
-    background-color: var(--ahi-surface-subtle);
-  }
-
-  /* Logo çıplaktır: arka plan ve ek boşluk yok */
-  .ahi-brand {
-    display: flex;
-    min-width: 0;
-    align-items: center;
-    gap: var(--ahi-space-3);
-  }
-
-  .ahi-brand__logo {
-    height: 22px;
-    width: 22px;
-    flex-shrink: 0;
-  }
-
-  .ahi-brand__name {
-    font-size: var(--ahi-text-sm);
-    font-weight: 650;
-    letter-spacing: -0.01em;
-    white-space: nowrap;
-  }
-
-  .ahi-divider-v {
-    height: 14px;
-    width: 1px;
-    flex-shrink: 0;
-    margin-inline: 2px;
-    background-color: var(--ahi-border);
-  }
-
-  .ahi-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-size: var(--ahi-text-2xs);
-    font-weight: 550;
-    white-space: nowrap;
-  }
-
-  .ahi-status--info {
-    color: var(--status-info-fg);
-  }
-
-  .ahi-status--success {
-    color: var(--status-success-fg);
-  }
-
-  .ahi-status--warning {
-    color: var(--status-warning-fg);
-  }
-
-  .ahi-status--error {
-    color: var(--status-error-fg);
-  }
-
-  .ahi-status--muted {
-    color: var(--ahi-muted-fg);
-  }
-
   /* ---- 10) Sohbet ---- */
-  .ahi-chat {
-    display: flex;
-    height: 100%;
-    min-height: 0;
-    flex-direction: column;
-  }
-
-  .ahi-messages {
-    width: 100%;
-    min-height: 0;
-    flex: 1 1 0;
-    overflow-y: auto;
-    padding: var(--ahi-space-3) var(--ahi-gutter);
-  }
-
   .ahi-composer {
     width: 100%;
     flex-shrink: 0;
-    border-top: 1px solid var(--ahi-border);
-    background-color: var(--vscode-sideBar-background);
-    padding: var(--ahi-space-2) var(--ahi-gutter) var(--ahi-space-3);
+    background-color: transparent;
+    padding: 4px 12px 12px 12px;
   }
 
   .ahi-composer__box {
@@ -1465,28 +1733,6 @@ select:focus-visible {
     text-overflow: ellipsis;
     font-size: var(--ahi-text-2xs);
     color: var(--ahi-muted-fg);
-  }
-
-  .ahi-toast-anchor {
-    position: absolute;
-    bottom: 100%;
-    left: var(--ahi-gutter);
-    right: var(--ahi-gutter);
-    z-index: 50;
-    margin-bottom: 4px;
-  }
-
-  .ahi-toast-floating {
-    pointer-events: none;
-    position: absolute;
-    bottom: var(--ahi-space-3);
-    left: var(--ahi-gutter);
-    right: var(--ahi-gutter);
-    z-index: 50;
-  }
-
-  .ahi-toast-floating > * {
-    pointer-events: auto;
   }
 
   /* ---- 11) Katmanlar ---- */
@@ -1537,50 +1783,24 @@ select:focus-visible {
     margin-bottom: 2px;
     border-bottom: 1px solid var(--ahi-border);
     font-size: var(--ahi-text-2xs);
-    font-weight: 650;
+    font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ahi-muted-fg);
-  }
-
-  .ahi-popover__scroll {
-    display: flex;
-    max-height: 13rem;
-    flex-direction: column;
-    gap: 2px;
-    overflow-y: auto;
   }
 
   /* ---- 12) Duyarlılık ----
    * Webview genişliği yan panelde ~200px ile editör alanında 900px+ arasında
    * değişir. Eşikler: 360px (dar), 480px (yan menü yer değiştirir), 720px (geniş).
    */
-  .ahi-show-sm,
-  .ahi-show-md {
-    display: none;
-  }
-
-  @media (min-width: 360px) {
-    .ahi-show-sm {
-      display: inline-flex;
-    }
-  }
-
   @media (min-width: 480px) {
     .ahi-composer__hint {
       display: flex;
     }
   }
 
-  @media (min-width: 560px) {
-    .ahi-show-md {
-      display: inline-flex;
-    }
-  }
-
-  /* Çok dar: marka adı gizlenir, mod etiketleri yalnızca simge olur */
+  /* Çok dar: mod etiketleri yalnızca simge olur */
   @media (max-width: 319px) {
-    .ahi-brand__name,
     .ahi-segmented__label {
       display: none;
     }
@@ -1613,11 +1833,6 @@ select:focus-visible {
     :root {
       --ahi-card-padding: 14px;
       --ahi-section-gap: 22px;
-    }
-
-    .ahi-brand__logo {
-      height: 24px;
-      width: 24px;
     }
   }
 }

@@ -10,25 +10,19 @@ import {
   Ban,
   Menu as MenuIcon
 } from 'lucide-react';
-import { NavigationDestination, TaskState, UserSettings } from '@shared/types';
+import { NavigationDestination, TaskState } from '@shared/types';
 import { Logo } from './Logo';
 import { vscode } from '../utils/vscode';
 import { MenuView } from './MenuView';
-import { Button, IconButton, ListButton } from './ui';
+import { Badge, Button, Drawer, IconButton, ListButton, Popover } from './ui';
 
 interface TaskHeaderProps {
   state: TaskState;
-  settings: UserSettings;
   changedFileCount: number;
   onSelectMenu: (destination: NavigationDestination) => void;
 }
 
-export const TaskHeader: React.FC<TaskHeaderProps> = ({
-  state,
-  settings,
-  changedFileCount,
-  onSelectMenu
-}) => {
+export const TaskHeader: React.FC<TaskHeaderProps> = ({ state, changedFileCount, onSelectMenu }) => {
   const [showCheckpoints, setShowCheckpoints] = useState(false);
   const [confirmRevert, setConfirmRevert] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
@@ -77,45 +71,45 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({
     switch (state.status) {
       case 'running':
         return (
-          <span className="flex items-center gap-1 text-2xs font-medium text-[var(--status-info-fg)]">
-            <Loader2 className="h-2.5 w-2.5 animate-spin" /> Çalışıyor
-          </span>
+          <Badge tone="info">
+            <Loader2 className="ahi-icon-xs animate-spin" /> Çalışıyor
+          </Badge>
         );
       case 'waiting_approval':
         return (
-          <span className="flex items-center gap-1 ahi-badge bg-[var(--status-warning-bg)] text-[var(--status-warning-fg)]">
-            <AlertCircle className="h-2.5 w-2.5" /> Onay bekleniyor
-          </span>
+          <Badge tone="warning">
+            <AlertCircle className="ahi-icon-xs" /> Onay bekleniyor
+          </Badge>
         );
       case 'waiting_user_input':
         return (
-          <span className="flex items-center gap-1 ahi-badge bg-[var(--status-info-bg)] text-[var(--status-info-fg)]">
-            <AlertCircle className="h-2.5 w-2.5" /> Yanıt bekleniyor
-          </span>
+          <Badge tone="info">
+            <AlertCircle className="ahi-icon-xs" /> Yanıt bekleniyor
+          </Badge>
         );
       case 'completed':
         return (
-          <span className="flex items-center gap-1 text-2xs font-medium text-[var(--status-success-fg)]">
-            <CheckCircle2 className="h-2.5 w-2.5" /> Tamamlandı
-          </span>
+          <Badge tone="success">
+            <CheckCircle2 className="ahi-icon-xs" /> Tamamlandı
+          </Badge>
         );
       case 'failed':
         return (
-          <span className="flex items-center gap-1 text-2xs font-medium text-[var(--status-error-fg)]">
-            <Ban className="h-2.5 w-2.5" /> Başarısız
-          </span>
+          <Badge tone="error">
+            <Ban className="ahi-icon-xs" /> Başarısız
+          </Badge>
         );
       case 'paused':
         return (
-          <span className="flex items-center gap-1 text-2xs font-medium text-[var(--status-warning-fg)]">
-            <PauseCircle className="h-2.5 w-2.5" /> Duraklatıldı
-          </span>
+          <Badge tone="warning">
+            <PauseCircle className="ahi-icon-xs" /> Duraklatıldı
+          </Badge>
         );
       case 'cancelled':
         return (
-          <span className="flex items-center gap-1 text-2xs font-medium text-[var(--vscode-descriptionForeground)]">
-            <Ban className="h-2.5 w-2.5" /> İptal edildi
-          </span>
+          <Badge tone="muted">
+            <Ban className="ahi-icon-xs" /> İptal edildi
+          </Badge>
         );
       default:
         return null;
@@ -123,28 +117,22 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({
   })();
 
   return (
-    <div className="relative z-10 flex shrink-0 select-none flex-col border-b border-[var(--vscode-sideBar-border)] bg-[var(--vscode-sideBar-background)] text-[var(--vscode-sideBar-foreground)]">
-      <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
+    <header className="ahi-header">
+      <div className="ahi-header__row">
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="ahi-avatar-soft flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[var(--ahi-brand-400)]">
-            <Logo className="h-3.5 w-3.5" colored />
+          <span className="ahi-avatar ahi-avatar-soft ahi-avatar--xs ahi-text-brand">
+            <Logo className="ahi-icon-sm" colored />
           </span>
           <span className="text-sm font-semibold tracking-tight">AhiCode</span>
-          <span
-            aria-label={`Görev modu: ${state.mode === 'plan' ? 'Planlama' : 'Kodlama'}`}
-            className="ahi-badge shrink-0 border border-[var(--ahi-surface-border)] bg-[var(--ahi-surface)] text-[var(--ahi-fg)]"
-          >
+          <Badge tone="neutral" aria-label={`Görev modu: ${state.mode === 'plan' ? 'Planlama' : 'Kodlama'}`}>
             {state.mode === 'plan' ? 'Planlama' : 'Kodlama'}
-          </span>
-          <span className="ahi-badge hidden max-w-[110px] truncate border border-[var(--ahi-surface-border)] bg-[var(--ahi-surface)] font-mono text-[var(--ahi-muted-fg)] min-[360px]:inline">
-            {settings.selectedModel || 'auto'}
-          </span>
+          </Badge>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="ahi-header__actions">
           {statusBadge}
 
-          <div className="mx-0.5 h-3.5 w-px bg-[var(--vscode-sideBar-border)]" />
+          <span className="ahi-divider ahi-divider--vertical mx-0.5" aria-hidden="true" />
 
           <span ref={checkpointButtonRef} className="inline-flex">
             <IconButton
@@ -154,7 +142,7 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({
               aria-expanded={showCheckpoints}
               onClick={() => setShowCheckpoints((value) => !value)}
             >
-              <RotateCcw className="h-3.5 w-3.5" />
+              <RotateCcw className="ahi-icon-sm" />
             </IconButton>
           </span>
           <Button
@@ -164,7 +152,7 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({
             title="Yeni sohbet"
             aria-label="Yeni sohbet"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="ahi-icon-sm" />
           </Button>
           <div className="relative">
             <IconButton
@@ -174,85 +162,33 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({
               aria-haspopup="menu"
               aria-expanded={showMenu}
             >
-              <MenuIcon className="h-3.5 w-3.5" />
+              <MenuIcon className="ahi-icon-sm" />
             </IconButton>
             {showMenu && (
-              <>
-                <div
-                  className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px]"
-                  onClick={() => setShowMenu(false)}
+              <Drawer onClose={() => setShowMenu(false)} drawerRef={menuRef}>
+                <MenuView
+                  changedFileCount={changedFileCount}
+                  onSelect={(destination) => {
+                    setShowMenu(false);
+                    onSelectMenu(destination);
+                  }}
+                  onClose={() => setShowMenu(false)}
                 />
-                <div
-                  ref={menuRef}
-                  className="fixed inset-y-0 right-0 z-50 flex w-72 max-w-[85vw] flex-col border-l border-[var(--vscode-sideBar-border)] bg-[var(--vscode-sideBar-background)] shadow-2xl"
-                >
-                  <MenuView
-                    changedFileCount={changedFileCount}
-                    onSelect={(destination) => {
-                      setShowMenu(false);
-                      onSelectMenu(destination);
-                    }}
-                    onClose={() => setShowMenu(false)}
-                  />
-                </div>
-              </>
+              </Drawer>
             )}
           </div>
         </div>
       </div>
 
-      <div className="scrollbar-none flex items-center gap-1.5 overflow-x-auto border-t border-[var(--vscode-sideBar-border)] bg-[var(--vscode-editorWidget-background)] px-2.5 py-1">
-        {state.stats.stepsCount > 0 && (
-          <span className="ahi-badge shrink-0 bg-[var(--vscode-sideBar-background)] font-mono text-[var(--ahi-muted-fg)]">
-            {state.stats.stepsCount} adım
-          </span>
-        )}
-        {state.stats.totalTokens > 0 && (
-          <span className="ahi-badge shrink-0 bg-[var(--vscode-sideBar-background)] font-mono text-[var(--ahi-muted-fg)]">
-            {state.stats.totalTokens.toLocaleString('tr-TR')} token
-          </span>
-        )}
-        {state.stats.filesModified.length > 0 && (
-          <span className="ahi-badge shrink-0 bg-[var(--vscode-sideBar-background)] font-mono text-[var(--ahi-muted-fg)]">
-            {state.stats.filesModified.length} dosya
-          </span>
-        )}
-        {state.stats.verification && state.stats.verification.status !== 'not_run' && (
-          <span
-            className={`shrink-0 rounded-full bg-[var(--vscode-sideBar-background)] px-1.5 py-0.5 font-mono text-2xs ${
-              state.stats.verification.status === 'passed'
-                ? 'text-[var(--status-success-fg)]'
-                : state.stats.verification.status === 'failed'
-                  ? 'text-[var(--status-error-fg)]'
-                  : 'text-[var(--vscode-descriptionForeground)]'
-            }`}
-            title={state.stats.verification.summary || 'Otomatik doğrulama'}
-          >
-            {state.stats.verification.status === 'running'
-              ? 'Doğrulanıyor'
-              : state.stats.verification.status === 'passed'
-                ? 'Doğrulandı'
-                : state.stats.verification.status === 'failed'
-                  ? 'Doğrulama başarısız'
-                  : 'Doğrulama atlandı'}
-            {state.stats.verification.attempts > 0 ? ` · ${state.stats.verification.attempts}` : ''}
-          </span>
-        )}
-      </div>
-
       {showCheckpoints && (
-        <div
-          ref={checkpointPanelRef}
+        <Popover
+          title="Kontrol noktaları"
+          popoverRef={checkpointPanelRef}
           role="dialog"
           aria-label="Kontrol noktaları"
-          className="absolute right-2 top-full z-30 mt-1 w-64 space-y-1 rounded-lg border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-editorWidget-background)] p-1.5 shadow-xl"
         >
-          <div className="border-b border-[var(--vscode-sideBar-border)] px-1 pb-1 text-2xs font-semibold uppercase tracking-wider text-[var(--vscode-descriptionForeground)]">
-            Kontrol noktaları
-          </div>
-
           {!state.checkpoints || state.checkpoints.length === 0 ? (
-            <div className="px-1 py-1.5 text-xs text-[var(--vscode-descriptionForeground)]">
+            <div className="px-1 py-1.5 text-xs ahi-text-muted">
               Henüz kontrol noktası yok. İlk görev sırasında otomatik olarak oluşturulur.
             </div>
           ) : (
@@ -277,7 +213,7 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({
           <Button
             variant={confirmRevert ? 'danger' : 'ghost'}
             block
-            className="mt-1 justify-start border-t border-[var(--vscode-sideBar-border)]"
+            className="mt-1 justify-start border-t ahi-border-base"
             title={
               confirmRevert
                 ? 'Dosya değişikliği kalıcı olarak geri alınacak'
@@ -292,12 +228,12 @@ export const TaskHeader: React.FC<TaskHeaderProps> = ({
               setConfirmRevert(false);
               setShowCheckpoints(false);
             }}
-            icon={<Undo2 className="h-3 w-3" />}
+            icon={<Undo2 className="ahi-icon-xs" />}
           >
             {confirmRevert ? 'Geri almayı onayla' : 'Son dosya değişikliğini geri al'}
           </Button>
-        </div>
+        </Popover>
       )}
-    </div>
+    </header>
   );
 };

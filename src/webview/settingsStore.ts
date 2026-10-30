@@ -21,8 +21,12 @@ function readAutonomy(value: string | undefined): UserSettings['autonomy'] {
 export function loadDefaultSettings(): UserSettings {
   const config = vscode.workspace.getConfiguration('ahiCode');
   const provider = config.get<string>('selectedProvider');
+  const explicitProvider = readExplicitSetting<string>(config, 'selectedProvider');
+  const explicitModel = readExplicitSetting<string>(config, 'selectedModel');
+  const hasExplicitConfig = Boolean(explicitProvider || explicitModel);
   return {
     ...DEFAULT_USER_SETTINGS,
+    isConfigured: hasExplicitConfig,
     selectedProvider: (provider && (VALID_PROVIDERS as readonly string[]).includes(provider)
       ? provider
       : DEFAULT_USER_SETTINGS.selectedProvider) as UserSettings['selectedProvider'],
@@ -82,9 +86,12 @@ export function mergeExplicitConfiguration(
 ): UserSettings {
   const pick = <T>(key: string, fallback: T): T => readExplicitSetting<T>(config, key) ?? fallback;
   const provider = readExplicitSetting<string>(config, 'selectedProvider');
+  const explicitModel = readExplicitSetting<string>(config, 'selectedModel');
+  const configured = Boolean(current.isConfigured || provider || explicitModel);
 
   return {
     ...current,
+    isConfigured: configured,
     selectedProvider: (provider && (VALID_PROVIDERS as readonly string[]).includes(provider)
       ? provider
       : current.selectedProvider) as UserSettings['selectedProvider'],
@@ -124,6 +131,7 @@ export function mergeExplicitConfiguration(
 /** Kullanıcıya görünen bir ayar değiştiyse ve ajan bilgilendirilmeli mi? */
 export function settingsDiffer(a: UserSettings, b: UserSettings): boolean {
   return (
+    a.isConfigured !== b.isConfigured ||
     a.selectedProvider !== b.selectedProvider ||
     a.selectedModel !== b.selectedModel ||
     a.autoVerify !== b.autoVerify ||
@@ -176,6 +184,11 @@ export async function restoreSettings(
     };
 
     Object.assign(next, safeConfig);
+    if (savedConfig.isConfigured !== undefined) {
+      next.isConfigured = savedConfig.isConfigured;
+    } else {
+      next.isConfigured = true;
+    }
     if (legacyApiKeys || legacyTokenBudget !== undefined || legacyCostBudget !== undefined) {
       await context.globalState.update(SETTINGS_KEY, safeConfig);
     }
@@ -183,7 +196,10 @@ export async function restoreSettings(
 
   for (const provider of API_KEY_PROVIDERS) {
     const key = await context.secrets.get(`ahi_key_${provider}`);
-    if (key) next.apiKeys[provider] = key;
+    if (key) {
+      next.apiKeys[provider] = key;
+      next.isConfigured = true;
+    }
   }
 
   return next;
@@ -202,9 +218,15 @@ export async function persistSettings(
   incoming: Partial<UserSettings>
 ): Promise<UserSettings> {
   const { apiKeys: incomingKeys, ...rest } = incoming;
-  const next: UserSettings = { ...current, ...rest, apiKeys: { ...current.apiKeys } };
+  const next: UserSettings = {
+    ...current,
+    ...rest,
+    isConfigured: true,
+    apiKeys: { ...current.apiKeys }
+  };
 
   await context.globalState.update(SETTINGS_KEY, {
+    isConfigured: true,
     selectedProvider: next.selectedProvider,
     selectedModel: next.selectedModel,
     autoApprove: next.autoApprove,

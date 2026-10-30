@@ -67,7 +67,7 @@ function isPrivateIpv6(address: string): boolean {
   return false;
 }
 
-export function isPrivateIp(address: string): boolean {
+function isPrivateIp(address: string): boolean {
   if (net.isIPv4(address)) return isPrivateIpv4(address);
   if (net.isIPv6(address)) return isPrivateIpv6(address);
   return true;
@@ -285,7 +285,7 @@ function extractInstantAnswers(data: unknown): WebSearchResult[] {
 }
 
 /** DuckDuckGo HTML sayfası beklenen işaretlemeyle eşleşmediğinde fırlatılır. */
-export class DuckDuckGoMarkupError extends Error {}
+class DuckDuckGoMarkupError extends Error {}
 
 /**
  * Getirilen HTML DuckDuckGo sonuç sayfasına benziyorsa doğrudur. İşaretleme

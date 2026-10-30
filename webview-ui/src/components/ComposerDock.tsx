@@ -9,11 +9,16 @@ import {
   FolderGit2,
   ListChecks,
   Loader2,
+  Play,
+  PlayCircle,
   Wrench
 } from 'lucide-react';
 import { PlanStep, TaskState } from '@shared/types';
 import { ApprovalCard } from './ApprovalCard';
+import { ModuleStrip } from './ModuleStrip';
 import { PendingQuestionCard } from './PendingQuestionCard';
+import { Button } from './ui';
+import { vscode } from '../utils/vscode';
 import { describePlanStep, STEP_STATUS_COLOR, STEP_STATUS_LABEL } from '../utils/planProgress';
 
 interface ComposerDockProps {
@@ -23,13 +28,13 @@ interface ComposerDockProps {
 const stepIcon = (step: PlanStep) => {
   switch (step.status) {
     case 'completed':
-      return <Check className="h-2.5 w-2.5 shrink-0 text-[var(--status-success-fg)]" />;
+      return <Check className="ahi-icon-xs shrink-0 ahi-text-success" />;
     case 'in_progress':
-      return <Loader2 className="h-2.5 w-2.5 shrink-0 animate-spin text-[var(--status-info-fg)]" />;
+      return <Loader2 className="ahi-icon-xs shrink-0 animate-spin ahi-text-info" />;
     case 'blocked':
-      return <Ban className="h-2.5 w-2.5 shrink-0 text-[var(--status-error-fg)]" />;
+      return <Ban className="ahi-icon-xs shrink-0 ahi-text-error" />;
     default:
-      return <Circle className="h-2.5 w-2.5 shrink-0 text-[var(--ahi-muted-fg)]" />;
+      return <Circle className="ahi-icon-xs shrink-0 ahi-text-muted" />;
   }
 };
 
@@ -53,17 +58,24 @@ export const ComposerDock: React.FC<ComposerDockProps> = ({ state }) => {
   const next = steps.find((step) => step.status !== 'completed');
   const percent = hasPlan ? Math.round((done / steps.length) * 100) : 0;
 
+  const hasModules = Boolean(state.modules && state.modules.modules.length > 0);
+  const building = state.workflow?.stage === 'build' || Boolean(state.workflow?.planApproved);
+
   const hasContent =
+    hasModules ||
     hasPlan ||
     Boolean(state.pendingQuestion) ||
     Boolean(state.pendingApproval) ||
-    Boolean(state.activeSubagent);
+    Boolean(state.activeSubagent) ||
+    state.status === 'paused';
   if (!hasContent) return null;
 
   return (
-    <div className="shrink-0 space-y-1.5 border-t border-[var(--vscode-sideBar-border)] bg-[var(--vscode-sideBar-background)] px-2.5 pt-1.5">
+    <div className="w-full shrink-0 space-y-1.5 px-3 pt-2 pb-1">
+      <ModuleStrip modules={state.modules} plan={state.plan} building={building} />
+
       {hasPlan && (
-        <div className="overflow-hidden rounded-md border border-[var(--ahi-surface-border)] bg-[var(--ahi-surface)]">
+        <div className="overflow-hidden rounded-md border ahi-border-surface ahi-bg-surface">
           <button
             type="button"
             onClick={() => setExpanded((value) => !value)}
@@ -73,20 +85,20 @@ export const ComposerDock: React.FC<ComposerDockProps> = ({ state }) => {
             className="flex w-full items-center gap-1.5 px-2 py-1.5 text-left transition hover:bg-[var(--ahi-hover-bg)]"
           >
             {expanded ? (
-              <ChevronDown className="h-3 w-3 shrink-0" />
+              <ChevronDown className="ahi-icon-xs shrink-0" />
             ) : (
-              <ChevronRight className="h-3 w-3 shrink-0" />
+              <ChevronRight className="ahi-icon-xs shrink-0" />
             )}
-            <ListChecks className="h-3 w-3 shrink-0 text-[var(--ahi-brand-400)]" />
-            <span className="text-xs min-w-0 flex-1 truncate font-medium text-[var(--ahi-fg)]">
+            <ListChecks className="ahi-icon-sm shrink-0 ahi-text-brand" />
+            <span className="text-sm min-w-0 flex-1 truncate font-medium ahi-text-fg">
               {state.plan?.goal || 'Görev planı'}
             </span>
-            <span className="shrink-0 font-mono text-2xs text-[var(--ahi-muted-fg)]">
+            <span className="shrink-0 font-mono text-xs ahi-text-muted">
               {done}/{steps.length} adım · %{percent}
             </span>
             {next && (
               <span
-                className={`shrink-0 text-2xs ${STEP_STATUS_COLOR[next.status]}`}
+                className={`shrink-0 text-xs ${STEP_STATUS_COLOR[next.status]}`}
                 title={describePlanStep(steps.indexOf(next) + 1, next.status, next.title)}
               >
                 {STEP_STATUS_LABEL[next.status]}
@@ -94,10 +106,42 @@ export const ComposerDock: React.FC<ComposerDockProps> = ({ state }) => {
             )}
           </button>
 
+          {/* İlerleme çubuğu */}
+          <div className="h-1 w-full ahi-bg-track overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-[var(--ahi-accent-bg)] to-[var(--status-success-fg)] transition-all duration-300"
+              style={{ width: `${percent}%` }}
+              role="progressbar"
+              aria-valuenow={percent}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </div>
+
+          {/* Aktif adım ve işlem göstergesi */}
+          {next && (
+            <div className="flex items-center justify-between gap-1.5 px-2.5 py-1 ahi-bg-input border-t ahi-border-surface text-xs">
+              <div className="flex items-center gap-1.5 min-w-0 ahi-text-muted">
+                {next.status === 'in_progress' ? (
+                  <Loader2 className="ahi-icon-xs shrink-0 animate-spin ahi-text-info" />
+                ) : (
+                  <Circle className="ahi-icon-xs shrink-0 ahi-text-muted" />
+                )}
+                <span className="truncate">
+                  <span className="font-medium ahi-text-fg">
+                    Adım {steps.indexOf(next) + 1}/{steps.length}:
+                  </span>{' '}
+                  {next.title}
+                </span>
+              </div>
+              <span className="shrink-0 font-mono ahi-text-brand">%{percent}</span>
+            </div>
+          )}
+
           {expanded && (
             <ol
               id="composer-dock-plan"
-              className="max-h-44 space-y-0.5 overflow-y-auto border-t border-[var(--ahi-surface-border)] px-2 py-1.5"
+              className="max-h-44 space-y-0.5 overflow-y-auto border-t ahi-border-surface px-2 py-1.5"
             >
               {steps.map((step, index) => (
                 <li
@@ -105,22 +149,20 @@ export const ComposerDock: React.FC<ComposerDockProps> = ({ state }) => {
                   aria-current={step.status === 'in_progress' ? 'step' : undefined}
                   aria-label={describePlanStep(index + 1, step.status, step.title)}
                   className={`flex items-start justify-between gap-1.5 rounded px-1 py-0.5 ${
-                    step.status === 'in_progress' ? 'bg-[var(--vscode-list-hoverBackground)]' : ''
+                    step.status === 'in_progress' ? 'ahi-bg-hover' : ''
                   }`}
                 >
                   <span className="flex min-w-0 items-start gap-1.5">
                     <span className="mt-0.5 shrink-0">{stepIcon(step)}</span>
                     <span
-                      className={`block text-xs leading-snug ${
-                        step.status === 'completed'
-                          ? 'text-[var(--ahi-muted-fg)] line-through'
-                          : 'text-[var(--ahi-fg)]'
+                      className={`block text-sm leading-snug ${
+                        step.status === 'completed' ? 'ahi-text-muted line-through' : 'ahi-text-fg'
                       }`}
                     >
                       {index + 1}. {step.title}
                     </span>
                   </span>
-                  <span className={`shrink-0 text-2xs ${STEP_STATUS_COLOR[step.status]}`}>
+                  <span className={`shrink-0 text-xs ${STEP_STATUS_COLOR[step.status]}`}>
                     {STEP_STATUS_LABEL[step.status]}
                   </span>
                 </li>
@@ -148,29 +190,29 @@ export const ComposerDock: React.FC<ComposerDockProps> = ({ state }) => {
       {state.activeSubagent && (
         <div
           data-testid="active-subagent-card"
-          className="rounded-md border border-[var(--ahi-brand-500)]/40 bg-[var(--ahi-surface)] p-2 shadow-xs"
+          className="rounded-md border ahi-border-brand ahi-bg-surface p-2"
         >
           <div className="flex items-center justify-between gap-1.5">
             <div className="flex items-center gap-1.5 min-w-0">
-              <Bot className="h-3.5 w-3.5 shrink-0 text-[var(--ahi-brand-400)] animate-pulse" />
-              <span className="text-xs font-semibold text-[var(--ahi-fg)] truncate">
+              <Bot className="ahi-icon-sm shrink-0 ahi-text-brand animate-pulse" />
+              <span className="ahi-title truncate">
                 {state.activeSubagent.displayName || state.activeSubagent.role}
               </span>
-              <span className="text-2xs rounded bg-[var(--ahi-brand-500)]/20 px-1 py-0.5 font-mono text-[var(--ahi-brand-400)] shrink-0">
+              <span className="text-2xs rounded ahi-bg-brand-soft px-1 py-0.5 font-mono ahi-text-brand shrink-0">
                 alt ajan
               </span>
             </div>
             {state.activeSubagent.isolate ? (
               <span
-                className="flex items-center gap-1 text-2xs text-amber-400 font-mono shrink-0 bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20"
+                className="flex items-center gap-1 text-2xs ahi-text-warning font-mono shrink-0 ahi-bg-warning px-1.5 py-0.5 rounded border ahi-border-warning"
                 title="İzole Git worktree üzerinde çalışıyor; ana çalışma alanı etkilenmez."
               >
-                <FolderGit2 className="h-2.5 w-2.5" />
+                <FolderGit2 className="ahi-icon-xs" />
                 İzole Worktree
               </span>
             ) : (
               <span
-                className="flex items-center gap-1 text-2xs text-[var(--ahi-muted-fg)] font-mono shrink-0"
+                className="flex items-center gap-1 text-2xs ahi-text-muted font-mono shrink-0"
                 title="Ana çalışma alanında doğrudan çalışıyor."
               >
                 Çalışma Alanı
@@ -178,13 +220,13 @@ export const ComposerDock: React.FC<ComposerDockProps> = ({ state }) => {
             )}
           </div>
 
-          <div className="mt-1 text-2xs text-[var(--ahi-muted-fg)] truncate">{state.activeSubagent.task}</div>
+          <div className="mt-1 text-2xs ahi-text-muted truncate">{state.activeSubagent.task}</div>
 
-          <div className="mt-1.5 flex items-center justify-between border-t border-[var(--ahi-surface-border)] pt-1 text-2xs">
-            <div className="flex items-center gap-1 text-[var(--ahi-brand-400)]">
+          <div className="mt-1.5 flex items-center justify-between border-t ahi-border-surface pt-1 text-2xs">
+            <div className="flex items-center gap-1 ahi-text-brand">
               {state.activeSubagent.currentTool ? (
                 <>
-                  <Wrench className="h-2.5 w-2.5 animate-spin" />
+                  <Wrench className="ahi-icon-xs animate-spin" />
                   <span className="font-mono">
                     {state.activeSubagent.currentTool}
                     {state.activeSubagent.step
@@ -194,20 +236,45 @@ export const ComposerDock: React.FC<ComposerDockProps> = ({ state }) => {
                 </>
               ) : (
                 <>
-                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                  <Loader2 className="ahi-icon-xs animate-spin" />
                   <span>Düşünüyor ve planlıyor…</span>
                 </>
               )}
             </div>
             {state.activeSubagent.worktreePath && (
               <span
-                className="font-mono text-2xs text-[var(--ahi-muted-fg)] truncate max-w-[140px]"
+                className="font-mono text-2xs ahi-text-muted truncate max-w-[140px]"
                 title={state.activeSubagent.worktreePath}
               >
                 {state.activeSubagent.worktreePath.split('/').pop()}
               </span>
             )}
           </div>
+        </div>
+      )}
+
+      {state.status === 'paused' && (
+        <div
+          data-testid="paused-resume-card"
+          className="flex items-center justify-between gap-2 rounded-md border ahi-border-info ahi-bg-info p-2"
+        >
+          <div className="flex min-w-0 items-center gap-2">
+            <PlayCircle className="ahi-icon-md shrink-0 ahi-text-info" />
+            <div className="min-w-0">
+              <span className="block ahi-title">Görev Duraklatıldı</span>
+              <span className="block truncate text-2xs ahi-text-muted">
+                Oturum korundu; kaldığı yerden devam edebilirsiniz.
+              </span>
+            </div>
+          </div>
+          <Button
+            size="xs"
+            variant="primary"
+            onClick={() => vscode.postMessage({ type: 'RESUME_TASK' })}
+            icon={<Play className="ahi-icon-xs" />}
+          >
+            Devam Et
+          </Button>
         </div>
       )}
     </div>

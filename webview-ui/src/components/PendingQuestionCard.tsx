@@ -22,12 +22,12 @@ export const PendingQuestionCard: React.FC<PendingQuestionCardProps> = ({ questi
   };
 
   return (
-    <div className="ahi-question-card rounded-lg border bg-[var(--vscode-editorWidget-background)] p-2.5 shadow-sm">
-      <div className="text-sm mb-1.5 flex items-center gap-1.5 font-semibold text-[var(--ahi-brand-400)]">
-        <HelpCircle className="h-3.5 w-3.5 shrink-0" />
+    <div className="ahi-question-card rounded-lg border ahi-bg-raised p-2.5 ahi-shadow-sm">
+      <div className="text-sm mb-1.5 flex items-center gap-1.5 font-semibold ahi-text-brand">
+        <HelpCircle className="ahi-icon-sm shrink-0" />
         AhiCode bir cevap bekliyor
       </div>
-      <div className="text-sm mb-2 rounded-md border border-[var(--ahi-surface-border)] bg-[var(--ahi-input-bg)] px-2.5 py-2 leading-relaxed text-[var(--ahi-fg)]">
+      <div className="text-sm mb-2 rounded-md border ahi-border-surface ahi-bg-input px-2.5 py-2 leading-relaxed ahi-text-fg">
         {question}
       </div>
       <form onSubmit={submit} className="flex flex-col gap-1.5">
@@ -50,7 +50,7 @@ export const PendingQuestionCard: React.FC<PendingQuestionCardProps> = ({ questi
             variant="secondary"
             size="xs"
             onClick={() => vscode.postMessage({ type: 'CANCEL_TASK' })}
-            icon={<X className="h-3 w-3" />}
+            icon={<X className="ahi-icon-xs" />}
           >
             İptal
           </Button>
@@ -59,7 +59,7 @@ export const PendingQuestionCard: React.FC<PendingQuestionCardProps> = ({ questi
             variant="primary"
             size="xs"
             disabled={!reply.trim()}
-            icon={<Send className="h-3 w-3" />}
+            icon={<Send className="ahi-icon-xs" />}
           >
             Yanıtla
           </Button>

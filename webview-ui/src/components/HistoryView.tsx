@@ -15,13 +15,16 @@ import {
   ArrowDownWideNarrow,
   Plus
 } from 'lucide-react';
-import { TaskSummary } from '@shared/types';
+import { NavigationDestination, TaskSummary } from '@shared/types';
 import { ScreenHeader } from './ScreenHeader';
 import { Button, Card, Chip, EmptyState, IconButton, SearchField } from './ui';
 import { vscode } from '../utils/vscode';
 
 interface HistoryViewProps {
   onBack: () => void;
+  onSelectTask?: () => void;
+  onSelectMenu?: (destination: NavigationDestination) => void;
+  changedFileCount?: number;
 }
 
 const statusMeta = (status: TaskSummary['status']) => {
@@ -29,29 +32,29 @@ const statusMeta = (status: TaskSummary['status']) => {
     case 'completed':
       return {
         label: 'Tamamlandı',
-        icon: <CheckCircle2 className="h-2.5 w-2.5" />,
-        className: 'text-[var(--status-success-fg)]'
+        icon: <CheckCircle2 className="ahi-icon-xs" />,
+        className: 'ahi-text-success'
       };
     case 'failed':
       return {
         label: 'Başarısız',
-        icon: <AlertCircle className="h-2.5 w-2.5" />,
-        className: 'text-[var(--status-error-fg)]'
+        icon: <AlertCircle className="ahi-icon-xs" />,
+        className: 'ahi-text-error'
       };
     case 'cancelled':
       return {
         label: 'İptal edildi',
-        icon: <Ban className="h-2.5 w-2.5" />,
-        className: 'text-[var(--ahi-muted-fg)]'
+        icon: <Ban className="ahi-icon-xs" />,
+        className: 'ahi-text-muted'
       };
     case 'running':
       return {
         label: 'Çalışıyor',
-        icon: <Loader2 className="h-2.5 w-2.5 animate-spin" />,
-        className: 'text-[var(--status-info-fg)]'
+        icon: <Loader2 className="ahi-icon-xs animate-spin" />,
+        className: 'ahi-text-info'
       };
     default:
-      return { label: status, icon: null, className: 'text-[var(--ahi-muted-fg)]' };
+      return { label: status, icon: null, className: 'ahi-text-muted' };
   }
 };
 
@@ -89,7 +92,12 @@ const SORT_LABELS: Record<SortOrder, string> = {
  * Oturum kütüphanesi: kayıtlı oturumların aranabilir, filtrelenebilir listesi.
  * `workspaceState` üzerinde küçük bir yerel veritabanı gibi davranır.
  */
-export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
+export const HistoryView: React.FC<HistoryViewProps> = ({
+  onBack,
+  onSelectTask,
+  onSelectMenu,
+  changedFileCount
+}) => {
   const [history, setHistory] = useState<TaskSummary[]>([]);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
@@ -111,7 +119,11 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
 
   const handleSelectTask = (taskId: string) => {
     vscode.postMessage({ type: 'LOAD_TASK', payload: { taskId } });
-    onBack();
+    if (onSelectTask) {
+      onSelectTask();
+    } else {
+      onBack();
+    }
   };
 
   const handleDeleteTask = (taskId: string) => {
@@ -160,6 +172,8 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
             : 'Kayıtlı oturum yok'
         }
         onBack={onBack}
+        onSelectMenu={onSelectMenu}
+        changedFileCount={changedFileCount}
         actions={
           <div className="flex items-center gap-1">
             <Button
@@ -167,9 +181,13 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
               size="xs"
               onClick={() => {
                 vscode.postMessage({ type: 'NEW_SESSION' });
-                onBack();
+                if (onSelectTask) {
+                  onSelectTask();
+                } else {
+                  onBack();
+                }
               }}
-              icon={<Plus className="h-3 w-3" />}
+              icon={<Plus className="ahi-icon-xs" />}
             >
               Yeni sohbet
             </Button>
@@ -177,16 +195,16 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
               label="Oturum içe aktar (JSON)"
               onClick={() => vscode.postMessage({ type: 'IMPORT_SESSION' })}
             >
-              <Upload className="h-3 w-3" />
+              <Upload className="ahi-icon-xs" />
             </IconButton>
             <IconButton label="Yenile" onClick={() => vscode.postMessage({ type: 'GET_TASK_HISTORY' })}>
-              <RotateCcw className="h-3 w-3" />
+              <RotateCcw className="ahi-icon-xs" />
             </IconButton>
           </div>
         }
       />
 
-      <div className="flex shrink-0 flex-col gap-1.5 border-b border-[var(--vscode-sideBar-border)] p-2">
+      <div className="flex shrink-0 flex-col gap-1.5 border-b ahi-border-base p-2">
         <SearchField
           value={search}
           onValueChange={setSearch}
@@ -225,7 +243,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
               )
             }
           >
-            <ArrowDownWideNarrow className="h-3 w-3" />
+            <ArrowDownWideNarrow className="ahi-icon-xs" />
             {SORT_LABELS[sort]}
           </Chip>
         </div>
@@ -234,13 +252,13 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
       <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto p-2">
         {loading ? (
           <div className="ahi-caption flex flex-col items-center gap-2 py-10">
-            <Loader2 className="h-4 w-4 animate-spin" /> Geçmiş yükleniyor...
+            <Loader2 className="ahi-icon-md animate-spin" /> Geçmiş yükleniyor...
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState
             icon={
-              <span className="ahi-toggle-row__icon h-9 w-9 text-[var(--ahi-muted-fg)]">
-                <History className="h-4 w-4" />
+              <span className="ahi-toggle-row__icon ahi-text-muted">
+                <History className="ahi-icon-md" />
               </span>
             }
             title={filtersActive ? 'Eşleşen oturum bulunamadı' : 'Henüz oturum yok'}
@@ -270,11 +288,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
             const confirming = pendingDelete === task.id;
 
             return (
-              <Card
-                key={task.id}
-                interactive
-                className="group p-2.5 hover:bg-[var(--vscode-list-hoverBackground)]"
-              >
+              <Card key={task.id} interactive className="group p-2.5 hover:bg-[var(--ahi-hover-bg)]">
                 <div className="flex items-start justify-between gap-2">
                   {/* Tıklama hedefi kartın kendisi değil satırdır: eylem düğmelerini
                       saran bir button role geçersiz ARIA olurdu ve Enter'da ikinci
@@ -292,19 +306,19 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
                     aria-label={`Oturumu aç: ${task.prompt || '(başlıksız görev)'}`}
                     className="min-w-0 flex-1 cursor-pointer rounded focus-visible:outline focus-visible:outline-1"
                   >
-                    <div className="text-sm line-clamp-2 font-medium leading-snug text-[var(--ahi-fg)]">
+                    <div className="text-sm line-clamp-2 font-medium leading-snug ahi-text-fg">
                       {task.prompt || '(başlıksız görev)'}
                     </div>
-                    <div className="text-2xs mt-1.5 flex flex-wrap items-center gap-2 text-[var(--ahi-muted-fg)]">
+                    <div className="text-2xs mt-1.5 flex flex-wrap items-center gap-2 ahi-text-muted">
                       <span className={`flex items-center gap-1 ${meta.className}`}>
                         {meta.icon}
                         {meta.label}
                       </span>
                       <span className="flex items-center gap-1">
-                        <MessageSquare className="h-2.5 w-2.5" /> {task.messageCount}
+                        <MessageSquare className="ahi-icon-xs" /> {task.messageCount}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Clock className="h-2.5 w-2.5" /> {formatDate(task.timestamp)}
+                        <Clock className="ahi-icon-xs" /> {formatDate(task.timestamp)}
                       </span>
                     </div>
                   </div>
@@ -322,7 +336,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
                         });
                       }}
                     >
-                      <FileJson className="h-3 w-3" />
+                      <FileJson className="ahi-icon-xs" />
                     </IconButton>
                     <IconButton
                       small
@@ -336,7 +350,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
                         });
                       }}
                     >
-                      <Download className="h-3 w-3" />
+                      <Download className="ahi-icon-xs" />
                     </IconButton>
                     <IconButton
                       small
@@ -349,11 +363,11 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ onBack }) => {
                       onBlur={() => setPendingDelete(null)}
                       className={
                         confirming
-                          ? 'bg-[var(--status-error-fg)] text-white hover:bg-[var(--status-error-fg)]'
+                          ? 'ahi-bg-error-solid ahi-text-on-accent hover:bg-[var(--status-error-fg)]'
                           : 'hover:text-[var(--status-error-fg)]'
                       }
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="ahi-icon-sm" />
                     </IconButton>
                   </div>
                 </div>

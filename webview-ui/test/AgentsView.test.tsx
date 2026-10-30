@@ -93,12 +93,12 @@ describe('AgentsView: yerleşik ajanlar ve görev başlatma', () => {
     });
   });
 
-  it('özel uzman ajanların doğrudan başlatılması engellenir', async () => {
+  it('uzman ajanlar için görev formu açılabilir ve aktif durumdadır', async () => {
     await renderAgentsView();
 
     const taskBtns = screen.getAllByRole('button', { name: 'Görev' });
     assert.ok(taskBtns.length > 0, 'en az bir görev butonu olmalı');
-    assert.ok(taskBtns[0]!.hasAttribute('disabled'), 'uzman ajanın görev butonu devre dışı olmalı');
+    assert.ok(!taskBtns[0]!.hasAttribute('disabled'), 'uzman ajanın görev butonu aktif olmalı');
   });
 
   it('aktif alt ajan varsa durum kartı gösterir ve başlatmayı engeller', async () => {

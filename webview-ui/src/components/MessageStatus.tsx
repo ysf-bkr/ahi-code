@@ -13,28 +13,28 @@ interface PhaseMeta {
 const PHASE_META: Record<MessagePhase, PhaseMeta> = {
   thinking: {
     label: 'düşünüyor',
-    className: 'text-[var(--ahi-brand-400)]',
-    icon: <Sparkles className="h-2.5 w-2.5 animate-pulse" />
+    className: 'ahi-text-brand',
+    icon: <Sparkles className="ahi-icon-xs animate-pulse" />
   },
   writing: {
     label: 'yazıyor',
-    className: 'text-[var(--ahi-brand-400)]',
-    icon: <Loader2 className="h-2.5 w-2.5 animate-spin" />
+    className: 'ahi-text-brand',
+    icon: <Loader2 className="ahi-icon-xs animate-spin" />
   },
   working: {
     label: 'çalışıyor',
-    className: 'text-[var(--ahi-brand-400)]',
-    icon: <Wrench className="h-2.5 w-2.5 animate-pulse" />
+    className: 'ahi-text-brand',
+    icon: <Wrench className="ahi-icon-xs animate-pulse" />
   },
   done: {
     label: 'tamamlandı',
-    className: 'text-[var(--status-success-fg)]',
-    icon: <CheckCircle2 className="h-2.5 w-2.5" />
+    className: 'ahi-text-success',
+    icon: <CheckCircle2 className="ahi-icon-xs" />
   },
   error: {
     label: 'hata',
-    className: 'text-[var(--status-error-fg)]',
-    icon: <AlertCircle className="h-2.5 w-2.5" />
+    className: 'ahi-text-error',
+    icon: <AlertCircle className="ahi-icon-xs" />
   }
 };
 
@@ -131,10 +131,8 @@ export const MessageStatus: React.FC<MessageStatusProps> = ({ message }) => {
 
 /** Hata metnini içeren genişletilmiş hata bloğu. */
 export const MessageError: React.FC<{ error: string }> = ({ error }) => (
-  <div className="flex items-start gap-1.5 rounded-md border border-[var(--status-error-border)] bg-[var(--status-error-bg)] px-2.5 py-1.5">
-    <AlertCircle className="mt-0.5 h-3 w-3 shrink-0 text-[var(--status-error-fg)]" />
-    <span className="text-2xs whitespace-pre-wrap break-words leading-relaxed text-[var(--ahi-fg)]">
-      {error}
-    </span>
+  <div className="flex items-start gap-1.5 rounded-md border ahi-border-error ahi-bg-error px-2.5 py-1.5">
+    <AlertCircle className="ahi-icon-xs mt-0.5 shrink-0 ahi-text-error" />
+    <span className="text-2xs whitespace-pre-wrap break-words leading-relaxed ahi-text-fg">{error}</span>
   </div>
 );

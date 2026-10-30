@@ -183,6 +183,13 @@ describe('File tools', () => {
     assert.ok(!result.includes('gizli.ts'));
   });
 
+  it('search_files supports regular expressions when isRegex is true', async () => {
+    await fs.writeFile(path.join(tmpDir, 'regex_test.ts'), 'const patternTarget123 = "found";', 'utf-8');
+    const result = await searchFilesTool.execute({ query: 'patternTarget\\d+', isRegex: true }, ctx());
+    assert.ok(result.includes('regex_test.ts'));
+    assert.ok(result.includes('patternTarget123'));
+  });
+
   it('search_files applies the same deny rules as read_file (F04)', async () => {
     // ripgrep kurulu olsun ya da olmasın deny kapsamındaki içerik görünmemeli.
     const root = await fs.mkdtemp(path.join(os.tmpdir(), 'ahi-search-perm-'));

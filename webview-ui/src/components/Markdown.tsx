@@ -9,7 +9,7 @@ interface MarkdownProps {
 export const Markdown: React.FC<MarkdownProps> = ({ content, isStreaming }) => {
   if (!content) {
     return isStreaming ? (
-      <span className="inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-[var(--vscode-focusBorder)]" />
+      <span className="inline-block h-3.5 w-1.5 animate-pulse rounded-sm ahi-bg-focus" />
     ) : null;
   }
 
@@ -38,10 +38,10 @@ export const Markdown: React.FC<MarkdownProps> = ({ content, isStreaming }) => {
   }
 
   return (
-    <div className="text-xs leading-relaxed text-[var(--vscode-foreground)] break-words">
+    <div className="ahi-prose">
       {parts}
       {isStreaming && (
-        <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-[var(--vscode-focusBorder)]" />
+        <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse rounded-sm ahi-bg-focus" />
       )}
     </div>
   );

@@ -36,7 +36,7 @@ export interface OpenAIRequestTool {
 }
 
 /** Araç tanımlarını istek biçimine çevirir. */
-export function formatTools(tools: ToolDefinition[]): OpenAIRequestTool[] {
+function formatTools(tools: ToolDefinition[]): OpenAIRequestTool[] {
   return tools.map((tool) => ({
     type: 'function',
     function: {
@@ -53,7 +53,7 @@ export function formatTools(tools: ToolDefinition[]): OpenAIRequestTool[] {
  * Araç çağrısı olan asistan mesajlarında `content` boşsa `null` gönderilir;
  * bazı sunucular boş dizeyi reddeder.
  */
-export function formatMessages(messages: ProviderMessage[]): OpenAIRequestMessage[] {
+function formatMessages(messages: ProviderMessage[]): OpenAIRequestMessage[] {
   return messages.map((message) => {
     if (message.role === 'tool') {
       return {
@@ -88,7 +88,7 @@ export function formatMessages(messages: ProviderMessage[]): OpenAIRequestMessag
  * `cache_control` yalnızca Anthropic tarzı uç noktalarda anlamlıdır; çağıran
  * bunu kontrol eder.
  */
-export function markSystemPromptCacheable(messages: OpenAIRequestMessage[]): void {
+function markSystemPromptCacheable(messages: OpenAIRequestMessage[]): void {
   const first = messages[0];
   if (!first || first.role !== 'system') return;
   if (typeof first.content !== 'string') return;

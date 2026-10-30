@@ -36,6 +36,7 @@ export const analyst: AgentDefinition = {
       '3. Plan: Break down the task into small, atomic, and verifiable steps.\n' +
       '4. Execute: Perform the task using approved tools, adhering to quality and security constraints.',
     rules: [
+      'STRICT ENGLISH CONTRACTS: All API schemas, type definitions, interface contracts, and property names MUST be in English. Never define Turkish types or contract endpoints.',
       'REQUIREMENTS MAPPING: Verify that all user requirements from docs/ correctly map to API schemas and types.',
       'CONTRACT FIRST: Enforce the Contract-First model — no application code without a validated contract.',
       'VERSIONING INTEGRITY: Validate that all API versioning changes are correctly registered in contract.version.json.',

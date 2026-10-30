@@ -83,7 +83,36 @@ const specCall: ModelCompletionResponse = {
         goal: 'Ekran ekle',
         scope: ['webview-ui'],
         // İkinci kriter bilinçli olarak doğrulama sözleri içeriyor.
-        acceptanceCriteria: ['Ekran görünür', 'Testler geçer']
+        acceptanceCriteria: [
+          'Ekran görünür',
+          'Testler geçer',
+          'Geçersiz girdide hata gösterilir',
+          'Boş liste sınırında çökmez'
+        ]
+      }
+    }
+  ]
+};
+
+const moduleCall: ModelCompletionResponse = {
+  text: '',
+  toolCalls: [
+    {
+      id: 'modules_1',
+      name: 'update_module_plan',
+      arguments: {
+        goal: 'Ekran ekle',
+        modules: [
+          {
+            id: 'ui-screen',
+            name: 'Ekran',
+            layer: 'interface',
+            paths: ['webview-ui'],
+            responsibility: 'Ekranı çizer',
+            ownerRole: 'frontend',
+            criteria: ['ac-1']
+          }
+        ]
       }
     }
   ]
@@ -97,7 +126,14 @@ const planCall: ModelCompletionResponse = {
       name: 'update_plan',
       arguments: {
         goal: 'Ekran ekle',
-        steps: [{ title: 'Bileşeni yaz', files: ['webview-ui/src/App.tsx'] }]
+        steps: [
+          {
+            title: 'Bileşeni yaz',
+            files: ['webview-ui/src/App.tsx'],
+            moduleId: 'ui-screen',
+            criteria: ['ac-1']
+          }
+        ]
       }
     }
   ]
@@ -126,7 +162,7 @@ describe('Kabul kriterleri: doğrulama geçse de otomatik işaretlenmez', () => 
   it('işaretlenmemiş kriter kalırsa doğrulama geçmiş olsa bile görev kapanmaz', async () => {
     const root = await workspace();
     const { core } = createAgent(
-      new ScriptedProvider([specCall, planCall, markFirstCriterionOnly, { text: 'bitti' }]),
+      new ScriptedProvider([specCall, moduleCall, planCall, markFirstCriterionOnly, { text: 'bitti' }]),
       root,
       { autonomy: 'guided' }
     );
@@ -135,7 +171,8 @@ describe('Kabul kriterleri: doğrulama geçse de otomatik işaretlenmez', () => 
     core.getState().stats.verification = {
       status: 'skipped',
       attempts: 0,
-      summary: 'otomatik doğrulama kapalı'
+      summary: 'otomatik doğrulama kapalı',
+      skippedReason: 'no-workspace'
     };
 
     // Tur 1: spec + plan onayları otomatik, ilk kriter işaretlenir, tur biter.

@@ -24,6 +24,13 @@ export interface VerificationResult {
   failureSignature: string[];
   durationMs: number;
   ranAt: number;
+  /**
+   * Doğrulama neden çalışmadı? `no-commands` projede test/lint komutu
+   * bulunmadığı, `aborted` iptal edildiği, `no-workspace` ise çalışma alanı
+   * olmadığı anlamına gelir. "Bitti" kapısı yalnızca `no-workspace` durumunda
+   * atlanmış doğrulamayı kabul eder.
+   */
+  skippedReason?: 'no-commands' | 'aborted' | 'no-workspace';
 }
 
 export interface VerificationOptions {
@@ -301,7 +308,8 @@ export class VerificationManager {
         summary: 'Verification skipped: workspace not found.',
         failureSignature: [],
         durationMs: 0,
-        ranAt
+        ranAt,
+        skippedReason: 'no-workspace'
       };
     }
 
@@ -340,7 +348,8 @@ export class VerificationManager {
         }),
         failureSignature: [],
         durationMs: 0,
-        ranAt
+        ranAt,
+        skippedReason: 'no-commands'
       };
     }
 
@@ -366,7 +375,8 @@ export class VerificationManager {
         summary: 'Verification was cancelled or no steps could be run.',
         failureSignature: [],
         durationMs: Date.now() - startedAt,
-        ranAt
+        ranAt,
+        skippedReason: 'aborted'
       };
     }
 

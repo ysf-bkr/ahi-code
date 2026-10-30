@@ -1,8 +1,8 @@
 {
   "name": "ahi-code",
   "displayName": "AhiCode — Yazılım Geliştirme",
-  "description": "Autonomous AI coding agent for VS Code. Ahilik zanaat disiplini ve mühendislik titizliğiyle mimari analiz, kod düzenleme ve test desteği.",
-  "version": "0.0.1",
+  "description": "VS Code için otonom yapay zeka kodlama ajanı. Ahilik zanaat disiplini ve mühendislik titizliğiyle mimari analiz, kod düzenleme ve test desteği.",
+  "version": "0.0.2",
   "publisher": "ysf-bkr",
   "author": {
     "name": "Yusuf BEKAR",

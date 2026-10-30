@@ -1,6 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { FileCode2, FileDiff, GitBranch, History, Loader2, RefreshCw } from 'lucide-react';
-import { ExtensionToWebviewMessage, GitChangesPayload, TaskState } from '@shared/types';
+import {
+  ExtensionToWebviewMessage,
+  GitChangesPayload,
+  NavigationDestination,
+  TaskState
+} from '@shared/types';
 import { ScreenHeader } from './ScreenHeader';
 import { Button, Card, EmptyState, IconButton, LinkButton, ListButton, Section, SectionTitle } from './ui';
 import { vscode } from '../utils/vscode';
@@ -8,6 +13,8 @@ import { vscode } from '../utils/vscode';
 interface ChangesViewProps {
   state: TaskState;
   onBack: () => void;
+  onSelectMenu?: (destination: NavigationDestination) => void;
+  changedFileCount?: number;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -46,8 +53,8 @@ const GitChangesView: React.FC = () => {
 
   if (loading && !changes) {
     return (
-      <div className="flex items-center justify-center gap-1.5 py-6 text-xs text-[var(--ahi-muted-fg)]">
-        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Git durumu alınıyor…
+      <div className="flex items-center justify-center gap-1.5 py-6 text-xs ahi-text-muted">
+        <Loader2 className="ahi-icon-sm animate-spin" /> Git durumu alınıyor…
       </div>
     );
   }
@@ -55,7 +62,7 @@ const GitChangesView: React.FC = () => {
   if (!changes || !changes.isRepository) {
     return (
       <EmptyState
-        icon={<GitBranch className="h-5 w-5 text-[var(--ahi-muted-fg)]" />}
+        icon={<GitBranch className="ahi-icon-lg ahi-text-muted" />}
         title="Git deposu bulunamadı"
         description={changes?.error || 'Bu çalışma alanı bir Git deposu değil; değişiklikler gösterilemiyor.'}
       />
@@ -66,7 +73,7 @@ const GitChangesView: React.FC = () => {
     <div className="flex flex-col gap-3">
       <Section>
         <SectionTitle
-          icon={<GitBranch className="h-3 w-3" />}
+          icon={<GitBranch className="ahi-icon-xs" />}
           title={`Git çalışma ağacı (${changes.branch || 'dal yok'})`}
           count={changes.files.length}
         />
@@ -80,7 +87,7 @@ const GitChangesView: React.FC = () => {
                 className="flex items-center gap-2 px-2 py-1.5"
               >
                 <span
-                  className="ahi-badge shrink-0 bg-[var(--vscode-sideBar-background)] font-mono"
+                  className="ahi-badge shrink-0 ahi-bg-base font-mono"
                   title={`Index: ${change.indexStatus === ' ' ? '-' : change.indexStatus}, çalışma ağacı: ${
                     change.workTreeStatus === ' ' ? '-' : change.workTreeStatus
                   }`}
@@ -98,6 +105,20 @@ const GitChangesView: React.FC = () => {
                 >
                   {change.path}
                 </LinkButton>
+                <Button
+                  variant="secondary"
+                  size="xs"
+                  onClick={() => {
+                    vscode.postMessage({
+                      type: 'SHOW_FILE_DIFF',
+                      payload: { filePath: change.path }
+                    });
+                  }}
+                  title="Git farkını VS Code diff görünümünde aç"
+                  icon={<FileDiff className="ahi-icon-xs" />}
+                >
+                  Fark
+                </Button>
               </Card>
             ))}
           </div>
@@ -106,7 +127,7 @@ const GitChangesView: React.FC = () => {
 
       <Section>
         <SectionTitle
-          icon={<History className="h-3 w-3" />}
+          icon={<History className="ahi-icon-xs" />}
           title="Son commitler"
           count={changes.commits.length}
         />
@@ -121,7 +142,7 @@ const GitChangesView: React.FC = () => {
                   vscode.postMessage({ type: 'SHOW_COMMIT', payload: { commitHash: commit.hash } })
                 }
                 icon={
-                  <span className="ahi-badge shrink-0 bg-[var(--vscode-sideBar-background)] font-mono text-[var(--ahi-brand-400)]">
+                  <span className="ahi-badge shrink-0 ahi-bg-base font-mono ahi-text-brand">
                     {commit.hash}
                   </span>
                 }
@@ -135,7 +156,12 @@ const GitChangesView: React.FC = () => {
   );
 };
 
-export const ChangesView: React.FC<ChangesViewProps> = ({ state, onBack }) => {
+export const ChangesView: React.FC<ChangesViewProps> = ({
+  state,
+  onBack,
+  onSelectMenu,
+  changedFileCount
+}) => {
   const changes = state.stats.filesModified.map((path) => ({ path }));
 
   return (
@@ -144,25 +170,27 @@ export const ChangesView: React.FC<ChangesViewProps> = ({ state, onBack }) => {
         title="Değişiklikler"
         subtitle="Görev dosyaları ve Git durumu"
         onBack={onBack}
+        onSelectMenu={onSelectMenu}
+        changedFileCount={changedFileCount ?? state.stats.filesModified.length}
         actions={
           <IconButton
             label="Git durumunu yenile"
             onClick={() => vscode.postMessage({ type: 'GET_GIT_CHANGES' })}
           >
-            <RefreshCw className="h-3 w-3" />
+            <RefreshCw className="ahi-icon-xs" />
           </IconButton>
         }
       />
       <div className="ahi-screen-body">
         <Section>
           <SectionTitle
-            icon={<FileCode2 className="h-3 w-3" />}
+            icon={<FileCode2 className="ahi-icon-xs" />}
             title="Bu görevde değişen dosyalar"
             count={changes.length}
           />
           {changes.length === 0 ? (
             <EmptyState
-              icon={<FileCode2 className="h-5 w-5 text-[var(--ahi-muted-fg)]" />}
+              icon={<FileCode2 className="ahi-icon-lg ahi-text-muted" />}
               title="Henüz değişiklik yok"
               description="Bu görevde henüz dosya değişikliği yapılmadı."
             />
@@ -173,7 +201,7 @@ export const ChangesView: React.FC<ChangesViewProps> = ({ state, onBack }) => {
               </p>
               {changes.map((change) => (
                 <Card key={change.path} className="flex items-center gap-2 px-2 py-1.5">
-                  <FileCode2 className="h-3.5 w-3.5 shrink-0 text-[var(--ahi-muted-fg)]" />
+                  <FileCode2 className="ahi-icon-sm shrink-0 ahi-text-muted" />
                   <LinkButton
                     plain
                     onClick={() =>
@@ -194,7 +222,7 @@ export const ChangesView: React.FC<ChangesViewProps> = ({ state, onBack }) => {
                       });
                     }}
                     title="Dosya farkını VS Code diff görünümünde aç"
-                    icon={<FileDiff className="h-3 w-3" />}
+                    icon={<FileDiff className="ahi-icon-xs" />}
                   >
                     Fark
                   </Button>

@@ -199,6 +199,7 @@ describe('TaskWorkflow: stage gates', () => {
     state: createWorkflowState({ stage: 'intake' }),
     hasApprovedSpec: false,
     hasPlan: false,
+    hasModules: false,
     criteriaMet: false,
     verificationPassed: false
   };
@@ -209,15 +210,27 @@ describe('TaskWorkflow: stage gates', () => {
     assert.match(gate.reason || '', /approve a spec/i);
   });
 
-  it('does not move to build stage without spec and plan approval', () => {
+  it('does not move to build stage without module map, spec and plan approval', () => {
     assert.strictEqual(gateForStage('build', base).allowed, false);
     assert.strictEqual(
       gateForStage('build', { ...base, hasApprovedSpec: true, hasPlan: true }).allowed,
       false
     );
+    // Modül haritası olmadan kod yazılmaz: plan modülden türetilir.
+    assert.match(
+      gateForStage('build', { ...base, hasApprovedSpec: true, hasPlan: true }).reason || '',
+      /module map/i
+    );
+    assert.match(gateForStage('plan', { ...base, hasApprovedSpec: true }).reason || '', /layered modules/i);
     const approvedState = createWorkflowState({ stage: 'plan', planApproved: true });
     assert.strictEqual(
-      gateForStage('build', { ...base, state: approvedState, hasApprovedSpec: true, hasPlan: true }).allowed,
+      gateForStage('build', {
+        ...base,
+        state: approvedState,
+        hasApprovedSpec: true,
+        hasPlan: true,
+        hasModules: true
+      }).allowed,
       true
     );
   });

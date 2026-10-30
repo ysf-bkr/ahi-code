@@ -31,10 +31,10 @@ describe('SubagentManager: role and depth limits', () => {
     assert.ok(result.includes('was found'));
   });
 
-  it('rejects a specialist started at the top level (hierarchy)', async () => {
+  it('runs a specialist started at the top level', async () => {
     const manager = new SubagentManager(provider);
     const result = await manager.runSubagent({ role: 'security', task: 'x' });
-    assert.ok(result.includes('Only the @manager role'));
+    assert.ok(result.includes('Alt ajan raporu'));
   });
 
   it('enforces maximum subagent depth', async () => {

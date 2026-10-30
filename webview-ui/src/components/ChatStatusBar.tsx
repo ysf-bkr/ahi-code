@@ -107,22 +107,22 @@ export function resolveChatStatus(state: TaskState): ChatStatus {
 
 const ICONS: Record<ChatStatus['kind'], React.ReactNode> = {
   idle: null,
-  busy: <Loader2 className="h-2.5 w-2.5 animate-spin" />,
-  waiting: <ShieldQuestion className="h-2.5 w-2.5" />,
-  error: <AlertCircle className="h-2.5 w-2.5" />,
-  paused: <Clock className="h-2.5 w-2.5" />,
-  stopped: <Clock className="h-2.5 w-2.5" />,
-  done: <CheckCircle2 className="h-2.5 w-2.5" />
+  busy: <Loader2 className="ahi-icon-xs animate-spin" />,
+  waiting: <ShieldQuestion className="ahi-icon-xs" />,
+  error: <AlertCircle className="ahi-icon-xs" />,
+  paused: <Clock className="ahi-icon-xs" />,
+  stopped: <Clock className="ahi-icon-xs" />,
+  done: <CheckCircle2 className="ahi-icon-xs" />
 };
 
 const TONES: Record<ChatStatus['kind'], string> = {
-  idle: 'text-[var(--ahi-muted-fg)]',
-  busy: 'text-[var(--ahi-brand-400)]',
-  waiting: 'text-[var(--status-warning-fg)]',
-  error: 'text-[var(--status-error-fg)]',
-  paused: 'text-[var(--status-warning-fg)]',
-  stopped: 'text-[var(--ahi-muted-fg)]',
-  done: 'text-[var(--status-success-fg)]'
+  idle: 'ahi-text-muted',
+  busy: 'ahi-text-brand',
+  waiting: 'ahi-text-warning',
+  error: 'ahi-text-error',
+  paused: 'ahi-text-warning',
+  stopped: 'ahi-text-muted',
+  done: 'ahi-text-success'
 };
 
 interface ChatStatusBarProps {
@@ -130,10 +130,28 @@ interface ChatStatusBarProps {
   onRetry: () => void;
 }
 
+/** Otomatik doğrulama sonucunu durum satırının sonunda gösteren kısa etiket. */
+const verificationLabel = (state: TaskState): { text: string; tone: string } | null => {
+  const verification = state.stats.verification;
+  if (!verification || verification.status === 'not_run') return null;
+  const attempts = verification.attempts > 0 ? ` · ${verification.attempts}` : '';
+  switch (verification.status) {
+    case 'running':
+      return { text: `Doğrulanıyor${attempts}`, tone: 'ahi-text-info' };
+    case 'passed':
+      return { text: `Doğrulandı${attempts}`, tone: 'ahi-text-success' };
+    case 'failed':
+      return { text: `Doğrulama başarısız${attempts}`, tone: 'ahi-text-error' };
+    default:
+      return { text: `Doğrulama atlandı${attempts}`, tone: 'ahi-text-muted' };
+  }
+};
+
 /** Bestecinin altındaki tek satırlık durum çizgisi. */
 export const ChatStatusBar: React.FC<ChatStatusBarProps> = ({ state, onRetry }) => {
   const status = resolveChatStatus(state);
-  if (status.kind === 'idle' || !status.message) return null;
+  const verification = verificationLabel(state);
+  if ((status.kind === 'idle' || !status.message) && !verification) return null;
 
   return (
     <div
@@ -141,17 +159,29 @@ export const ChatStatusBar: React.FC<ChatStatusBarProps> = ({ state, onRetry }) 
       aria-live="polite"
       className={`text-2xs flex items-center gap-1.5 px-1 pt-1.5 ${TONES[status.kind]}`}
     >
-      <span className="shrink-0">{ICONS[status.kind]}</span>
-      <span className="min-w-0 flex-1 truncate leading-relaxed" title={status.message}>
-        {status.message}
-      </span>
+      {status.kind !== 'idle' && status.message && (
+        <>
+          <span className="shrink-0">{ICONS[status.kind]}</span>
+          <span className="min-w-0 flex-1 truncate leading-relaxed" title={status.message}>
+            {status.message}
+          </span>
+        </>
+      )}
+      {verification && (
+        <span
+          className={`shrink-0 font-mono ${verification.tone}`}
+          title={state.stats.verification?.summary || 'Otomatik doğrulama'}
+        >
+          {verification.text}
+        </span>
+      )}
       {status.canRetry && (
         <Button
           size="xs"
           variant="secondary"
           onClick={onRetry}
           title="Son istemi yeniden gönder"
-          icon={<RefreshCw className="h-2.5 w-2.5" />}
+          icon={<RefreshCw className="ahi-icon-xs" />}
         >
           Yeniden gönder
         </Button>

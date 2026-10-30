@@ -121,10 +121,24 @@ describe('CommandPolicy: risk classification', () => {
     }
   });
 
-  it('chaining and redirection are risky', () => {
+  it('chaining and redirection with risky operations remain risky', () => {
     assert.strictEqual(assessCommand('npm test; cat ~/.ssh/id_rsa').risk, 'risky');
-    assert.strictEqual(assessCommand('npm test && echo done').risk, 'risky');
     assert.strictEqual(assessCommand('npm test | tee out.log').risk, 'risky');
+    assert.strictEqual(assessCommand('npm test; rm -rf build').risk, 'risky');
+    assert.strictEqual(assessCommand('npm test; sudo reboot').risk, 'blocked');
+  });
+
+  it('chaining safe inspection and test commands is safe', () => {
+    const safeChains = [
+      'npm test && echo done',
+      'sed -n \'60,120p\' src/main/modules/mail/mail.service.ts; echo "=== PASS KULLANIMI ==="; grep -n "ayar.pass\\|ANAHTAR.pass" src/main/modules/mail/mail.service.ts',
+      'git diff --stat -- src package.json tsconfig.json 2>/dev/null | tail -5; echo "=== bitti ==="',
+      'ls dev.sh 2>/dev/null || echo "dev.sh YOK"',
+      'git status; git diff'
+    ];
+    for (const cmd of safeChains) {
+      assert.strictEqual(assessCommand(cmd).risk, 'safe', cmd);
+    }
   });
 
   it('cannot bypass policy with quoting and wrapper tricks (allowlist)', () => {

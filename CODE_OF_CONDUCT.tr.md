@@ -23,13 +23,13 @@ Olumlu bir ortama katkıda bulunan davranış örnekleri:
 - Yapıcı geri bildirim vermek ve zarafetle kabul etmek
 - Hatalarımızdan etkilenenlerin karşısında sorumluluğu kabul etmek, özür dilemek
   ve bu deneyimden öğrenmek
-- Yalnızca bireyler olarak kendimiz için değil, topluluun geneli için en iyi
+- Yalnızca bireyler olarak kendimiz için değil, topluluğun geneli için en iyi
   olana odaklanmak
 
 Kabul edilemez davranış örnekleri:
 
 - Cinselleştirilmiş dil veya imge kullanımı ve her türlü cinsel ilgi veya talep
-- Kışkıltma (trolling), hakaret veya aşağılayıcı yorumlar; kişisel veya politik
+- Kışkırtma (trolling), hakaret veya aşağılayıcı yorumlar; kişisel veya politik
   saldırılar
 - Kamusal veya özel taciz
 - Başkalarının açık izni olmaksızın fiziksel veya e-posta adresi gibi özel

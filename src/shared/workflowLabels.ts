@@ -11,7 +11,7 @@ export const STAGE_INFO: Record<WorkflowStage, { label: string; hint: string }> 
   onboard: { label: 'Anlama', hint: 'Projeyi ve mevcut durumu anlama' },
   intake: { label: 'İstek', hint: 'Gereksinimleri netleştirme, sorular' },
   spec: { label: 'Spec', hint: 'Hedef, kapsam ve kabul kriterleri onayı' },
-  plan: { label: 'Plan', hint: 'Uygulama adımlarının planı ve onayı' },
+  plan: { label: 'Plan', hint: 'Katmanlı modül haritası ve uygulama planı onayı' },
   build: { label: 'Uygulama', hint: 'Kod yazma ve komut çalıştırma' },
   review: { label: 'İnceleme', hint: 'Değişiklikleri ve planı gözden geçirme' },
   verify: { label: 'Doğrulama', hint: 'Test, lint ve tip denetimi' },

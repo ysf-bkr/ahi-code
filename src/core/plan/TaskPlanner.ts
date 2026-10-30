@@ -16,6 +16,10 @@ export interface PlanStepInput {
   dependsOn?: string[];
   completionCriteria?: string;
   files?: string[];
+  /** Bu adımın ait olduğu modül kimliği. */
+  moduleId?: string;
+  /** Bu adımın karşıladığı kabul kriterleri. */
+  criteria?: string[];
   /** Bu adımı yürütecek uzman rol (ör. `backend`, `frontend`). */
   ownerRole?: string;
 }
@@ -23,6 +27,16 @@ export interface PlanStepInput {
 export interface PlanUpdateInput {
   goal?: string;
   steps?: PlanStepInput[];
+  /**
+   * Doğrulama bağlamı. Yalnızca testler ve çağıranlar tarafından doldurulur;
+   * modelden gelmez. Modül/kriter bağlarını zorlamak için kullanılır.
+   */
+  validation?: {
+    moduleIds?: ReadonlySet<string>;
+    criteriaIds?: ReadonlySet<string>;
+    requireModule?: boolean;
+    requireCriteria?: boolean;
+  };
 }
 
 const TURKISH_CHAR_MAP: Record<string, string> = {
@@ -147,12 +161,17 @@ export class TaskPlanner {
           ? String(raw.completionCriteria)
           : previous?.completionCriteria,
         files: Array.isArray(raw.files) ? raw.files.map(String).filter(Boolean) : previous?.files,
+        moduleId: raw.moduleId ? String(raw.moduleId) : previous?.moduleId,
+        criteria: Array.isArray(raw.criteria)
+          ? raw.criteria.map(String).filter(Boolean)
+          : previous?.criteria || [],
         ownerRole: raw.ownerRole ? String(raw.ownerRole) : previous?.ownerRole,
         ownerRoleSource: raw.ownerRole ? 'model' : previous?.ownerRoleSource
       };
     });
 
     this.validateDependencies(steps);
+    this.validateModuleLinks(steps, input.validation);
 
     this.plan = {
       goal: String(input.goal ?? this.plan?.goal ?? '').trim(),
@@ -262,7 +281,7 @@ Plan rules:
 - "~" marks a step currently in progress, "x" marks it completed, and "!" marks it blocked.
 - When you finish a step, set its status to "completed" with the update_plan tool.
 - Do not start a step until its dependencies are complete.
-- Specialist subagents can only be executed via @manager. The main agent delegates orchestration to @manager, who invokes and coordinates the assigned ownerRoles.
+- Specialist subagents run one per step: call invoke_subagent directly with the step's ownerRole, or delegate through @manager when several specialists must be coordinated. Run independent steps in parallel with run_parallel_tasks.
 === END OF PLAN ===`;
   }
 
@@ -281,6 +300,49 @@ Plan rules:
       `Summary: ${this.plan.steps.length} steps · ${counts.completed || 0} completed · ` +
         `${counts.in_progress || 0} in progress · ${counts.pending || 0} pending · ${counts.blocked || 0} blocked`
     ].join('\n');
+  }
+
+  /**
+   * Adım ↔ modül ve adım ↔ kabul kriteri bağlarını zorlar.
+   *
+   * Endüstriyel akışta plan, modül haritasından türetilir: her adım bir modüle
+   * aittir ve en az bir kabul kriterini karşılar. Bu bağ kurulmazsa plan
+   * "yapılacaklar listesi" olur, sözleşmeye bağlı bir yol haritası olmaz.
+   */
+  private validateModuleLinks(steps: PlanStep[], validation?: PlanUpdateInput['validation']): void {
+    if (!validation) return;
+    const { moduleIds, criteriaIds, requireModule = false, requireCriteria = false } = validation;
+
+    for (const step of steps) {
+      if (requireModule && !step.moduleId) {
+        throw new Error(
+          `Step "${step.id}" must reference a moduleId from the module plan. ` +
+            'Call update_module_plan first and assign every step to a module.'
+        );
+      }
+      if (step.moduleId && moduleIds && !moduleIds.has(step.moduleId)) {
+        throw new Error(
+          `Step "${step.id}" references unknown module "${step.moduleId}". ` +
+            `Known modules: ${[...moduleIds].join(', ') || '(none)'}.`
+        );
+      }
+      const criteria = step.criteria ?? [];
+      if (requireCriteria && criteria.length === 0) {
+        throw new Error(
+          `Step "${step.id}" must list at least one acceptance criterion id (for example "ac-1").`
+        );
+      }
+      if (criteriaIds) {
+        for (const criterion of criteria) {
+          if (!criteriaIds.has(criterion)) {
+            throw new Error(
+              `Step "${step.id}" references unknown acceptance criterion "${criterion}". ` +
+                `Known criteria: ${[...criteriaIds].join(', ') || '(none)'}.`
+            );
+          }
+        }
+      }
+    }
   }
 
   private validateDependencies(steps: PlanStep[]): void {

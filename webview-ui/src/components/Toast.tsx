@@ -12,16 +12,16 @@ interface ToastProps {
 
 const LEVEL_STYLES: Record<ToastLevel, { box: string; icon: string }> = {
   error: {
-    box: 'border-[var(--status-error-border)] bg-[var(--status-error-bg)]',
-    icon: 'bg-[var(--status-error-bg)] text-[var(--status-error-fg)]'
+    box: 'ahi-border-error ahi-bg-error',
+    icon: 'ahi-bg-error ahi-text-error'
   },
   warning: {
-    box: 'border-[var(--status-warning-border)] bg-[var(--status-warning-bg)]',
-    icon: 'bg-[var(--status-warning-bg)] text-[var(--status-warning-fg)]'
+    box: 'ahi-border-warning ahi-bg-warning',
+    icon: 'ahi-bg-warning ahi-text-warning'
   },
   info: {
-    box: 'border-[var(--status-info-border)] bg-[var(--status-info-bg)]',
-    icon: 'bg-[var(--status-info-bg)] text-[var(--status-info-fg)]'
+    box: 'ahi-border-info ahi-bg-info',
+    icon: 'ahi-bg-info ahi-text-info'
   }
 };
 
@@ -37,14 +37,14 @@ export const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
     <div
       role={toast.level === 'error' ? 'alert' : 'status'}
       aria-live={toast.level === 'error' ? 'assertive' : 'polite'}
-      className={`ahi-animate-in flex items-start gap-2 rounded-lg border p-2.5 text-sm text-[var(--ahi-fg)] shadow-xl backdrop-blur-sm ${style.box}`}
+      className={`ahi-animate-in ahi-shadow-lg flex items-start gap-2 rounded-lg border p-2.5 text-sm ahi-text-fg backdrop-blur-sm ${style.box}`}
     >
       <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${style.icon}`}>
-        <Icon className="h-3.5 w-3.5" />
+        <Icon className="ahi-icon-sm" />
       </span>
       <span className="flex-1 break-words pt-0.5 leading-relaxed">{toast.message}</span>
       <IconButton label="Bildirimi kapat" small className="shrink-0" onClick={onDismiss}>
-        <X className="h-3.5 w-3.5" />
+        <X className="ahi-icon-sm" />
       </IconButton>
     </div>
   );

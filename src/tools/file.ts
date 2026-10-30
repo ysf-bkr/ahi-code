@@ -194,13 +194,18 @@ export const listDirectoryTool: ToolDefinition = {
 
 export const searchFilesTool: ToolDefinition = {
   name: 'search_files',
-  description: 'Searches project files for text (protected against command injection).',
+  description:
+    'Searches project files for text or regular expressions (protected against command injection).',
   parameters: {
     type: 'object',
     properties: {
       query: {
         type: 'string',
-        description: 'Text or word to search for.'
+        description: 'Text pattern or regular expression to search for.'
+      },
+      isRegex: {
+        type: 'boolean',
+        description: 'Whether to treat the query as a regular expression (default: false).'
       },
       caseSensitive: {
         type: 'boolean',
@@ -225,6 +230,7 @@ export const searchFilesTool: ToolDefinition = {
 
     const maxResults = Math.min(100, Math.max(1, toPositiveInt(args.maxResults, 50)));
     const caseSensitive = argBoolean(args.caseSensitive);
+    const isRegex = argBoolean(args.isRegex);
     // `read_file` ile aynı okuma izni: deny kuralları ve hassas dosyalar arama
     // sonuçlarında da filtrelenir; aksi hâlde arama bu kuralları aşardı (F04).
     const isReadDenied = (relPath: string): boolean =>
@@ -235,7 +241,7 @@ export const searchFilesTool: ToolDefinition = {
       '--no-messages',
       '--color',
       'never',
-      '--fixed-strings',
+      ...(isRegex ? [] : ['--fixed-strings']),
       ...(caseSensitive ? [] : ['--ignore-case']),
       '--glob',
       '!node_modules/**',
@@ -308,7 +314,14 @@ export const searchFilesTool: ToolDefinition = {
       if (exitCode === 1) {
         return 'No results found.';
       }
-      return searchFilesFallback(context.workspaceRoot, query, caseSensitive, maxResults, isReadDenied);
+      return searchFilesFallback(
+        context.workspaceRoot,
+        query,
+        caseSensitive,
+        maxResults,
+        isReadDenied,
+        isRegex
+      );
     }
   }
 };
@@ -318,7 +331,8 @@ export async function searchFilesFallback(
   query: string,
   caseSensitive: boolean,
   maxResults: number,
-  isReadDenied?: (relPath: string) => boolean
+  isReadDenied?: (relPath: string) => boolean,
+  isRegex?: boolean
 ): Promise<string> {
   const ignoredDirs = new Set([
     'node_modules',
@@ -333,6 +347,14 @@ export async function searchFilesFallback(
     '.aws',
     '.gnupg'
   ]);
+  let regexMatcher: RegExp | undefined;
+  if (isRegex) {
+    try {
+      regexMatcher = new RegExp(query, caseSensitive ? '' : 'i');
+    } catch {
+      regexMatcher = undefined;
+    }
+  }
   const needle = caseSensitive ? query : query.toLowerCase();
   const results: string[] = [];
 
@@ -378,7 +400,8 @@ export async function searchFilesFallback(
           const line = lines[i];
           if (!line) continue;
           const haystack = caseSensitive ? line : line.toLowerCase();
-          if (haystack.includes(needle)) {
+          const matched = regexMatcher ? regexMatcher.test(line) : haystack.includes(needle);
+          if (matched) {
             results.push(`${rel}:${i + 1}:${line.trim().slice(0, 300)}`);
           }
         }

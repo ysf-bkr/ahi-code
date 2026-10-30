@@ -86,6 +86,7 @@ const POLICIES: Partial<Record<ToolName, ToolPolicyKind>> = {
   // Yönlendirilmiş akış ve kayıt araçları hiç onay istemez.
   ask_followup_question: 'never',
   update_plan: 'never',
+  update_module_plan: 'never',
   undo_change: 'never'
 };
 

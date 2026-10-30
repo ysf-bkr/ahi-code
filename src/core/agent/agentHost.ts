@@ -23,6 +23,7 @@ import type { CheckpointManager } from '../checkpoint/CheckpointManager';
 import type { ContextManager } from '../context/ContextManager';
 import type { ProjectMemoryManager, ProjectMemoryStatus } from '../memory/ProjectMemoryManager';
 import type { TaskPlanner } from '../plan/TaskPlanner';
+import type { ModulePlanner } from '../plan/ModulePlanner';
 import type { VerificationManager } from '../verification/VerificationManager';
 import type { ModelRouter } from '../routing/ModelRouter';
 import type { WorktreeManager } from '../worktree/WorktreeManager';
@@ -61,6 +62,8 @@ export interface AgentHost {
   contextManager: ContextManager;
   projectMemory: ProjectMemoryManager;
   planner: TaskPlanner;
+  /** Kod yazmadan önce çıkarılan katmanlı modül haritası. */
+  modulePlanner: ModulePlanner;
   verificationManager: VerificationManager;
   modelRouter: ModelRouter;
   worktreeManager: WorktreeManager;
@@ -98,6 +101,8 @@ export interface AgentHost {
   runGeneration: number;
   messageSeq: number;
   activeAbortController?: AbortController;
+  /** Şu an işlenen turun kimliği; asistan mesajları bu kimliği devralır. */
+  currentTurnId?: string;
   pendingResolver?: (approved: boolean, reason?: string) => void;
   pendingQuestionResolver?: (answer: string) => void;
 
@@ -181,6 +186,8 @@ export interface SessionPort {
   canRevertCommand(toolCallId: string): boolean;
   provideUserReply(answer: string): Promise<void>;
   retryLastTurn(): Promise<void>;
+  /** Gönderilmiş bir kullanıcı mesajını düzenler: o mesajdan sonrası atılıp istem yeniden çalıştırılır. */
+  editMessage(messageId: string, text: string): Promise<void>;
 }
 
 export interface ToolPipelinePort {

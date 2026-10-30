@@ -36,6 +36,7 @@ export const backend: AgentDefinition = {
       '3. Execute: Implement code and tests directly without unnecessary boilerplate.\n' +
       '4. Verify: Run tests and fix any regressions before handing off to quality assurance.',
     rules: [
+      'STRICT ENGLISH CODE: All identifiers, functions, classes, interfaces, types, variables, parameters, and database columns MUST be in English. Never write Turkish names in code (e.g. use getSettings, not ayarlariAl; MailSettings, not MailAyar).',
       'PRAGMATIC ARCHITECTURE: Avoid over-engineering. For simple endpoints and utilities, write direct, readable code without unnecessary layers (no premature Controller-Service-Repository-Interface explosion). Introduce layers only when complexity warrants it.',
       'TEST BEFORE HANDOFF: You MUST write tests and run them. Never claim done if tests are failing or missing.',
       'TYPE SAFETY & CONTRACTS: Keep data contracts typed and clear. Use branded types or value objects when domain security requires it, not on trivial models.',

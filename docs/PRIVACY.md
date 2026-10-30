@@ -1,81 +1,93 @@
-# Gizlilik bildirimi
+# Privacy Notice
 
-**Son güncelleme:** 28 Ekim 2026
+[🇹🇷 Türkçe](PRIVACY.tr.md) | **English**
 
-AhiCode, Yusuf BEKAR tarafından bağımsız olarak geliştirilen açık kaynaklı bir VS Code
-eklentisidir. Bu bildirim eklentinin çalışma sırasında işleyebildiği verileri ve bunların
-gidebileceği yerleri açıklar. Model sağlayıcılarının kendi gizlilik ve saklama koşulları
-ayrıdır; bu belge onların uygulamalarını garanti etmez.
+**Last updated:** October 30, 2026
 
-## Eklentinin işlediği veriler
+AhiCode is an open-source Visual Studio Code extension independently developed
+by Yusuf BEKAR. This notice explains which data the extension processes while
+it runs and where that data can travel. Model providers have their own privacy
+and retention terms; this document does not guarantee their practices.
 
-- Sohbet mesajları, görev talimatları, model yanıtları ve araca verilen bağlam.
-- Kullanıcı tarafından seçilen sağlayıcı, model ve uç nokta ayarları.
-- Görev geçmişi ve görev özeti.
-- Ajanın çalıştırdığı araçların adları, kararları ve redakte edilmiş argümanları.
-- Kullanıcı tarafından açılan proje dosyaları ve projede oluşturulan `.ahi/` hafıza, kontrol
-  noktası ve doğrulama dosyaları.
+## 1. Data processed by the extension
 
-Eklenti, araca erişim izni verilen dosyaları okuyabilir. Okunan dosya içeriği model bağlamına
-eklenmişse seçili model sağlayıcısına gönderilebilir. Hassas verileri göndermeden önce
-çalışma alanını, seçili sağlayıcıyı ve eklentinin izin ayarlarını kontrol edin.
+- Chat messages, task instructions, model responses, and prompt context.
+- Provider, model, and endpoint settings chosen by the user.
+- Task history and session transcripts.
+- Names, decisions, and redacted arguments of the tools the agent executes.
+- Files opened by the user, and metadata created under `.ahi/` (memory,
+  checkpoints, audit ledger, verification baseline).
 
-## Model sağlayıcılarına gönderim
+The extension can read files the agent is permitted to access. If file content
+is added to the model context, it may be sent to the selected model provider.
+Before sending sensitive data, check the workspace, the selected provider, and
+the extension's permission settings.
 
-İstek gönderildiğinde sohbet mesajları, model bağlamı ve ilgili araç tanımları seçilen sağlayıcıya
-iletilir. Araç sonucu veya proje dosyası içeriği bağlama eklenmişse bu içerikler de gönderilebilir.
+## 2. Transmission to model providers
 
-- **Ollama:** İstekler ayarladığınız Ollama adresine gönderilir; varsayılan adres
-  `http://localhost:11434` şeklindedir ve tamamen yerel çalışır.
-- **OpenRouter:** İstekler `https://openrouter.ai/api/v1` adresine gönderilir ve oradan seçilen
-  model sağlayıcısına yönlendirilebilir. OpenRouter'ın ve ilgili model sağlayıcısının koşulları
-  geçerlidir.
-- **OpenAI uyumlu uç nokta:** İstekler kullanıcı tarafından ayarlanan temel adrese gönderilir.
-  Uzak sunucu kullanılıyorsa o sunucunun işletmecisi isteklere erişebilir.
+When a request is dispatched, chat messages, model context, and the relevant
+tool schemas are sent to the selected provider. If tool output or file content
+has been added to the context, that content may be sent as well.
 
-AhiCode, bu üçüncü taraf hizmetlerin verileri ne kadar süre sakladığını veya model eğitimi için
-kullanıp kullanmadığını belirlemez. Sağlayıcınızın güncel koşullarını inceleyin.
+- **Ollama (default):** Requests go to the Ollama address you configured;
+  the default is `http://localhost:11434` and runs entirely locally.
+- **EVREN LLM (SSYZ):** Requests are sent to the EVREN API endpoint with the
+  credentials you supplied.
+- **OpenRouter:** Requests go to `https://openrouter.ai/api/v1` and may be
+  routed from there to the selected model provider. OpenRouter's and the target
+  provider's terms apply.
+- **OpenAI-compatible endpoint:** Requests are sent to the base URL you
+  configured. If you use a remote server, that server's operator can access the
+  requests.
 
-## Web araması, URL alma ve MCP
+AhiCode does not determine how long these third parties store data or whether
+they use it for model training. Review your provider's current terms.
 
-- `web_search` aracı arama sorgusunu Tavily veya Brave'e (ilgili API anahtarı ortamda
-  tanımlanmışsa) ya da DuckDuckGo'ya gönderir.
-- `web_fetch` aracı kullanıldığında istenen URL'ye ağ isteği yapılır. Alınan sayfa içeriği görev
-  bağlamına eklenebilir ve bu durumda model sağlayıcısına da gönderilebilir.
-- MCP sunucuları kullanıcı tarafından yapılandırılır. MCP aracına verilen argümanlar ve araç
-  çağrısının gerektirdiği proje verileri o MCP sunucusuna iletilebilir. Yalnızca güvendiğiniz
-  sunucuları ekleyin ve kendi gizlilik koşullarını inceleyin.
+## 3. Web search, URL fetching, and MCP
 
-## Yerel saklama
+- The `web_search` tool sends the query to Tavily or Brave (when the relevant
+  API key is present in the environment) or to DuckDuckGo.
+- When `web_fetch` runs, a network request is made to the requested URL. The
+  retrieved page content may be added to the task context and can therefore be
+  sent to the model provider.
+- MCP servers are configured by the user. Arguments passed to an MCP tool and
+  the project data required by the call may be transmitted to that MCP server.
+  Only add servers you trust and review their own privacy terms.
 
-- Sağlayıcı API anahtarları VS Code `SecretStorage` içinde saklanır; düz metin kullanıcı ayarlarına
-  kaydedilmez.
-- Ayarlar VS Code eklenti durum alanında saklanır. Görev geçmişi ve mesajlar VS Code
-  `workspaceState` içinde yerel olarak saklanır.
-- Proje hafızası, denetim günlüğü, checkpoint'ler ve doğrulama baseline'ı çalışma alanındaki
-  `.ahi/` klasöründe tutulabilir. Bu klasörün içeriği kullanıcının proje ayarlarına göre Git'e
-  eklenebilir; depodaki `.gitignore` bu yerel dosyaların çoğunu hariç tutar.
-- VS Code Output kanalına tanılama mesajları yazılabilir. API anahtarları ve mesaj içerikleri
-  kasıtlı olarak uygulama telemetrisi olarak gönderilmez.
+## 4. Local storage
 
-Görev geçmişini eklentinin geçmiş ekranından silebilirsiniz. Proje içindeki `.ahi/` kayıtlarını
-silmek veya saklamak kullanıcının ve proje bakım sorumlusunun kontrolündedir.
+- Provider API keys are stored in VS Code `SecretStorage`; they are never
+  written to plain-text user settings.
+- Settings are kept in the VS Code extension state. Task history and messages
+  are stored locally in VS Code `workspaceState`.
+- Project memory, the audit log, checkpoints, and the verification baseline may
+  be kept in the workspace's `.ahi/` folder. Its contents can be committed to
+  Git depending on your project settings; the repository `.gitignore` excludes
+  most of these local files.
+- Diagnostic messages may be written to the VS Code Output channel. API keys
+  and message contents are deliberately never sent as application telemetry.
 
-## Telemetri
+You can delete task history from the extension's history screen. Removing or
+keeping the `.ahi/` records inside a project is up to the user and the project
+maintainer.
 
-Kod tabanında AhiCode tarafından işletilen analitik/telemetri gönderimi
-bulunmamaktadır. VS Code, model sağlayıcıları, web arama hizmetleri, MCP sunucuları veya
-yapılandırdığınız başka hizmetlerin kendi veri uygulamaları bu bildirimin kapsamı dışındadır.
+## 5. Telemetry
 
-## Güvenlik ve çocukların gizliliği
+The codebase contains no analytics or telemetry submission operated by AhiCode.
+The data practices of VS Code, model providers, web search services, MCP
+servers, or any other service you configure are outside the scope of this
+notice.
 
-API anahtarlarını, erişim belirteçlerini ve özel kodu herkese açık GitHub issue'larına veya
-günlüklere eklemeyin. Eklenti, sağlayıcıya gönderilen veriler üzerinde uçtan uca şifreleme ya da
-sağlayıcının saklamayacağı garantisi vermez. AhiCode özellikle çocuklara yönelik tasarlanmamıştır.
+## 6. Security and children's privacy
 
-## İletişim ve değişiklikler
+Do not put API keys, access tokens, or private code into public GitHub issues or
+logs. The extension does not provide end-to-end encryption for data sent to a
+provider, nor does it guarantee that the provider will not store it. AhiCode is
+not specifically designed for children.
 
-Gizlilik soruları için [ybekar@msn.com](mailto:ybekar@msn.com) adresine yazabilir veya
-[GitHub Issues](https://github.com/ysf-bkr/ahi-code/issues) üzerinden bildirim açabilirsiniz.
-Herkese açık issue'larda hassas veri paylaşmayın. Bu bildirim, eklentinin veri işleme şekli
-değiştikçe güncellenecektir.
+## 7. Contact and changes
+
+For privacy questions, email [ybekar@msn.com](mailto:ybekar@msn.com) or open an
+issue on [GitHub Issues](https://github.com/ysf-bkr/ahi-code/issues). Do not
+share sensitive data in public issues. This notice will be updated as the
+extension's data handling changes.

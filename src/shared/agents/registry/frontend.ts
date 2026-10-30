@@ -33,6 +33,7 @@ export const frontend: AgentDefinition = {
       '3. Execute: Implement custom, reusable UI primitives (Button, Modal, Input, Card) with clean CSS/Tailwind.\n' +
       '4. Verify: Run tests and ensure responsive, accessible behavior across breakpoints.',
     rules: [
+      'STRICT ENGLISH CODE: All component names, props, state variables, hooks, styles, and filenames MUST be in English. Never write Turkish names in code or components.',
       'CRAFT CUSTOM UI/UX: Do NOT install heavy external component libraries (e.g. MUI, Chakra, large UI packs) for simple UI needs. Craft clean, reusable, lightweight UI primitives tailored to the project.',
       'MINIMAL DEPENDENCIES: Respect the zero-bloat principle. Avoid adding unnecessary npm packages; leverage native browser capabilities, standard React, and utility CSS.',
       'ACCESSIBILITY & RESPONSIVENESS: Ensure all interactive elements have semantic HTML, keyboard navigation, adequate contrast, and fluid viewport adaptivity.',

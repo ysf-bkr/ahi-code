@@ -57,6 +57,12 @@ export class AgentLoop {
           await this.host.knowledgeStore.refresh(workspaceRoot, {
             signal: this.host.activeAbortController?.signal
           });
+        } else {
+          // İndeks yok ya da bozuk: insan dosyaları yukarıda zaten yüklendi,
+          // depo haritasını ise turu bekletmeden arka planda üret.
+          void this.host.knowledgeStore.ensureFresh(workspaceRoot, {
+            signal: this.host.activeAbortController?.signal
+          });
         }
         const workflow = this.host.workflow.getWorkflow();
         workflow.knowledgeReady = true;
@@ -144,7 +150,8 @@ export class AgentLoop {
           this.host.state.stats.verification = {
             status: 'skipped',
             attempts: 0,
-            summary: baseline.summary
+            summary: baseline.summary,
+            skippedReason: baseline.skippedReason
           };
           await this.host.saveCurrentState();
           this.host.emitState();
@@ -182,7 +189,8 @@ export class AgentLoop {
         this.host.planner.formatForPrompt(),
         this.host.settings.autonomy
       )) +
-      `${vectorMemoryContext ? `\n\n${vectorMemoryContext}` : ''}${onboardingNudge}\n${workflowContext}${knowledgeContext}`;
+      `${vectorMemoryContext ? `\n\n${vectorMemoryContext}` : ''}${onboardingNudge}\n${workflowContext}${knowledgeContext}` +
+      this.host.modulePlanner.formatForPrompt();
 
     let mcpTools: ToolDefinition[] = [];
     try {
@@ -268,7 +276,9 @@ export class AgentLoop {
         role: 'assistant',
         content: '',
         timestamp: Date.now(),
-        isStreaming: true
+        isStreaming: true,
+        // Bu yanıt, aynı kullanıcı istemine ait önceki adımlarla tek blokta toplanır.
+        turnId
       };
       this.host.state.messages.push(streamingAssistantMsg);
       this.host.emitState();

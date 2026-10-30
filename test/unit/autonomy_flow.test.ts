@@ -81,7 +81,35 @@ const specCall: ModelCompletionResponse = {
       arguments: {
         goal: 'Ekran ekle',
         scope: ['webview-ui'],
-        acceptanceCriteria: ['Ekran görünür']
+        acceptanceCriteria: [
+          'Ekran görünür ve düğme çalışır',
+          'Geçersiz girdide hata mesajı gösterilir',
+          'Boş liste sınırında çökmez'
+        ]
+      }
+    }
+  ]
+};
+
+const moduleCall: ModelCompletionResponse = {
+  text: '',
+  toolCalls: [
+    {
+      id: 'modules_1',
+      name: 'update_module_plan',
+      arguments: {
+        goal: 'Ekran ekle',
+        modules: [
+          {
+            id: 'ui-screen',
+            name: 'Ekran',
+            layer: 'interface',
+            paths: ['webview-ui/src/App.tsx'],
+            responsibility: 'Ekranı çizer',
+            ownerRole: 'frontend',
+            criteria: ['ac-1']
+          }
+        ]
       }
     }
   ]
@@ -95,7 +123,14 @@ const planCall: ModelCompletionResponse = {
       name: 'update_plan',
       arguments: {
         goal: 'Ekran ekle',
-        steps: [{ title: 'Bileşeni yaz', files: ['webview-ui/src/App.tsx'] }]
+        steps: [
+          {
+            title: 'Bileşeni yaz',
+            files: ['webview-ui/src/App.tsx'],
+            moduleId: 'ui-screen',
+            criteria: ['ac-1']
+          }
+        ]
       }
     }
   ]
@@ -137,9 +172,13 @@ describe('Autonomy: approval gates', () => {
 
   it('auto mode skips the plan gate and assigns owner roles', async () => {
     const root = await workspace();
-    const { core } = createAgent(new ScriptedProvider([specCall, planCall, { text: 'bitti' }]), root, {
-      autonomy: 'auto'
-    });
+    const { core } = createAgent(
+      new ScriptedProvider([specCall, moduleCall, planCall, { text: 'bitti' }]),
+      root,
+      {
+        autonomy: 'auto'
+      }
+    );
 
     await core.handleSendMessage('ekran ekle');
 

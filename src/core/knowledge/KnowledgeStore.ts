@@ -129,6 +129,11 @@ export class KnowledgeStore {
 
   /**
    * Önceden kalıcılaştırılmış indeksi yükler. Kullanılabilir bir şey yoksa false döner.
+   *
+   * İnsan tarafından yazılan bilgi dosyaları (`project.md`, `conventions.md`,
+   * `decisions.md`, `notes.md`) indeksten bağımsızdır. İndeks yoksa, bozuksa ya
+   * da başka bir checkout'a aitse bile bu dosyalar yüklenir; aksi halde `.ahi`
+   * dolu olsa da ajan proje bilgisini hiç görmez ve her şeyi yeniden sorardı.
    */
   public async load(workspaceRoot: string): Promise<boolean> {
     this.root = workspaceRoot;
@@ -138,9 +143,9 @@ export class KnowledgeStore {
     this.state = undefined;
     this.human = {};
 
-    if (!paths.map || !paths.symbols || !paths.state) return false;
-
     try {
+      if (!paths.map || !paths.symbols || !paths.state) return false;
+
       const [mapRaw, symbolRaw, stateRaw] = await Promise.all([
         fs.readFile(paths.map, 'utf-8'),
         fs.readFile(paths.symbols, 'utf-8'),
@@ -166,9 +171,11 @@ export class KnowledgeStore {
     } catch {
       // Bozuk ya da yabancı indeks atılır ve sıfırdan yeniden oluşturulur.
       return false;
+    } finally {
+      // İndeks başarısız olsa da insan dosyaları her durumda okunur.
+      await this.loadHumanFiles();
     }
 
-    await this.loadHumanFiles();
     return this.files.size > 0;
   }
 

@@ -99,7 +99,10 @@ const RISKY_RULES: Rule[] = [
   { pattern: /\bnpm\s+publish\b|\byarn\s+publish\b|\bpnpm\s+publish\b/, reason: 'package publication' },
   { pattern: /\bdocker\s+(run|rm|rmi|prune|system)\b/, reason: 'container lifecycle operations' },
   { pattern: /\bkill\b|\bpkill\b|\bkillall\b/, reason: 'process termination' },
-  { pattern: /(^|[^0-9a-zA-Z_])>>?\s*[^&\s]/, reason: 'output redirection overwrites files' },
+  {
+    pattern: /(^|[^0-9a-zA-Z_])>>?\s*(?!\/dev\/null\b)[^&\s]/,
+    reason: 'output redirection overwrites files'
+  },
   { pattern: /\btee\b/, reason: 'tee writes to files' },
   { pattern: /\bgit\s+commit\b/, reason: 'git commit records changes' },
   {
@@ -140,12 +143,15 @@ const RISKY_RULES: Rule[] = [
     reason: 'the command references a parent directory outside the workspace'
   },
   {
-    pattern: /(^|\s)(\/[^\s]*|[A-Za-z]:[/\\][^\s]*|~\/[^\s]*)/,
+    pattern:
+      /(^|\s)(\/(etc|var|usr|bin|sbin|root|opt|lib|sys|proc|private\/etc)($|[\s/\\])|~[/\\]|\$HOME[/\\]|[A-Za-z]:[/\\](Windows|Program Files))/i,
     reason: 'the command references an absolute or home path outside the workspace'
   }
 ];
 
-const SHELL_METACHARACTERS = /[;&|<>`\n]|\$\(/;
+/** Salt-okunur ardışık düzen (pipeline) filtre araçları. */
+const SAFE_PIPELINE_FILTER_PATTERN =
+  /^(grep|egrep|fgrep|rg|head|tail|wc|sort|uniq|cut|column|less|more|cat|tr|sed)(\s|$)/;
 
 /**
  * Kimlik bilgisi ya da anahtar malzemesi gibi görünen komut argümanları. Bunları
@@ -180,12 +186,15 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   // `printenv`/`env` hariç: tüm ortam değişkenlerini (API anahtarları dahil)
   // dökerler. `git branch` hariç çünkü `git branch <ad>` dal oluşturur
   // (yalnızca `git branch -d/-D` riskli kurala yakalanır).
-  /^(ls|ll|la|pwd|cd|echo|printf|date|cal|whoami|id|uname|hostname|which|type|whatis|file|wc|head|tail|stat|du|df|tree|basename|dirname|realpath|readlink|cat|less|more|grep|egrep|fgrep|rg|ag|diff|cmp|sort|uniq|cut|column|rev|nl|sleep|true|false|test|mkdir|touch|dir|where|ver)(\s|$)/,
+  // `sed` için salt-okunur kullanım serbesttir (`sed -i` zaten RISKY_RULES ile engellenir).
+  /^(ls|ll|la|pwd|cd|echo|printf|date|cal|whoami|id|uname|hostname|which|type|whatis|file|wc|head|tail|stat|du|df|tree|basename|dirname|realpath|readlink|cat|less|more|grep|egrep|fgrep|rg|ag|diff|cmp|sort|uniq|cut|column|rev|nl|sleep|true|false|test|mkdir|touch|dir|where|ver|sed)(\s|$)/,
+  // Güvenli dosya arama (yıkıcı -delete veya -exec parametreleri hariç)
+  /^find\s+(?![^\n]*\s(-exec|-execdir|-delete)\b)/,
   // Standart test/build/lint/typecheck akışları. `start`/`dev`/`watch`
   // bilinçli olarak yok: bunlar package.json'da tanımlı keyfi betiklerdir ve
   // doğrulama değil, sürekli çalışan geliştirme sunucusu akışlarıdır.
   /^(npm|yarn|pnpm)\s+(test|ls|outdated|audit|view|info)(\s|$)/,
-  /^(npm|yarn|pnpm)\s+run\s+(test|build|lint|typecheck|check|format|verify|bench|compile)[a-z0-9:_-]*(\s|$)/,
+  /^(npm|yarn|pnpm)\s+run\s+(test|build|lint|typecheck|check|format|verify|bench|compile|package|bundle|clean|generate|validate)[a-z0-9:_-]*(\s|$)/,
   /^(npm|yarn|pnpm)\s+(-v|--version)(\s|$)/,
   // Araç zinciri kontrolleri ve test çalıştırıcıları.
   /^(node|python|python3)\s+(-v|--version)(\s|$)/,
@@ -207,10 +216,13 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^swift\s+(test|build|package|--version)(\s|$)/,
   // Çapraz platform derleyici ve araç zinciri kontrolleri
   /^(rustc|cargo|go|flutter|dart|swift|clang|gcc|ninja|cmake)\s+(-v|--version)(\s|$)/,
-  // Salt-okunur Git incelemesi. Değiştiren alt komutlar (push, reset, clean,
-  // checkout, stash, switch, dal oluşturma, ...) bilinçli olarak yok; ya riskli
-  // kurala uyarlar ya da varsayılan `risky` sınıflandırmasına düşerler.
-  /^git\s+(status|diff|log|show|rev-parse|ls-files|blame|shortlog|describe|reflog)(\s|$)/,
+  // Güvenli Git işlemleri: inceleme, staging (add), dal değiştirme (switch/checkout dal)
+  /^git\s+(status|diff|log|show|rev-parse|ls-files|blame|shortlog|describe|reflog|merge-base)(\s|$)/,
+  /^git\s+add(\s|$)/,
+  /^git\s+fetch(\s|$)/,
+  /^git\s+branch(\s+(-a|-r|-v|--list|--show-current\b))*$/,
+  /^git\s+checkout\s+(?!--|\.|\s-f)(?!.*(--|\s\.|\s-f))[a-zA-Z0-9_\-./]+(\s|$)/,
+  /^git\s+switch\s+(?!-f\b)(?!.*-f\b)[a-zA-Z0-9_\-./]+(\s|$)/,
   /^git\s+(remote|stash)\s+(-v|--verbose|--list|list)(\s|$)/,
   /^git\s+config\s+(--get|--list|-l)(\s|$)/
 ];
@@ -219,37 +231,176 @@ function matchingReasons(command: string, rules: Rule[]): string[] {
   return rules.filter((rule) => rule.pattern.test(command)).map((rule) => rule.reason);
 }
 
-export function assessCommand(command: string): CommandAssessment {
-  const value = String(command || '').trim();
-  if (!value) {
+/**
+ * Komut dizesini tırnakları (`'` ve `"`) ve kaçışları (`\`) dikkate alarak
+ * `;`, `&&`, `||` operatörlerine göre alt mantıksal ifadelere (clauses) böler.
+ */
+export function splitCompoundCommand(command: string): string[] {
+  const clauses: string[] = [];
+  let current = '';
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let escapeNext = false;
+
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i];
+
+    if (escapeNext) {
+      current += char;
+      escapeNext = false;
+      continue;
+    }
+
+    if (char === '\\' && !inSingleQuote) {
+      current += char;
+      escapeNext = true;
+      continue;
+    }
+
+    if (char === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote;
+      current += char;
+      continue;
+    }
+
+    if (char === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote;
+      current += char;
+      continue;
+    }
+
+    // Tırnak dışında kalan operatörler:
+    if (!inSingleQuote && !inDoubleQuote) {
+      if ((char === '&' && command[i + 1] === '&') || (char === '|' && command[i + 1] === '|')) {
+        if (current.trim()) {
+          clauses.push(current.trim());
+        }
+        current = '';
+        i++; // ikinci karakteri atla
+        continue;
+      }
+      if (char === ';') {
+        if (current.trim()) {
+          clauses.push(current.trim());
+        }
+        current = '';
+        continue;
+      }
+    }
+
+    current += char;
+  }
+
+  if (current.trim()) {
+    clauses.push(current.trim());
+  }
+
+  return clauses;
+}
+
+/**
+ * Bir ifadeyi tırnakları dikkate alarak `|` (boru) aşamalarına böler.
+ */
+export function splitPipeline(clause: string): string[] {
+  const stages: string[] = [];
+  let current = '';
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let escapeNext = false;
+
+  for (let i = 0; i < clause.length; i++) {
+    const char = clause[i];
+
+    if (escapeNext) {
+      current += char;
+      escapeNext = false;
+      continue;
+    }
+
+    if (char === '\\' && !inSingleQuote) {
+      current += char;
+      escapeNext = true;
+      continue;
+    }
+
+    if (char === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote;
+      current += char;
+      continue;
+    }
+
+    if (char === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote;
+      current += char;
+      continue;
+    }
+
+    if (!inSingleQuote && !inDoubleQuote && char === '|') {
+      if (current.trim()) {
+        stages.push(current.trim());
+      }
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current.trim()) {
+    stages.push(current.trim());
+  }
+
+  return stages;
+}
+
+/**
+ * Tekil bir komut veya boru hattı filtresi aşamasını değerlendirir.
+ */
+function assessSingleStage(stage: string, isPipelineFilter: boolean): CommandAssessment {
+  const cleaned = stage.replace(/\s*(2>&1|2>\/dev\/null|1?>\s*\/dev\/null)\b/g, '').trim();
+  if (!cleaned) {
     return { risk: 'safe', reasons: [] };
   }
 
-  const blocked = matchingReasons(value, BLOCKED_RULES);
+  const blocked = matchingReasons(cleaned, BLOCKED_RULES);
   if (blocked.length > 0) {
     return { risk: 'blocked', reasons: blocked };
   }
 
-  const risky = matchingReasons(value, RISKY_RULES);
+  const risky = matchingReasons(cleaned, RISKY_RULES);
   if (risky.length > 0) {
     return { risk: 'risky', reasons: risky };
   }
 
-  if (SHELL_METACHARACTERS.test(value)) {
+  // Komut ikamesi (`...` veya $(...)) tehlikelidir; keyfi alt komut çalıştırabilir
+  if (/`|\$\(/.test(cleaned)) {
     return {
       risk: 'risky',
-      reasons: ['shell chaining, pipes, or redirection can run additional commands']
+      reasons: ['command substitution (`...` or $(...)) can run arbitrary commands']
     };
   }
 
-  if (SENSITIVE_FILE_PATTERN.test(value)) {
+  if (SENSITIVE_FILE_PATTERN.test(cleaned)) {
     return {
       risk: 'risky',
       reasons: ['the command references sensitive files such as keys or environment secrets']
     };
   }
 
-  if (SAFE_COMMAND_PATTERNS.some((pattern) => pattern.test(value))) {
+  if (isPipelineFilter) {
+    if (
+      SAFE_PIPELINE_FILTER_PATTERN.test(cleaned) ||
+      SAFE_COMMAND_PATTERNS.some((pattern) => pattern.test(cleaned))
+    ) {
+      return { risk: 'safe', reasons: [] };
+    }
+    return {
+      risk: 'risky',
+      reasons: ['pipeline filter stage is not on the safe allowlist']
+    };
+  }
+
+  if (SAFE_COMMAND_PATTERNS.some((pattern) => pattern.test(cleaned))) {
     return { risk: 'safe', reasons: [] };
   }
 
@@ -257,6 +408,58 @@ export function assessCommand(command: string): CommandAssessment {
     risk: 'risky',
     reasons: ['the command is not on the safe-command allowlist; it requires explicit approval']
   };
+}
+
+export function assessCommand(command: string, _workspaceRoot?: string): CommandAssessment {
+  const value = String(command || '').trim();
+  if (!value) {
+    return { risk: 'safe', reasons: [] };
+  }
+
+  // 1. Tüm komut genelinde sert kural kontrolü (blocked)
+  const rootBlocked = matchingReasons(value, BLOCKED_RULES);
+  if (rootBlocked.length > 0) {
+    return { risk: 'blocked', reasons: rootBlocked };
+  }
+
+  // 2. Tırnakları koruyarak `;`, `&&`, `||` ile ayrılmış mantıksal ifadelere böl
+  const clauses = splitCompoundCommand(value);
+
+  // Eğer hiçbir ifade çıkmadıysa
+  if (clauses.length === 0) {
+    return { risk: 'safe', reasons: [] };
+  }
+
+  const allBlockedReasons: string[] = [];
+  const allRiskyReasons: string[] = [];
+
+  for (const clause of clauses) {
+    // Her bir clause boru hattı (`|`) içerebilir
+    const stages = splitPipeline(clause);
+    if (stages.length === 0) continue;
+
+    for (let i = 0; i < stages.length; i++) {
+      const stage = stages[i];
+      if (!stage) continue;
+      const isFilter = i > 0;
+      const res = assessSingleStage(stage, isFilter);
+      if (res.risk === 'blocked') {
+        allBlockedReasons.push(...res.reasons);
+      } else if (res.risk === 'risky') {
+        allRiskyReasons.push(...res.reasons);
+      }
+    }
+  }
+
+  if (allBlockedReasons.length > 0) {
+    return { risk: 'blocked', reasons: Array.from(new Set(allBlockedReasons)) };
+  }
+
+  if (allRiskyReasons.length > 0) {
+    return { risk: 'risky', reasons: Array.from(new Set(allRiskyReasons)) };
+  }
+
+  return { risk: 'safe', reasons: [] };
 }
 
 /** Hook'lar ve komut çalıştırıcısı tarafından kullanılan geriye dönük uyumlu yardımcı. */

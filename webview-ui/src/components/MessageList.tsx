@@ -11,22 +11,29 @@ import {
   Plug,
   Bot,
   Pencil,
-  Undo2
+  Settings,
+  Undo2,
+  ChevronRight
 } from 'lucide-react';
 import { ChatMessage, CheckpointSummary, ToolCall } from '@shared/types';
+import { stripInjectedContext } from '@shared/editorContext';
 import { Button, Disclosure, ListButton } from './ui';
 import { vscode } from '../utils/vscode';
 import { ActionStepCard } from './ActionStepCard';
 import { Logo } from './Logo';
 import { Markdown } from './Markdown';
 import { MessageError, MessageStatus } from './MessageStatus';
+import { TurnChangesReview } from './TurnChangesReview';
 
 interface MessageListProps {
   messages: ChatMessage[];
   pendingToolCall?: ToolCall;
   checkpoints?: CheckpointSummary[];
-  onEditMessage?: (content: string) => void;
+  /** Mesaj içeriği ve kimliği; düzenleme o turdan sonrasını yeniden çalıştırır. */
+  onEditMessage?: (content: string, messageId: string) => void;
   onSuggestionClick?: (prompt: string) => void;
+  isConfigured?: boolean;
+  onOpenSettings?: () => void;
 }
 
 const formatTime = (timestamp: number) =>
@@ -34,27 +41,27 @@ const formatTime = (timestamp: number) =>
 
 const QUICK_ACTIONS = [
   {
-    icon: <FileSearch className="h-4 w-4 text-[var(--ahi-brand-400)]" />,
+    icon: <FileSearch className="ahi-icon-md ahi-text-brand" />,
     title: 'Projeyi analiz et',
     desc: 'Mimariyi ve dosya yapısını incele',
     prompt:
       'Projenin mimarisini, klasör yapısını ve bağımlılıklarını incele; eksik veya riskli alanları bildir.'
   },
   {
-    icon: <Bug className="h-4 w-4 text-amber-400" />,
+    icon: <Bug className="ahi-icon-md ahi-text-warning" />,
     title: 'Hataları bul ve düzelt',
     desc: 'Derleme, test ve tip hatalarını gider',
     prompt: 'Projede derleme, test ve tip hatalarını bul; nedenlerini analiz edip düzelt.'
   },
   {
-    icon: <ShieldCheck className="h-4 w-4 text-emerald-400" />,
+    icon: <ShieldCheck className="ahi-icon-md ahi-text-success" />,
     title: 'Güvenlik incelemesi',
     desc: 'Riskli kodu ve izinleri denetle',
     prompt:
       'Kod tabanını güvenlik sorunları açısından incele; riskli örüntüleri ve izin sorunlarını bildir, mümkün olanları düzelt.'
   },
   {
-    icon: <Terminal className="h-4 w-4 text-violet-400" />,
+    icon: <Terminal className="ahi-icon-md ahi-text-brand" />,
     title: 'Testleri çalıştır',
     desc: 'Testleri çalıştır ve hataları gider',
     prompt: 'Proje testlerini çalıştır; başarısız testleri ve hata mesajlarını analiz edip düzelt.'
@@ -62,13 +69,16 @@ const QUICK_ACTIONS = [
 ];
 
 const CAPABILITIES = [
-  { icon: <Sparkles className="h-3 w-3" />, label: 'Otonom ReAct' },
-  { icon: <Plug className="h-3 w-3" />, label: 'MCP' },
-  { icon: <Layers className="h-3 w-3" />, label: 'LSP' },
-  { icon: <Bot className="h-3 w-3" />, label: 'Alt ajanlar' }
+  { icon: <Sparkles className="ahi-icon-xs" />, label: 'Otonom ReAct' },
+  { icon: <Plug className="ahi-icon-xs" />, label: 'MCP' },
+  { icon: <Layers className="ahi-icon-xs" />, label: 'LSP' },
+  { icon: <Bot className="ahi-icon-xs" />, label: 'Alt ajanlar' }
 ];
 
-const CopyMessageButton: React.FC<{ content: string }> = ({ content }) => {
+const CopyMessageButton: React.FC<{ content: string; label?: string }> = ({
+  content,
+  label = 'Yanıtı kopyala'
+}) => {
   const [copied, setCopied] = useState(false);
 
   return (
@@ -84,13 +94,13 @@ const CopyMessageButton: React.FC<{ content: string }> = ({ content }) => {
           })
           .catch(() => {});
       }}
-      aria-label={copied ? 'Yanıt kopyalandı' : 'Yanıtı kopyala'}
-      title={copied ? 'Yanıt kopyalandı' : 'Yanıtı kopyala'}
+      aria-label={copied ? 'Yanıt kopyalandı' : label}
+      title={copied ? 'Yanıt kopyalandı' : label}
       icon={
         copied ? (
-          <Check className="h-3 w-3 text-emerald-400" />
+          <Check className="ahi-icon-xs ahi-text-success" />
         ) : (
-          <Copy className="h-3 w-3" aria-hidden="true" />
+          <Copy className="ahi-icon-xs" aria-hidden="true" />
         )
       }
     >
@@ -99,16 +109,20 @@ const CopyMessageButton: React.FC<{ content: string }> = ({ content }) => {
   );
 };
 
-const EmptyState: React.FC<{ onSuggestionClick?: (prompt: string) => void }> = ({ onSuggestionClick }) => (
+const EmptyState: React.FC<{
+  onSuggestionClick?: (prompt: string) => void;
+  isConfigured?: boolean;
+  onOpenSettings?: () => void;
+}> = ({ onSuggestionClick, isConfigured = true, onOpenSettings }) => (
   <div className="flex h-full flex-col justify-between gap-4 p-3">
     <div className="space-y-5 pt-2">
       <div className="flex flex-col items-center gap-2 text-center">
-        <div className="ahi-avatar-soft flex h-10 w-10 items-center justify-center rounded-full border text-[var(--ahi-brand-400)]">
-          <Logo className="h-5 w-5" colored />
+        <div className="ahi-avatar ahi-avatar-soft ahi-avatar--lg ahi-text-brand">
+          <Logo className="ahi-icon-lg" colored />
         </div>
         <div>
-          <h1 className="text-sm font-semibold tracking-tight text-[var(--vscode-foreground)]">AhiCode</h1>
-          <p className="mt-0.5 max-w-[260px] text-sm leading-relaxed text-[var(--vscode-descriptionForeground)]">
+          <h1 className="text-sm font-semibold tracking-tight ahi-text-fg">AhiCode</h1>
+          <p className="mt-0.5 max-w-[260px] text-sm leading-relaxed ahi-text-muted">
             Ahilik zanaat disiplini ve mühendislik titizliğiyle projenizi inceleyen, kod yazan, testleri
             çalıştıran ve hataları düzelten yazılım ajanı.
           </p>
@@ -117,7 +131,7 @@ const EmptyState: React.FC<{ onSuggestionClick?: (prompt: string) => void }> = (
           {CAPABILITIES.map((cap) => (
             <span
               key={cap.label}
-              className="flex items-center gap-1 rounded-full border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-editorWidget-background)] px-2 py-0.5 text-2xs text-[var(--vscode-descriptionForeground)]"
+              className="flex items-center gap-1 rounded-full border ahi-border-surface ahi-bg-raised px-2 py-0.5 text-2xs ahi-text-muted"
             >
               {cap.icon}
               {cap.label}
@@ -126,26 +140,49 @@ const EmptyState: React.FC<{ onSuggestionClick?: (prompt: string) => void }> = (
         </div>
       </div>
 
-      <div className="space-y-1.5">
-        <div className="px-1 text-2xs font-semibold uppercase tracking-[0.14em] text-[var(--vscode-descriptionForeground)]">
-          Hızlı başlangıç
+      {!isConfigured ? (
+        <div className="rounded-lg border ahi-border-warning ahi-bg-warning p-4 text-center space-y-3">
+          <div className="ahi-avatar ahi-avatar--lg ahi-bg-badge mx-auto">
+            <Settings className="ahi-icon-lg" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="ahi-title">Model Ayarları Yapılandırılmadı</h2>
+            <p className="text-xs ahi-text-muted leading-relaxed">
+              AhiCode ile sohbete başlayabilmek için lütfen bir model sağlayıcısı (Yerel Ollama, EVREN LLM,
+              OpenRouter vb.) seçip yapılandırın.
+            </p>
+          </div>
+          {onOpenSettings && (
+            <Button
+              variant="primary"
+              className="w-full justify-center"
+              onClick={onOpenSettings}
+              icon={<Settings className="ahi-icon-sm" />}
+            >
+              Ayarları Yapılandır
+            </Button>
+          )}
         </div>
-        <div className="grid grid-cols-1 gap-1.5">
-          {QUICK_ACTIONS.map((item) => (
-            <ListButton
-              key={item.title}
-              onClick={() => onSuggestionClick?.(item.prompt)}
-              icon={item.icon}
-              title={item.title}
-              description={item.desc}
-            />
-          ))}
+      ) : (
+        <div className="space-y-1.5">
+          <div className="px-1 ahi-overline">Hızlı başlangıç</div>
+          <div className="grid grid-cols-1 gap-1.5">
+            {QUICK_ACTIONS.map((item) => (
+              <ListButton
+                key={item.title}
+                onClick={() => onSuggestionClick?.(item.prompt)}
+                icon={item.icon}
+                title={item.title}
+                description={item.desc}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
 
-    <div className="flex items-center gap-2 rounded-md border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-editorWidget-background)] px-2.5 py-2 text-xs text-[var(--vscode-descriptionForeground)]">
-      <Terminal className="h-3 w-3 shrink-0 text-emerald-400" />
+    <div className="flex items-center gap-2 rounded-md border ahi-border-surface ahi-bg-raised px-2.5 py-2 text-xs ahi-text-muted">
+      <Terminal className="ahi-icon-xs ahi-text-success" />
       <span>Dosya, terminal ve LSP araçlarını kullanabilir. Değişiklikler onayınıza sunulur.</span>
     </div>
   </div>
@@ -175,7 +212,7 @@ function findCheckpointForMessage(
 interface UserMessageProps {
   message: ChatMessage;
   checkpoints?: CheckpointSummary[];
-  onEdit?: (content: string) => void;
+  onEdit?: (content: string, messageId: string) => void;
 }
 
 const UserMessage: React.FC<UserMessageProps> = ({ message, checkpoints, onEdit }) => {
@@ -185,10 +222,13 @@ const UserMessage: React.FC<UserMessageProps> = ({ message, checkpoints, onEdit 
   // kutusu göstermez ve her zaman false döner — düğme ölü görünüyordu.
   const [confirmRewind, setConfirmRewind] = useState(false);
   const checkpoint = findCheckpointForMessage(message, checkpoints);
+  // Kullanıcı balonunda ajanın eklediği editör bağlamı görünmez; kopyalama da
+  // kullanıcının kendi sözlerini alır.
+  const visibleContent = stripInjectedContext(message.content);
 
   const copy = () => {
     navigator.clipboard
-      .writeText(message.content)
+      .writeText(visibleContent)
       .then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
@@ -211,20 +251,17 @@ const UserMessage: React.FC<UserMessageProps> = ({ message, checkpoints, onEdit 
   };
 
   return (
-    <div className="group/user flex flex-col items-end">
-      <div className="ahi-user-bubble max-w-[94%] rounded-lg rounded-tr-sm border px-3 py-2">
-        <div className="mb-1 flex items-center justify-end gap-2 text-2xs font-medium uppercase tracking-wider text-[var(--vscode-descriptionForeground)]">
+    <div className="flex flex-col items-end">
+      <div className="ahi-bubble ahi-bubble--user">
+        <div className="ahi-overline mb-1 justify-end">
           <span>Sen</span>
         </div>
-        <div className="whitespace-pre-wrap break-words text-xs leading-relaxed text-[var(--vscode-foreground)]">
-          {message.content}
-        </div>
+        <div className="whitespace-pre-wrap break-words ahi-text-fg">{visibleContent}</div>
       </div>
 
-      {/* Zaman ve mesaj başına eylemler balonun altında durur; böylece sohbet
-          okunabilir kalır. Üzerine gelince görünür ve Tab ile erişilebilir. */}
-      <div className="text-2xs mt-0.5 flex items-center gap-1 pr-0.5 text-[var(--vscode-descriptionForeground)] opacity-0 transition group-hover/user:opacity-100 focus-within:opacity-100">
-        <span className="font-mono">{formatTime(message.timestamp)}</span>
+      {/* Zaman ve mesaj başına eylemler balonun altında sabit ve sakin durur */}
+      <div className="text-2xs mt-1 flex items-center gap-1 pr-0.5 ahi-text-muted">
+        <span className="font-mono opacity-70">{formatTime(message.timestamp)}</span>
         <Button
           variant="ghost"
           size="xs"
@@ -233,9 +270,9 @@ const UserMessage: React.FC<UserMessageProps> = ({ message, checkpoints, onEdit 
           title={copied ? 'Mesaj kopyalandı' : 'Mesajı kopyala'}
           icon={
             copied ? (
-              <Check className="h-2.5 w-2.5 text-emerald-400" />
+              <Check className="ahi-icon-xs ahi-text-success" />
             ) : (
-              <Copy className="h-2.5 w-2.5" aria-hidden="true" />
+              <Copy className="ahi-icon-xs" aria-hidden="true" />
             )
           }
         >
@@ -245,10 +282,10 @@ const UserMessage: React.FC<UserMessageProps> = ({ message, checkpoints, onEdit 
           <Button
             variant="ghost"
             size="xs"
-            onClick={() => onEdit(message.content)}
+            onClick={() => onEdit(visibleContent, message.id)}
             aria-label="Mesajı düzenle ve yeniden gönder"
             title="Mesajı düzenle ve yeniden gönder"
-            icon={<Pencil className="h-2.5 w-2.5" aria-hidden="true" />}
+            icon={<Pencil className="ahi-icon-xs" aria-hidden="true" />}
           >
             Düzenle
           </Button>
@@ -260,8 +297,8 @@ const UserMessage: React.FC<UserMessageProps> = ({ message, checkpoints, onEdit 
             onClick={requestRewind}
             aria-label="Bu mesajdan sonraki değişiklikleri geri al"
             title="Bu mesajdan sonraki değişiklikleri geri al"
-            className={confirmRewind ? 'text-rose-400' : ''}
-            icon={<Undo2 className="h-2.5 w-2.5" aria-hidden="true" />}
+            className={confirmRewind ? 'ahi-text-error' : ''}
+            icon={<Undo2 className="ahi-icon-xs" aria-hidden="true" />}
           >
             {confirmRewind ? 'Emin misin?' : 'Geri al'}
           </Button>
@@ -274,68 +311,182 @@ const UserMessage: React.FC<UserMessageProps> = ({ message, checkpoints, onEdit 
 const SystemMessage: React.FC<{ message: ChatMessage }> = ({ message }) => (
   <Disclosure
     summary="Bağlam özeti"
-    className="ahi-soft-card rounded-md border border-dashed border-[var(--vscode-editorWidget-border)] px-2.5 py-1.5"
+    className="ahi-soft-card rounded-md border border-dashed ahi-border-surface px-2.5 py-1.5"
   >
-    <div className="mt-1.5 border-t border-[var(--vscode-editorWidget-border)] pt-1.5 opacity-90">
+    <div className="mt-1.5 border-t ahi-border-surface pt-1.5 opacity-90">
       <Markdown content={message.content} />
     </div>
   </Disclosure>
 );
 
-const AssistantMessage: React.FC<{
-  message: ChatMessage;
+/** Sohbetin tek bir turu: bir kullanıcı istemi ve ona ait tüm asistan adımları. */
+export interface ChatTurn {
+  id: string;
+  user?: ChatMessage;
+  assistant: ChatMessage[];
+}
+
+/**
+ * Mesajları turlara böler.
+ *
+ * Bir tur, kullanıcı istemiyle başlar ve sonraki kullanıcı istemine kadar
+ * süren tüm asistan/sistem mesajlarını kapsar. Yeni kayıtlarda `turnId`
+ * doğrudan kullanılır; eski kayıtlarda kullanıcı mesajı sınır kabul edilir.
+ */
+export function groupMessages(messages: ChatMessage[]): ChatTurn[] {
+  const turns: ChatTurn[] = [];
+
+  for (const message of messages) {
+    const current = turns[turns.length - 1];
+    const startsTurn =
+      message.role === 'user' || !current || (message.turnId !== undefined && current.id !== message.turnId);
+
+    if (startsTurn) {
+      turns.push({
+        id: message.turnId ?? message.id,
+        user: message.role === 'user' ? message : undefined,
+        assistant: message.role === 'user' ? [] : [message]
+      });
+      continue;
+    }
+
+    current.assistant.push(message);
+  }
+
+  return turns;
+}
+
+/** Markdown işaretlerini sıyırıp akordeon başlığı için tek satırlık özet üretir. */
+export function summarizeTurn(turn: ChatTurn): string {
+  const withContent = [...turn.assistant].reverse().find((message) => message.content.trim());
+  if (withContent) {
+    const line = withContent.content
+      .replace(/```[\s\S]*?```/g, ' ')
+      .replace(/[#>*_`~|-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (line) return line.length > 110 ? `${line.slice(0, 110)}…` : line;
+  }
+
+  const toolCount = turn.assistant.reduce((total, message) => total + (message.toolCalls?.length ?? 0), 0);
+  if (toolCount > 0) return `${toolCount} araç adımı çalıştırıldı`;
+  return 'Yanıt';
+}
+
+const ToolSteps: React.FC<{ toolCalls: ToolCall[]; pendingToolCall?: ToolCall }> = ({
+  toolCalls,
+  pendingToolCall
+}) => (
+  <div className="ml-1 space-y-1 border-l ahi-border-surface pl-2">
+    <div className="flex items-center gap-1.5 px-0.5 ahi-overline">
+      <Layers className="ahi-icon-xs ahi-text-brand" />
+      Araç adımları
+      <span className="ahi-badge-soft rounded-full px-1.5 py-0.5 font-mono text-2xs ahi-text-muted">
+        {toolCalls.length}
+      </span>
+    </div>
+    {toolCalls.map((toolCall, index) => (
+      <ActionStepCard
+        key={toolCall.id}
+        toolCall={toolCall}
+        stepNumber={index + 1}
+        isPendingApproval={pendingToolCall?.id === toolCall.id}
+      />
+    ))}
+  </div>
+);
+
+interface TurnBlockProps {
+  turn: ChatTurn;
+  /** Tur şu anda çalışıyorsa akordeon açık kalır. */
+  active: boolean;
   pendingToolCall?: ToolCall;
-}> = ({ message, pendingToolCall }) => {
-  const hasBody = Boolean(message.content) || Boolean(message.isStreaming);
-  const hasTools = Boolean(message.toolCalls?.length);
+}
+
+/**
+ * Asistan yanıtlarını tek akordeonda toplar.
+ *
+ * Her tur ayrı bir "AhiCode" balonu gibi görünmek yerine tek bir başlık altında
+ * katlanır; çalışırken açık, bittiğinde kendiliğinden kapanır ve başlıkta
+ * yanıtın kısa özetini gösterir.
+ */
+const TurnBlock: React.FC<TurnBlockProps> = ({ turn, active, pendingToolCall }) => {
+  const [open, setOpen] = useState(active);
+  const wasActive = useRef(active);
+  const last = turn.assistant[turn.assistant.length - 1];
+  const toolCalls = turn.assistant.flatMap((message) => message.toolCalls ?? []);
+  const content = turn.assistant
+    .map((message) => message.content)
+    .filter(Boolean)
+    .join('\n\n');
+
+  useEffect(() => {
+    // Çalışma bitince akordeonu kendiliğinden kapat; kullanıcı sonradan açarsa
+    // bir daha zorla kapatma.
+    if (active) {
+      setOpen(true);
+    } else if (wasActive.current) {
+      setOpen(false);
+    }
+    wasActive.current = active;
+  }, [active]);
+
+  if (turn.assistant.length === 0) return null;
 
   return (
-    <div className="group/msg flex items-start gap-2">
-      <div className="ahi-avatar-soft mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[var(--ahi-brand-400)]">
-        <Logo
-          className={`h-3.5 w-3.5 ${message.isStreaming ? 'animate-spin [animation-duration:2.5s]' : ''}`}
-        />
+    <div className="rounded-lg border ahi-border-surface ahi-bg-surface">
+      <div className="flex items-center gap-2 px-2.5 py-1.5">
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          aria-controls={`turn-${turn.id}`}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          title={open ? 'Yanıtı daralt' : 'Yanıtı genişlet'}
+        >
+          <ChevronRight
+            className={`ahi-icon-xs shrink-0 ahi-text-muted transition-transform ${open ? 'rotate-90' : ''}`}
+          />
+          <span className="ahi-avatar ahi-avatar-soft ahi-avatar--sm ahi-text-brand">
+            <Logo className="ahi-icon-xs" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-2">
+              <span className="text-xs font-semibold ahi-text-fg">AhiCode</span>
+              {last && <MessageStatus message={last} />}
+              <span className="font-mono text-2xs ahi-text-muted opacity-70">
+                {formatTime(turn.assistant[0].timestamp)}
+              </span>
+              {!open && (
+                <span className="min-w-0 flex-1 truncate text-2xs ahi-text-muted">{summarizeTurn(turn)}</span>
+              )}
+            </span>
+          </span>
+        </button>
+        {content && <CopyMessageButton content={content} />}
       </div>
 
-      <div className="min-w-0 flex-1 space-y-1.5">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-[var(--vscode-foreground)]">AhiCode</span>
-          <span className="font-mono text-2xs text-[var(--vscode-descriptionForeground)] opacity-70">
-            {formatTime(message.timestamp)}
-          </span>
-          <MessageStatus message={message} />
-          <span className="ml-auto">
-            {message.content && <CopyMessageButton content={message.content} />}
-          </span>
-        </div>
-
-        {hasBody && (
-          <div className="rounded-lg rounded-tl-sm border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-editorWidget-background)] px-3 py-2">
-            <Markdown content={message.content} isStreaming={message.isStreaming} />
+      <div
+        id={`turn-${turn.id}`}
+        hidden={!open}
+        className="space-y-2 border-t ahi-border-surface px-2.5 py-2"
+      >
+        {turn.assistant.map((message) => (
+          <div key={message.id} className="space-y-1.5">
+            {(message.content || message.isStreaming) && (
+              <div className="ahi-bubble">
+                <Markdown content={message.content} isStreaming={message.isStreaming} />
+              </div>
+            )}
+            {message.error && <MessageError error={message.error} />}
           </div>
+        ))}
+
+        {turn.assistant.some((message) => message.toolCalls?.length) && (
+          <TurnChangesReview toolCalls={toolCalls} />
         )}
 
-        {message.error && <MessageError error={message.error} />}
-
-        {hasTools && (
-          <div className="ml-1 space-y-1 border-l border-[var(--vscode-editorWidget-border)] pl-2">
-            <div className="flex items-center gap-1.5 px-0.5 text-2xs font-semibold uppercase tracking-wider text-[var(--vscode-descriptionForeground)]">
-              <Layers className="h-2.5 w-2.5 text-[var(--ahi-brand-400)]" />
-              Araç adımları
-              <span className="ahi-badge-soft rounded-full px-1.5 py-0.5 font-mono text-2xs text-[var(--vscode-descriptionForeground)]">
-                {message.toolCalls!.length}
-              </span>
-            </div>
-            {message.toolCalls!.map((tc, index) => (
-              <ActionStepCard
-                key={tc.id}
-                toolCall={tc}
-                stepNumber={index + 1}
-                isPendingApproval={pendingToolCall?.id === tc.id}
-              />
-            ))}
-          </div>
-        )}
+        {toolCalls.length > 0 && <ToolSteps toolCalls={toolCalls} pendingToolCall={pendingToolCall} />}
       </div>
     </div>
   );
@@ -346,7 +497,9 @@ export const MessageList: React.FC<MessageListProps> = ({
   pendingToolCall,
   checkpoints,
   onEditMessage,
-  onSuggestionClick
+  onSuggestionClick,
+  isConfigured = true,
+  onOpenSettings
 }) => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -373,23 +526,44 @@ export const MessageList: React.FC<MessageListProps> = ({
   if (messages.length === 0) {
     return (
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <EmptyState onSuggestionClick={onSuggestionClick} />
+        <EmptyState
+          onSuggestionClick={onSuggestionClick}
+          isConfigured={isConfigured}
+          onOpenSettings={onOpenSettings}
+        />
       </div>
     );
   }
 
+  const turns = groupMessages(messages);
+  const lastTurn = turns[turns.length - 1];
+  const activeTurnId =
+    lastTurn && (lastTurn.assistant.some((message) => message.isStreaming) || Boolean(pendingToolCall))
+      ? lastTurn.id
+      : undefined;
+
   return (
-    <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-2.5 py-3">
+    <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
       <div className="space-y-3">
-        {messages.map((msg) => (
-          <div key={msg.id} className="ahi-message">
-            {msg.role === 'user' ? (
-              <UserMessage message={msg} checkpoints={checkpoints} onEdit={onEditMessage} />
-            ) : msg.role === 'system' ? (
-              <SystemMessage message={msg} />
-            ) : (
-              <AssistantMessage message={msg} pendingToolCall={pendingToolCall} />
+        {turns.map((turn) => (
+          <div key={turn.id} className="ahi-message space-y-1.5">
+            {turn.user && (
+              <UserMessage message={turn.user} checkpoints={checkpoints} onEdit={onEditMessage} />
             )}
+            {turn.assistant.some((message) => message.role === 'system') && (
+              <div className="space-y-1.5">
+                {turn.assistant
+                  .filter((message) => message.role === 'system')
+                  .map((message) => (
+                    <SystemMessage key={message.id} message={message} />
+                  ))}
+              </div>
+            )}
+            <TurnBlock
+              turn={{ ...turn, assistant: turn.assistant.filter((message) => message.role !== 'system') }}
+              active={turn.id === activeTurnId}
+              pendingToolCall={pendingToolCall}
+            />
           </div>
         ))}
 

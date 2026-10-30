@@ -32,6 +32,8 @@ export interface ModelRoutingSettings {
 }
 
 export interface UserSettings {
+  /** Kullanıcı en az bir kez ayarları yapılandırıp kaydetti mi? */
+  isConfigured?: boolean;
   selectedProvider: ModelProviderType;
   selectedModel: string;
   apiKeys: {
@@ -47,6 +49,8 @@ export interface UserSettings {
   customBaseUrl?: string;
   openAiCompatibleBaseUrl?: string;
   ollamaBaseUrl?: string;
+  /** Model isteği bağlantı zaman aşımı süresi (saniye, varsayılan: 180). Yavaş sağlayıcılar için artırılabilir. */
+  requestTimeoutSeconds?: number;
   /** EVREN LLM kullanım koşullarını otomatik kabul et. */
   autoAcceptTerms?: boolean;
   autoApprove: {
@@ -120,6 +124,7 @@ export type ToolName =
   | 'get_hover'
   | 'undo_change'
   | 'update_plan'
+  | 'update_module_plan'
   | 'run_verification'
   | 'get_references'
   | 'get_workspace_symbols'
@@ -159,6 +164,34 @@ export interface ToolCall {
   error?: string;
 }
 
+/** EVREN LLM kullanım kotası; `GET /v1/quota` yanıtından arayüze taşınan alanlar. */
+export interface EvrenQuota {
+  /** Kayan pencere içinde tüketilen token sayısı. */
+  usedTokens: number | null;
+  /** Kayan pencerenin token sınırı. */
+  windowCap: number | null;
+  /** Kayan pencere uzunluğu (dakika). */
+  windowMinutes: number | null;
+  /** En eski kovanın düştüğü ISO 8601 zamanı. */
+  resetAt: string | null;
+  /** Günlük (UTC) tüketilen token sayısı. */
+  dailyUsedTokens: number | null;
+  /** Günlük token sınırı; hesabın sınırı yoksa null. */
+  dailyLimitTokens: number | null;
+  /** Kalan günlük token sayısı. */
+  dailyRemainingTokens: number | null;
+  /** Günlük sayacın sıfırlandığı ISO 8601 zamanı. */
+  dailyResetAt: string | null;
+  /** `ok`, `warn` (>=%75), `critical` (>=%90) veya `unknown`. */
+  level: 'ok' | 'warn' | 'critical' | 'unknown';
+  /** Kalan kredi bakiyesi (sağlayıcıdan gelen ham metin). */
+  remainingCredits: string | null;
+  /** Şu anda uçuşta olan istek sayısı. */
+  concurrentRequests: number | null;
+  /** Hesabın eşzamanlı istek sınırı. */
+  concurrencyLimit: number | null;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
@@ -168,6 +201,12 @@ export interface ChatMessage {
   isStreaming?: boolean;
   /** Bu asistan turu başarısız olduğunda ayarlanır; arayüz yeniden dene/geri al sunar. */
   error?: string;
+  /**
+   * Mesajın ait olduğu tur. Bir kullanıcı istemi ve ardından gelen tüm asistan
+   * çıktıları aynı kimliği paylaşır; arayüz bunları tek bir yanıt bloğunda
+   * toplar. Eski kayıtlarda bulunmayabilir.
+   */
+  turnId?: string;
 }
 
 export interface TaskSummary {
@@ -244,6 +283,10 @@ export interface PlanStep {
   dependsOn: string[];
   completionCriteria?: string;
   files?: string[];
+  /** Bu adımın ait olduğu modül (`update_module_plan` kimliği). */
+  moduleId?: string;
+  /** Bu adımın karşıladığı kabul kriterleri (`ac-1` biçiminde). */
+  criteria?: string[];
   /**
    * Bu adımı yürütecek uzman rol. Yönetici ajan bunu
    * `assign_plan_roles` ile doldurur; model de doğrudan verebilir.
@@ -256,6 +299,43 @@ export interface PlanStep {
 export interface TaskPlan {
   goal: string;
   steps: PlanStep[];
+  updatedAt: number;
+}
+
+/**
+ * Modül katmanı. Endüstriyel düzende bağımlılık yönü yukarıdan aşağıyadır:
+ * arayüz → uygulama → alan; altyapı ve paylaşılan katman herkesin altındadır.
+ */
+export type ModuleLayer =
+  | 'interface'
+  | 'application'
+  | 'domain'
+  | 'infrastructure'
+  | 'shared'
+  | 'test'
+  | 'docs';
+
+/** Kod yazmadan önce çıkarılan modül haritasının tek kaydı. */
+export interface ProjectModule {
+  /** Kararlı kimlik (`slug`); plan adımları bunu `moduleId` ile referanslar. */
+  id: string;
+  name: string;
+  layer: ModuleLayer;
+  /** Bu modülün sahip olduğu dosya ya da dizin yolları (çalışma alanına göreli). */
+  paths: string[];
+  /** Tek cümlelik sorumluluk; "ne yapar" sorusunu yanıtlar. */
+  responsibility: string;
+  /** Bu modülün bağımlı olduğu diğer modül kimlikleri. */
+  dependsOn: string[];
+  /** Bu modülü yazacak uzman rol (ör. `backend`, `frontend`). */
+  ownerRole: string;
+  /** Bu modülün karşıladığı kabul kriterleri (`ac-1`). */
+  criteria: string[];
+}
+
+export interface ModulePlan {
+  goal: string;
+  modules: ProjectModule[];
   updatedAt: number;
 }
 
@@ -394,6 +474,11 @@ export interface TaskVerificationStats {
   attempts: number;
   summary?: string;
   lastRunAt?: number;
+  /**
+   * Doğrulamanın neden çalışmadığı. `no-commands` dışındaki her neden "bitti"
+   * kapısını kapatır: test yok diye görev sessizce tamamlanmış sayılmaz.
+   */
+  skippedReason?: 'no-commands' | 'no-workspace' | 'aborted';
 }
 
 /**
@@ -435,6 +520,8 @@ export interface TaskState {
   pendingQuestion?: PendingQuestion;
   checkpoints?: CheckpointSummary[];
   plan?: TaskPlan;
+  /** Kod yazmadan önce çıkarılan modül haritası. */
+  modules?: ModulePlan;
   /** Yönlendirilmiş iş akışı aşaması ve onaylar. */
   workflow?: WorkflowState;
   /** Arayüz için etkin spec özeti. */
@@ -452,9 +539,11 @@ export interface TaskState {
  */
 export type WebviewToExtensionMessage =
   | { type: 'SEND_MESSAGE'; payload: { text: string; mode?: AgentMode } }
+  | { type: 'EDIT_MESSAGE'; payload: { messageId: string; text: string; mode?: AgentMode } }
   | { type: 'NEW_SESSION' }
   | { type: 'SET_MODE'; payload: { mode: AgentMode } }
   | { type: 'CANCEL_TASK' }
+  | { type: 'RESUME_TASK' }
   | { type: 'RETRY_LAST_TURN' }
   | { type: 'APPROVE_TOOL'; payload: { toolCallId: string } }
   | { type: 'REJECT_TOOL'; payload: { toolCallId: string; reason?: string } }
@@ -465,6 +554,7 @@ export type WebviewToExtensionMessage =
   | { type: 'SAVE_SETTINGS'; payload: Partial<UserSettings> }
   | { type: 'REQUEST_SETTINGS' }
   | { type: 'FETCH_MODELS'; payload: { provider: ModelProviderType; apiKey?: string; baseUrl?: string } }
+  | { type: 'FETCH_QUOTA' }
   | { type: 'GET_TASK_HISTORY' }
   | { type: 'LOAD_TASK'; payload: { taskId: string } }
   | { type: 'DELETE_TASK'; payload: { taskId: string } }
@@ -486,6 +576,7 @@ export type WebviewToExtensionMessage =
   | { type: 'REVERT_TOOL_SNAPSHOT'; payload: { toolCallId: string } }
   | { type: 'REVERT_COMMAND'; payload: { toolCallId: string } }
   | { type: 'SHOW_TOOL_DIFF'; payload: { toolCallId: string } }
+  | { type: 'PREVIEW_TOOL_DIFF'; payload: { toolCallId: string } }
   | { type: 'SHOW_FILE_DIFF'; payload: { filePath: string } }
   | { type: 'OPEN_FILE'; payload: { filePath: string } }
   | { type: 'GET_GIT_CHANGES' }
@@ -514,6 +605,10 @@ export type ExtensionToWebviewMessage =
   | { type: 'STREAM_CHUNK'; payload: { messageId: string; text: string } }
   | { type: 'SETTINGS_LOADED'; payload: UserSettings }
   | { type: 'MODELS_LOADED'; payload: { provider: ModelProviderType; models: string[]; error?: string } }
+  | {
+      type: 'QUOTA_LOADED';
+      payload: { provider: ModelProviderType; quota?: EvrenQuota; error?: string };
+    }
   | { type: 'TASK_HISTORY_LOADED'; payload: { history: TaskSummary[] } }
   | { type: 'MCP_STATUS_LOADED'; payload: { servers: McpServerInfo[] } }
   | { type: 'CUSTOMIZATIONS_LOADED'; payload: WorkspaceCustomizations }

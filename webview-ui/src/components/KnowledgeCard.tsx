@@ -47,15 +47,15 @@ export const KnowledgeCard: React.FC = () => {
   return (
     <Section>
       <SectionTitle
-        icon={<Database className="h-3 w-3" />}
+        icon={<Database className="ahi-icon-xs" />}
         title="Bilgi tabanı"
         count={ready ? (status?.fileCount ?? 0) : undefined}
       />
 
       <Card className="flex flex-col gap-2">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-xs flex items-center gap-1.5 font-medium text-[var(--ahi-fg)]">
-            <Database className="h-3 w-3 text-[var(--status-info-fg)]" />
+          <div className="text-xs flex items-center gap-1.5 font-medium ahi-text-fg">
+            <Database className="ahi-icon-xs ahi-text-info" />
             {ready ? `${status?.fileCount} dosya · ${status?.symbolCount} sembol` : 'Henüz oluşturulmadı'}
           </div>
           <div className="flex items-center gap-1">
@@ -66,9 +66,9 @@ export const KnowledgeCard: React.FC = () => {
               disabled={busy}
               icon={
                 busy ? (
-                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                  <Loader2 className="ahi-icon-xs animate-spin" />
                 ) : (
-                  <RefreshCw className="h-2.5 w-2.5" />
+                  <RefreshCw className="ahi-icon-xs" />
                 )
               }
             >
@@ -88,7 +88,7 @@ export const KnowledgeCard: React.FC = () => {
                   vscode.postMessage({ type: 'CLEAR_KNOWLEDGE' });
                   setConfirmClear(false);
                 }}
-                icon={<Trash2 className="h-2.5 w-2.5" />}
+                icon={<Trash2 className="ahi-icon-xs" />}
               >
                 {confirmClear ? 'Emin misin?' : 'Sıfırla'}
               </Button>
@@ -106,8 +106,7 @@ export const KnowledgeCard: React.FC = () => {
           <div className="ahi-caption flex flex-col gap-0.5">
             {status.modules.slice(0, 5).map((module) => (
               <span key={module.path} className="truncate">
-                <span className="font-mono text-[var(--ahi-brand-400)]">{module.path}</span> —{' '}
-                {module.summary}
+                <span className="font-mono ahi-text-brand">{module.path}</span> — {module.summary}
               </span>
             ))}
           </div>
@@ -128,7 +127,7 @@ export const KnowledgeCard: React.FC = () => {
             block
             onClick={addNote}
             disabled={!note.trim()}
-            icon={<PlusCircle className="h-2.5 w-2.5" />}
+            icon={<PlusCircle className="ahi-icon-xs" />}
           >
             Notu bilgi tabanına ekle
           </Button>
@@ -136,7 +135,7 @@ export const KnowledgeCard: React.FC = () => {
 
         {status?.notes?.trim() && (
           <Disclosure summary="Notları görüntüle">
-            <pre className="text-2xs mt-1 max-h-32 overflow-y-auto whitespace-pre-wrap break-words rounded border border-[var(--ahi-surface-border)] bg-[var(--ahi-input-bg)] p-2 font-mono text-[var(--ahi-muted-fg)]">
+            <pre className="text-2xs mt-1 max-h-32 overflow-y-auto whitespace-pre-wrap break-words rounded border ahi-border-surface ahi-bg-input p-2 font-mono ahi-text-muted">
               {status.notes.slice(-1500)}
             </pre>
           </Disclosure>

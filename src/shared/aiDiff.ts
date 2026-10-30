@@ -16,16 +16,6 @@ export interface AiDiffOptions {
   collapseAssets?: boolean;
 }
 
-export interface DiffFileStats {
-  path: string;
-  oldPath?: string;
-  status: 'M' | 'A' | 'D' | 'R' | 'B';
-  additions: number;
-  deletions: number;
-  isLockfile: boolean;
-  isAsset: boolean;
-}
-
 /** Yaygın bağımlılık kilit dosyaları; diff'leri çok büyük token harcar. */
 const LOCKFILE_PATTERNS = [
   'package-lock.json',

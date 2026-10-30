@@ -29,7 +29,7 @@ import {
   Database,
   Terminal
 } from 'lucide-react';
-import { TaskState, WorkspaceCustomizations } from '@shared/types';
+import { NavigationDestination, TaskState, WorkspaceCustomizations } from '@shared/types';
 import { BUILT_IN_SUBAGENT_ROLES } from '@shared/agents/index';
 import { ScreenHeader } from './ScreenHeader';
 import {
@@ -49,34 +49,36 @@ import { vscode } from '../utils/vscode';
 interface AgentsViewProps {
   onBack: () => void;
   state?: TaskState;
+  onSelectMenu?: (destination: NavigationDestination) => void;
+  changedFileCount?: number;
 }
 
 const ROLE_ICONS: Record<string, React.ReactNode> = {
-  manager: <Crown className="h-3.5 w-3.5 text-amber-400" />,
-  analyst: <Target className="h-3.5 w-3.5 text-indigo-400" />,
-  architect: <Compass className="h-3.5 w-3.5 text-[var(--ahi-brand-400)]" />,
-  backend: <Server className="h-3.5 w-3.5 text-blue-400" />,
-  frontend: <Palette className="h-3.5 w-3.5 text-cyan-400" />,
-  mobile: <Smartphone className="h-3.5 w-3.5 text-violet-400" />,
-  native: <Cpu className="h-3.5 w-3.5 text-orange-400" />,
-  database: <Database className="h-3.5 w-3.5 text-teal-400" />,
-  devops: <Terminal className="h-3.5 w-3.5 text-pink-400" />,
-  explorer: <Search className="h-3.5 w-3.5 text-yellow-400" />,
-  git: <FolderGit2 className="h-3.5 w-3.5 text-red-400" />,
-  quality: <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />,
-  security: <ShieldCheck className="h-3.5 w-3.5 text-rose-400" />,
-  coder: <Wrench className="h-3.5 w-3.5 text-emerald-400" />,
-  tester: <TestTube2 className="h-3.5 w-3.5 text-amber-400" />,
-  reviewer: <ShieldCheck className="h-3.5 w-3.5 text-rose-400" />
+  manager: <Crown className="ahi-icon-sm ahi-text-warning" />,
+  analyst: <Target className="ahi-icon-sm ahi-text-brand" />,
+  architect: <Compass className="ahi-icon-sm ahi-text-brand" />,
+  backend: <Server className="ahi-icon-sm ahi-text-info" />,
+  frontend: <Palette className="ahi-icon-sm ahi-text-brand" />,
+  mobile: <Smartphone className="ahi-icon-sm ahi-text-info" />,
+  native: <Cpu className="ahi-icon-sm ahi-text-warning" />,
+  database: <Database className="ahi-icon-sm ahi-text-info" />,
+  devops: <Terminal className="ahi-icon-sm ahi-text-warning" />,
+  explorer: <Search className="ahi-icon-sm ahi-text-info" />,
+  git: <FolderGit2 className="ahi-icon-sm ahi-text-error" />,
+  quality: <CheckCircle2 className="ahi-icon-sm ahi-text-success" />,
+  security: <ShieldCheck className="ahi-icon-sm ahi-text-error" />,
+  coder: <Wrench className="ahi-icon-sm ahi-text-success" />,
+  tester: <TestTube2 className="ahi-icon-sm ahi-text-warning" />,
+  reviewer: <ShieldCheck className="ahi-icon-sm ahi-text-success" />
 };
 
 const CodePreview: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <pre className="text-2xs mt-1.5 max-h-24 overflow-hidden whitespace-pre-wrap break-words rounded border border-[var(--ahi-surface-border)] bg-[var(--ahi-input-bg)] p-2 font-mono leading-relaxed text-[var(--ahi-muted-fg)]">
+  <pre className="text-2xs mt-1.5 max-h-24 overflow-hidden whitespace-pre-wrap break-words rounded border ahi-border-surface ahi-bg-input p-2 font-mono leading-relaxed ahi-text-muted">
     {children}
   </pre>
 );
 
-export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
+export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state, onSelectMenu, changedFileCount }) => {
   const [customizations, setCustomizations] = useState<WorkspaceCustomizations>({
     hasAgentsMd: false,
     skills: [],
@@ -117,10 +119,6 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
   const memoryCount = customizations.memoryEntryCount || 0;
 
   const selectRole = (role: string) => {
-    // Hiyerarşi: uzmanları yalnızca yönetici başlatır. Kullanıcı arayüzden
-    // doğrudan uzman (security, backend, ...) çalıştıramaz; kartlar bilgilendirme
-    // amaçlıdır ve yalnızca @manager için görev formu açılır.
-    if (role !== 'manager') return;
     setLaunchRole((current) => (current === role ? null : role));
     setLaunchTask('');
   };
@@ -142,13 +140,28 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
     }, 600);
   };
 
+  const activeAgentInfo = launchRole
+    ? BUILT_IN_SUBAGENT_ROLES.find((a) => a.role === launchRole) ||
+      customizations.agents.find(
+        (a) =>
+          a.name.toLowerCase() === launchRole.toLowerCase() ||
+          a.role.toLowerCase() === launchRole.toLowerCase()
+      )
+    : undefined;
+
   const launchForm = launchRole ? (
-    <Card className="flex flex-col gap-2">
-      <div className="text-xs font-semibold text-[var(--ahi-fg)]">Alt ajan görevi: {launchRole}</div>
+    <Card className="flex flex-col gap-2 ahi-border-brand ahi-bg-surface">
+      <div className="flex items-center justify-between">
+        <div className="ahi-title flex items-center gap-1.5">
+          <Bot className="ahi-icon-sm ahi-text-brand" />
+          Ajan görevi: <span className="ahi-text-brand">{activeAgentInfo?.name || launchRole}</span>
+        </div>
+        <span className="text-2xs font-mono ahi-text-muted">@{launchRole}</span>
+      </div>
       <Textarea
         className="w-full resize-none font-mono text-xs"
         rows={3}
-        placeholder="Bu ajan ne yapsın? Görevi kısaca ve net tanımlayın."
+        placeholder={`${activeAgentInfo?.name || launchRole} ne yapsın? Görevi kısaca ve net tanımlayın.`}
         value={launchTask}
         onChange={(event) => setLaunchTask(event.target.value)}
         aria-label="Alt ajan görevi"
@@ -169,7 +182,9 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
               ? 'Şu anda başka bir alt ajan çalışırken yeni bir ajan başlatılamaz.'
               : undefined
           }
-          icon={launching ? <Loader2 className="h-3 w-3 animate-spin" /> : <Play className="h-3 w-3" />}
+          icon={
+            launching ? <Loader2 className="ahi-icon-xs animate-spin" /> : <Play className="ahi-icon-xs" />
+          }
         >
           {launching ? 'Başlatılıyor…' : 'Başlat'}
         </Button>
@@ -189,38 +204,38 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
         title="Ajanlar & Beceriler"
         subtitle="AGENTS.md, .agents/skills ve alt ajanlar"
         onBack={onBack}
+        onSelectMenu={onSelectMenu}
+        changedFileCount={changedFileCount}
         actions={
           <IconButton label="Yeniden tara" onClick={refresh}>
-            <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin text-[var(--status-info-fg)]' : ''}`} />
+            <RefreshCw className={`ahi-icon-xs ${loading ? 'animate-spin ahi-text-info' : ''}`} />
           </IconButton>
         }
       />
 
       <div className="ahi-screen-body">
         {state?.activeSubagent && (
-          <Card className="border-[var(--ahi-brand-500)]/40 bg-[var(--ahi-brand-500)]/10">
+          <Card className="ahi-border-brand ahi-bg-brand-soft">
             <div className="flex items-center justify-between gap-1.5">
               <div className="flex items-center gap-1.5 min-w-0">
                 <span className="relative flex h-2 w-2 shrink-0">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--ahi-brand-400)] opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--ahi-brand-400)]" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full ahi-bg-brand opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full ahi-bg-brand" />
                 </span>
-                <span className="text-xs font-semibold text-[var(--ahi-fg)] truncate">
+                <span className="ahi-title truncate">
                   Aktif Alt Ajan: {state.activeSubagent.displayName || state.activeSubagent.role}
                 </span>
               </div>
-              <span className="text-2xs font-mono text-[var(--ahi-brand-400)] shrink-0">
+              <span className="text-2xs font-mono ahi-text-brand shrink-0">
                 {state.activeSubagent.isolate ? 'İzole Worktree' : 'Çalışma Alanı'}
               </span>
             </div>
-            <p className="mt-1 text-2xs text-[var(--ahi-muted-fg)] line-clamp-2">
-              {state.activeSubagent.task}
-            </p>
-            <div className="mt-1.5 flex items-center justify-between border-t border-[var(--ahi-surface-border)] pt-1 text-2xs">
-              <div className="flex items-center gap-1 text-[var(--ahi-brand-400)]">
+            <p className="mt-1 text-2xs ahi-text-muted line-clamp-2">{state.activeSubagent.task}</p>
+            <div className="mt-1.5 flex items-center justify-between border-t ahi-border-surface pt-1 text-2xs">
+              <div className="flex items-center gap-1 ahi-text-brand">
                 {state.activeSubagent.currentTool ? (
                   <>
-                    <Wrench className="h-2.5 w-2.5 animate-spin" />
+                    <Wrench className="ahi-icon-xs animate-spin" />
                     <span className="font-mono">
                       {state.activeSubagent.currentTool}
                       {state.activeSubagent.step
@@ -230,14 +245,14 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
                   </>
                 ) : (
                   <>
-                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                    <Loader2 className="ahi-icon-xs animate-spin" />
                     <span>İşlem yürütülüyor…</span>
                   </>
                 )}
               </div>
               {state.activeSubagent.worktreePath && (
                 <span
-                  className="font-mono text-2xs text-[var(--ahi-muted-fg)] truncate max-w-[140px]"
+                  className="font-mono text-2xs ahi-text-muted truncate max-w-[140px]"
                   title={state.activeSubagent.worktreePath}
                 >
                   {state.activeSubagent.worktreePath.split('/').pop()}
@@ -249,11 +264,11 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
 
         <Card>
           <div className="flex items-start gap-2">
-            <span className="ahi-toggle-row__icon h-7 w-7 text-[var(--status-info-fg)]">
-              <Sparkles className="h-3.5 w-3.5" />
+            <span className="ahi-toggle-row__icon ahi-text-info">
+              <Sparkles className="ahi-icon-sm" />
             </span>
             <div>
-              <div className="text-sm font-semibold text-[var(--ahi-fg)]">Projeye özel ajan sistemi</div>
+              <div className="ahi-title">Projeye özel ajan sistemi</div>
               <p className="ahi-caption mt-0.5">
                 Codex ve Claude Code ile uyumlu <code className="ahi-code-inline">AGENTS.md</code>, beceriler
                 ve özel alt ajanlar otomatik algılanır.
@@ -263,18 +278,19 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
         </Card>
 
         <Section>
-          <SectionTitle icon={<BookOpen className="h-3 w-3" />} title="Proje yönergeleri" />
+          <SectionTitle icon={<BookOpen className="ahi-icon-xs" />} title="Proje yönergeleri" />
           {customizations.hasAgentsMd ? (
-            <Card className="border-[var(--status-success-border)]">
+            <Card className="ahi-border-success">
               <div className="flex items-center justify-between">
-                <span className="text-xs flex items-center gap-1.5 font-medium text-[var(--ahi-fg)]">
-                  <CheckCircle2 className="h-3 w-3 text-[var(--status-success-fg)]" /> AGENTS.md aktif
+                <span className="text-xs flex items-center gap-1.5 font-medium ahi-text-fg">
+                  <CheckCircle2 className="ahi-icon-xs ahi-text-success" /> AGENTS.md aktif
                 </span>
                 <Button
                   variant="ghost"
                   size="xs"
-                  onClick={() => openFile('AGENTS.md')}
-                  icon={<FileCode className="h-2.5 w-2.5" />}
+                  onClick={() => openFile(customizations.agentsMdPath || 'AGENTS.md')}
+                  icon={<FileCode className="ahi-icon-xs" />}
+                  title="AGENTS.md dosyasını aç"
                 >
                   Aç
                 </Button>
@@ -282,21 +298,36 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
               <CodePreview>{customizations.agentsMdContent?.slice(0, 500) || '(boş)'}</CodePreview>
             </Card>
           ) : (
-            <EmptyState
-              title="AGENTS.md bulunamadı"
-              description="Proje kuralları ve mimari notları her göreve otomatik olarak eklenir."
-            />
+            <Card className="ahi-border-warning ahi-bg-warning">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="ahi-title">AGENTS.md bulunamadı</div>
+                  <div className="text-2xs ahi-text-muted mt-0.5">
+                    Proje kuralları ve mimari notları her göreve otomatik olarak eklenir.
+                  </div>
+                </div>
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={scaffold}
+                  icon={<PlusCircle className="ahi-icon-xs" />}
+                  title="AGENTS.md ve .agents/ şablonunu oluştur"
+                >
+                  Oluştur
+                </Button>
+              </div>
+            </Card>
           )}
         </Section>
 
         <KnowledgeCard />
 
         <Section>
-          <SectionTitle icon={<Brain className="h-3 w-3" />} title="Proje hafızası" count={memoryCount} />
+          <SectionTitle icon={<Brain className="ahi-icon-xs" />} title="Proje hafızası" count={memoryCount} />
           <Card>
             <div className="flex items-center justify-between gap-2">
-              <div className="text-xs flex items-center gap-1.5 font-medium text-[var(--ahi-fg)]">
-                <Brain className="h-3 w-3 text-violet-400" />
+              <div className="text-xs flex items-center gap-1.5 font-medium ahi-text-fg">
+                <Brain className="ahi-icon-xs ahi-text-brand" />
                 {memoryCount ? `${memoryCount} görev kaydı` : 'Henüz kayıt yok'}
               </div>
               <div className="flex items-center gap-1">
@@ -305,7 +336,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
                     variant="ghost"
                     size="xs"
                     onClick={() => openFile(customizations.memoryPath!)}
-                    icon={<FileCode className="h-2.5 w-2.5" />}
+                    icon={<FileCode className="ahi-icon-xs" />}
                   >
                     Aç
                   </Button>
@@ -323,7 +354,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
                       vscode.postMessage({ type: 'CLEAR_PROJECT_MEMORY' });
                       setConfirmMemoryClear(false);
                     }}
-                    icon={<Trash2 className="h-2.5 w-2.5" />}
+                    icon={<Trash2 className="ahi-icon-xs" />}
                   >
                     {confirmMemoryClear ? 'Emin misin?' : 'Temizle'}
                   </Button>
@@ -340,7 +371,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
 
         <Section>
           <SectionTitle
-            icon={<FolderGit2 className="h-3 w-3" />}
+            icon={<FolderGit2 className="ahi-icon-xs" />}
             title="Beceriler"
             count={customizations.skills.length}
           />
@@ -352,10 +383,10 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
                 <ListButton
                   key={skill.name}
                   onClick={() => openFile(skill.path)}
-                  icon={<BookOpen className="h-4 w-4 text-teal-400" />}
+                  icon={<BookOpen className="ahi-icon-md ahi-text-info" />}
                   title={skill.name}
                   description={skill.description}
-                  trailing={<ExternalLink className="h-3 w-3 opacity-50" />}
+                  trailing={<ExternalLink className="ahi-icon-xs opacity-50" />}
                 />
               ))}
             </div>
@@ -364,7 +395,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
 
         <Section>
           <SectionTitle
-            icon={<Bot className="h-3 w-3" />}
+            icon={<Bot className="ahi-icon-xs" />}
             title="Özel alt ajanlar"
             count={customizations.agents.length}
           />
@@ -380,27 +411,20 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
                     className="flex min-w-0 flex-1 items-start gap-2 text-left"
                     title="Ajan tanımını aç"
                   >
-                    <span className="ahi-toggle-row__icon h-5 w-5 text-pink-400">
-                      <Bot className="h-2.5 w-2.5" />
+                    <span className="ahi-toggle-row__icon ahi-text-warning">
+                      <Bot className="ahi-icon-xs" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5">
-                        <span className="text-xs truncate font-medium text-[var(--ahi-fg)]">
-                          {agent.name}
-                        </span>
-                        <span className="ahi-badge bg-[var(--vscode-sideBar-background)] font-mono text-[var(--ahi-muted-fg)]">
-                          {agent.role}
-                        </span>
+                        <span className="text-xs truncate font-medium ahi-text-fg">{agent.name}</span>
+                        <span className="ahi-badge ahi-bg-base font-mono ahi-text-muted">{agent.role}</span>
                       </span>
                       <span className="ahi-caption mt-0.5 line-clamp-2">{agent.description}</span>
                       <span className="mt-1 flex flex-wrap gap-1">
                         {(agent.tools && agent.tools.length > 0 ? agent.tools : ['salt-okunur'])
                           .slice(0, 4)
                           .map((tool) => (
-                            <span
-                              key={tool}
-                              className="ahi-badge bg-[var(--vscode-sideBar-background)] font-mono text-[var(--ahi-muted-fg)]"
-                            >
+                            <span key={tool} className="ahi-badge ahi-bg-base font-mono ahi-text-muted">
                               {tool}
                             </span>
                           ))}
@@ -408,12 +432,11 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
                     </span>
                   </button>
                   <Button
-                    variant="ghost"
+                    variant={launchRole === agent.name ? 'primary' : 'ghost'}
                     size="xs"
                     onClick={() => selectRole(agent.name)}
-                    icon={<Play className="h-2.5 w-2.5" />}
-                    disabled
-                    title="Uzmanları yalnızca yönetici başlatır"
+                    icon={<Play className="ahi-icon-xs" />}
+                    title={`${agent.name} ile görev başlat`}
                   >
                     Görev
                   </Button>
@@ -426,7 +449,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
         {launchForm}
 
         <Section>
-          <SectionTitle icon={<Layers className="h-3 w-3" />} title="Yerleşik ajanlar" />
+          <SectionTitle icon={<Layers className="ahi-icon-xs" />} title="Yerleşik ajanlar" />
           <div className="flex flex-col gap-1.5">
             {BUILT_IN_SUBAGENT_ROLES.map((agent) => {
               const isCustomized = customizations.agents.some(
@@ -445,8 +468,8 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
                   key={agent.role}
                   className={`rounded-md border p-2 transition ${
                     launchRole === agent.role
-                      ? 'border-[var(--ahi-brand-400)] bg-[var(--status-info-bg)]'
-                      : 'border-[var(--ahi-surface-border)] bg-[var(--ahi-surface)]'
+                      ? 'ahi-border-brand ahi-bg-info'
+                      : 'ahi-border-surface ahi-bg-surface'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -454,34 +477,26 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
                       type="button"
                       onClick={() => selectRole(agent.role)}
                       className="flex min-w-0 flex-1 items-start gap-2 text-left"
-                      title={
-                        agent.role === 'manager'
-                          ? 'Yönetici ajanla görev başlat'
-                          : 'Uzmanları yönetici başlatır; bu kart bilgilendirme amaçlıdır'
-                      }
+                      title={`${agent.name} ile görev başlat`}
                     >
                       <span className="mt-0.5 shrink-0">
-                        {ROLE_ICONS[agent.role] ?? <Bot className="h-3.5 w-3.5" />}
+                        {ROLE_ICONS[agent.role] ?? <Bot className="ahi-icon-sm" />}
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-medium text-[var(--ahi-fg)] truncate">
-                            {agent.name}
-                          </span>
-                          <span className="text-2xs font-mono text-[var(--ahi-muted-fg)]">
-                            ({agent.role})
-                          </span>
+                          <span className="text-xs font-medium ahi-text-fg truncate">{agent.name}</span>
+                          <span className="text-2xs font-mono ahi-text-muted">({agent.role})</span>
                           {isCustomized ? (
-                            <span className="text-2xs rounded bg-amber-500/15 border border-amber-500/30 px-1 font-mono text-amber-400 shrink-0">
+                            <span className="text-2xs rounded ahi-bg-warning border ahi-border-warning px-1 font-mono ahi-text-warning shrink-0">
                               Özelleştirildi
                             </span>
                           ) : agent.role === 'manager' ? (
-                            <span className="text-2xs rounded bg-red-500/15 border border-red-500/30 px-1 font-mono text-red-400 shrink-0 font-medium">
+                            <span className="text-2xs rounded ahi-bg-error border ahi-border-error px-1 font-mono ahi-text-error shrink-0 font-medium">
                               Orkestratör
                             </span>
                           ) : (
                             agent.tier && (
-                              <span className="text-2xs uppercase font-mono px-1 rounded bg-[var(--ahi-input-bg)] text-[var(--ahi-muted-fg)] border border-[var(--ahi-surface-border)] shrink-0">
+                              <span className="text-2xs uppercase font-mono px-1 rounded ahi-bg-input ahi-text-muted border ahi-border-surface shrink-0">
                                 {agent.tier}
                               </span>
                             )
@@ -499,7 +514,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
                             size="xs"
                             onClick={() => openFile(customAgentDef.path)}
                             title="Özelleştirilmiş ajan dosyasını aç ve kurallarını düzenle"
-                            icon={<FileCode className="h-2.5 w-2.5" />}
+                            icon={<FileCode className="ahi-icon-xs" />}
                           >
                             Düzenle
                           </Button>
@@ -513,7 +528,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
                               })
                             }
                             title="Yerleşik varsayılan ayarlara geri dön"
-                            icon={<RotateCcw className="h-2.5 w-2.5" />}
+                            icon={<RotateCcw className="ahi-icon-xs" />}
                           >
                             Sıfırla
                           </Button>
@@ -529,7 +544,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
                             })
                           }
                           title="Bu ajanın prompt, kural ve izinlerini .agents/ altında özelleştir"
-                          icon={<Wrench className="h-2.5 w-2.5" />}
+                          icon={<Wrench className="ahi-icon-xs" />}
                         >
                           Özelleştir
                         </Button>
@@ -538,13 +553,8 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
                         variant={launchRole === agent.role ? 'primary' : 'ghost'}
                         size="xs"
                         onClick={() => selectRole(agent.role)}
-                        icon={<Play className="h-2.5 w-2.5" />}
-                        disabled={agent.role !== 'manager'}
-                        title={
-                          agent.role === 'manager'
-                            ? 'Yönetici ajanla görev başlat'
-                            : 'Uzmanları yalnızca yönetici başlatır'
-                        }
+                        icon={<Play className="ahi-icon-xs" />}
+                        title={`${agent.name} ile görev başlat`}
                       >
                         Görev
                       </Button>
@@ -563,17 +573,17 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state }) => {
           disabled={loading}
           icon={
             loading ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <Loader2 className="ahi-icon-xs animate-spin" />
             ) : (
-              <PlusCircle className="h-3 w-3 text-[var(--status-info-fg)]" />
+              <PlusCircle className="ahi-icon-xs ahi-text-info" />
             )
           }
         >
           AGENTS.md ve .agents/ şablonlarını oluştur
         </Button>
 
-        <div className="text-2xs flex items-center justify-center gap-1 text-[var(--ahi-muted-fg)]">
-          <Search className="h-2.5 w-2.5" /> Değişiklikler otomatik taranır
+        <div className="text-2xs flex items-center justify-center gap-1 ahi-text-muted">
+          <Search className="ahi-icon-xs" /> Değişiklikler otomatik taranır
         </div>
       </div>
     </div>

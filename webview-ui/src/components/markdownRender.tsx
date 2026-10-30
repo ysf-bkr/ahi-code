@@ -10,7 +10,7 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { vscode } from '../utils/vscode';
 
-export function isSafeLink(url: string): boolean {
+function isSafeLink(url: string): boolean {
   try {
     const parsed = new URL(url, 'https://ahi.invalid');
     return parsed.protocol === 'http:' || parsed.protocol === 'https:' || parsed.protocol === 'mailto:';
@@ -37,30 +37,66 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({ code, language }) => {
       .catch(() => {});
   };
 
+  const isDiff = language?.toLowerCase() === 'diff' || language?.toLowerCase() === 'patch';
+
+  const renderContent = () => {
+    if (!isDiff) {
+      return <code className="whitespace-pre">{code}</code>;
+    }
+
+    const lines = code.split('\n');
+    return (
+      <code className="block whitespace-pre">
+        {lines.map((line, idx) => {
+          let lineClass = 'ahi-text-fg';
+          if (line.startsWith('+') && !line.startsWith('+++')) {
+            lineClass =
+              'bg-[var(--vscode-diffEditor-insertedLineBackground,rgba(46,160,67,0.18))] ahi-text-success font-medium';
+          } else if (line.startsWith('-') && !line.startsWith('---')) {
+            lineClass =
+              'bg-[var(--vscode-diffEditor-removedLineBackground,rgba(248,81,73,0.18))] ahi-text-error font-medium';
+          } else if (line.startsWith('@@')) {
+            lineClass = 'ahi-text-info opacity-85 font-semibold';
+          } else if (
+            line.startsWith('diff ') ||
+            line.startsWith('index ') ||
+            line.startsWith('+++') ||
+            line.startsWith('---')
+          ) {
+            lineClass = 'ahi-text-muted font-bold';
+          }
+          return (
+            <div key={idx} className={`-mx-3 px-3 py-0.5 ${lineClass}`}>
+              {line || ' '}
+            </div>
+          );
+        })}
+      </code>
+    );
+  };
+
   return (
-    <div className="my-2 overflow-hidden rounded-md border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-textCodeBlock-background)] shadow-xs">
-      <div className="flex items-center justify-between border-b border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-sideBarSectionHeader-background,transparent)] px-2.5 py-1">
-        <span className="font-mono text-xs uppercase tracking-wider text-[var(--vscode-descriptionForeground)]">
-          {language || 'kod'}
-        </span>
+    <div className="my-2 overflow-hidden rounded-md border ahi-border-surface ahi-bg-code">
+      <div className="flex items-center justify-between border-b ahi-border-surface ahi-bg-section px-2.5 py-1">
+        <span className="font-mono text-xs uppercase tracking-wider ahi-text-muted">{language || 'kod'}</span>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-[var(--vscode-descriptionForeground)] transition hover:bg-[var(--vscode-toolbar-hoverBackground)] hover:text-[var(--vscode-foreground)]"
+          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs ahi-text-muted transition hover:bg-[var(--vscode-toolbar-hoverBackground)] hover:text-[var(--ahi-fg)]"
           title="Kodu kopyala"
         >
-          {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+          {copied ? <Check className="ahi-icon-xs ahi-text-success" /> : <Copy className="ahi-icon-xs" />}
           <span>{copied ? 'Kopyalandı' : 'Kopyala'}</span>
         </button>
       </div>
-      <pre className="max-h-[420px] overflow-auto p-3 font-mono text-sm leading-relaxed text-[var(--vscode-editor-foreground)]">
-        <code className="whitespace-pre">{code}</code>
+      <pre className="max-h-[420px] overflow-auto p-3 font-mono text-sm leading-relaxed ahi-text-fg">
+        {renderContent()}
       </pre>
     </div>
   );
 };
 
 /** Yalnızca React elemanları üreten güvenli satır içi Markdown ve HTML biçimlendiricisi. */
-export function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
+function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
   if (!text) return [];
 
   const tokenRegex =
@@ -74,10 +110,7 @@ export function renderInline(text: string, keyPrefix: string): React.ReactNode[]
 
     if (part.startsWith('`') && part.endsWith('`')) {
       nodes.push(
-        <code
-          key={key}
-          className="rounded bg-[var(--vscode-textCodeBlock-background)] px-1 py-0.5 font-mono text-sm text-[var(--vscode-textPreformat-foreground,var(--vscode-foreground))] border border-[var(--vscode-editorWidget-border)]"
-        >
+        <code key={key} className="ahi-code-inline">
           {part.slice(1, -1)}
         </code>
       );
@@ -85,7 +118,7 @@ export function renderInline(text: string, keyPrefix: string): React.ReactNode[]
     }
     if (part.startsWith('**') && part.endsWith('**')) {
       nodes.push(
-        <strong key={key} className="font-semibold text-[var(--vscode-foreground)]">
+        <strong key={key} className="font-semibold ahi-text-fg">
           {part.slice(2, -2)}
         </strong>
       );
@@ -110,7 +143,7 @@ export function renderInline(text: string, keyPrefix: string): React.ReactNode[]
       nodes.push(
         <kbd
           key={key}
-          className="rounded border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-editor-background)] px-1.5 py-0.5 font-mono text-xs text-[var(--vscode-foreground)] shadow-xs"
+          className="rounded border ahi-border-surface bg-[var(--vscode-editor-background)] px-1.5 py-0.5 font-mono text-xs ahi-text-fg"
         >
           {kbdMatch[1]}
         </kbd>
@@ -120,7 +153,7 @@ export function renderInline(text: string, keyPrefix: string): React.ReactNode[]
     const markMatch = part.match(/^<mark>([^<]+)<\/mark>$/i);
     if (markMatch) {
       nodes.push(
-        <mark key={key} className="rounded bg-amber-400/20 px-1 py-0.5 text-[var(--vscode-foreground)]">
+        <mark key={key} className="rounded ahi-bg-warning px-1 py-0.5 ahi-text-fg">
           {markMatch[1]}
         </mark>
       );
@@ -129,7 +162,7 @@ export function renderInline(text: string, keyPrefix: string): React.ReactNode[]
     const bMatch = part.match(/^<b>([^<]+)<\/b>$/i);
     if (bMatch) {
       nodes.push(
-        <strong key={key} className="font-semibold text-[var(--vscode-foreground)]">
+        <strong key={key} className="font-semibold ahi-text-fg">
           {bMatch[1]}
         </strong>
       );
@@ -154,13 +187,13 @@ export function renderInline(text: string, keyPrefix: string): React.ReactNode[]
             key={key}
             type="button"
             onClick={() => vscode.postMessage({ type: 'OPEN_EXTERNAL', payload: { url: link[2] } })}
-            className="inline cursor-pointer text-left text-[var(--ahi-brand-400)] underline decoration-[var(--ahi-brand-400)] underline-offset-2 hover:text-[var(--ahi-brand-300)] transition"
+            className="inline cursor-pointer text-left ahi-text-brand underline decoration-[var(--ahi-brand-400)] underline-offset-2 hover:text-[var(--ahi-brand-400)] transition"
             title={link[2]}
           >
             {link[1]}
           </button>
         ) : (
-          <span key={key} title={link[2]} className="text-[var(--vscode-descriptionForeground)]">
+          <span key={key} title={link[2]} className="ahi-text-muted">
             {link[1]}
           </span>
         )
@@ -204,12 +237,7 @@ export function renderMarkdownBlocks(text: string): React.ReactNode[] {
         const isChecked = taskMatch[1].toLowerCase() === 'x';
         return (
           <li key={`li-${key}-${index}`} className="my-1 flex items-start gap-2 list-none -ml-4">
-            <input
-              type="checkbox"
-              checked={isChecked}
-              readOnly
-              className="mt-0.5 h-3.5 w-3.5 rounded border-[var(--vscode-checkbox-border)] bg-[var(--vscode-checkbox-background)] text-[var(--vscode-checkbox-foreground)]"
-            />
+            <input type="checkbox" checked={isChecked} readOnly className="ahi-check__box mt-0.5" />
             <span className={isChecked ? 'line-through opacity-75' : ''}>
               {renderInline(taskMatch[2], `li-${key}-${index}`)}
             </span>
@@ -252,39 +280,39 @@ export function renderMarkdownBlocks(text: string): React.ReactNode[] {
         { border: string; bg: string; title: string; color: string; icon: React.ReactNode }
       > = {
         NOTE: {
-          border: 'border-[var(--ahi-brand-500)]',
-          bg: 'bg-[var(--ahi-brand-soft)]',
+          border: 'ahi-border-brand',
+          bg: 'ahi-bg-brand-soft',
           title: 'Not',
-          color: 'text-[var(--ahi-brand-400)]',
-          icon: <Info className="h-3.5 w-3.5 shrink-0" />
+          color: 'ahi-text-brand',
+          icon: <Info className="ahi-icon-sm shrink-0" />
         },
         TIP: {
-          border: 'border-emerald-500',
-          bg: 'bg-emerald-500/10',
+          border: 'ahi-border-success',
+          bg: 'ahi-bg-success',
           title: 'Tip',
-          color: 'text-emerald-400',
-          icon: <Lightbulb className="h-3.5 w-3.5 shrink-0" />
+          color: 'ahi-text-success',
+          icon: <Lightbulb className="ahi-icon-sm shrink-0" />
         },
         IMPORTANT: {
-          border: 'border-purple-500',
-          bg: 'bg-purple-500/10',
+          border: 'ahi-border-info',
+          bg: 'ahi-bg-info',
           title: 'Important',
-          color: 'text-purple-400',
-          icon: <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          color: 'ahi-text-info',
+          icon: <AlertCircle className="ahi-icon-sm shrink-0" />
         },
         WARNING: {
-          border: 'border-amber-500',
-          bg: 'bg-amber-500/10',
+          border: 'ahi-border-warning',
+          bg: 'ahi-bg-warning',
           title: 'Warning',
-          color: 'text-amber-400',
-          icon: <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          color: 'ahi-text-warning',
+          icon: <AlertTriangle className="ahi-icon-sm shrink-0" />
         },
         CAUTION: {
-          border: 'border-rose-500',
-          bg: 'bg-rose-500/10',
+          border: 'ahi-border-error',
+          bg: 'ahi-bg-error',
           title: 'Dikkat',
-          color: 'text-rose-400',
-          icon: <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+          color: 'ahi-text-error',
+          icon: <ShieldAlert className="ahi-icon-sm shrink-0" />
         }
       };
 
@@ -292,13 +320,13 @@ export function renderMarkdownBlocks(text: string): React.ReactNode[] {
       blocks.push(
         <div
           key={`alert-${key++}`}
-          className={`my-2 rounded-md border-l-4 ${cfg.border} ${cfg.bg} p-2.5 text-xs shadow-xs`}
+          className={`my-2 rounded-md border-l-4 ${cfg.border} ${cfg.bg} p-2.5 text-sm`}
         >
           <div className={`mb-1 flex items-center gap-1.5 font-semibold ${cfg.color}`}>
             {cfg.icon}
             <span>{cfg.title}</span>
           </div>
-          <div className="space-y-1 text-[var(--vscode-foreground)] leading-relaxed">
+          <div className="space-y-1 ahi-text-fg leading-relaxed">
             {renderInline(restLines.join('\n'), `alert-${key}`)}
           </div>
         </div>
@@ -310,7 +338,7 @@ export function renderMarkdownBlocks(text: string): React.ReactNode[] {
     blocks.push(
       <blockquote
         key={`q-${key++}`}
-        className="my-2 border-l-2 border-[var(--ahi-brand-400)] bg-[var(--vscode-textBlockQuote-background,transparent)] px-2.5 py-1 text-[var(--vscode-descriptionForeground)]"
+        className="my-2 border-l-2 ahi-border-brand bg-[var(--vscode-textBlockQuote-background,transparent)] px-2.5 py-1 ahi-text-muted"
       >
         {renderInline(quoteLines.join('\n'), `q-${key}`)}
       </blockquote>
@@ -352,18 +380,15 @@ export function renderMarkdownBlocks(text: string): React.ReactNode[] {
     const dataRows = tableLines.slice(2).map(parseRow);
 
     blocks.push(
-      <div
-        key={`table-wrapper-${key++}`}
-        className="my-2 overflow-x-auto rounded border border-[var(--vscode-editorWidget-border)] shadow-xs"
-      >
+      <div key={`table-wrapper-${key++}`} className="my-2 overflow-x-auto rounded border ahi-border-surface">
         <table className="w-full border-collapse text-left text-sm">
-          <thead className="border-b border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-sideBarSectionHeader-background,transparent)]">
+          <thead className="border-b ahi-border-surface ahi-bg-section">
             <tr>
               {headerRow.map((col, idx) => (
                 <th
                   key={`th-${idx}`}
                   style={{ textAlign: (alignments[idx] as React.CSSProperties['textAlign']) || 'left' }}
-                  className="px-2.5 py-1.5 font-semibold text-[var(--vscode-foreground)]"
+                  className="px-2.5 py-1.5 font-semibold ahi-text-fg"
                 >
                   {renderInline(col, `th-${key}-${idx}`)}
                 </th>
@@ -380,7 +405,7 @@ export function renderMarkdownBlocks(text: string): React.ReactNode[] {
                   <td
                     key={`td-${rIdx}-${cIdx}`}
                     style={{ textAlign: (alignments[cIdx] as React.CSSProperties['textAlign']) || 'left' }}
-                    className="px-2.5 py-1 text-[var(--vscode-foreground)]"
+                    className="px-2.5 py-1 ahi-text-fg"
                   >
                     {renderInline(row[cIdx] || '', `td-${key}-${rIdx}-${cIdx}`)}
                   </td>
@@ -423,13 +448,13 @@ export function renderMarkdownBlocks(text: string): React.ReactNode[] {
       blocks.push(
         <details
           key={`details-${key++}`}
-          className="my-2 rounded-md border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-sideBar-background)] p-2 shadow-xs group"
+          className="my-2 rounded-md border ahi-border-surface ahi-bg-base p-2 group"
         >
-          <summary className="cursor-pointer font-medium text-[var(--vscode-foreground)] select-none text-xs flex items-center gap-1.5 transition hover:text-[var(--ahi-brand-400)]">
-            <ChevronDown className="h-3 w-3 shrink-0 transition-transform group-open:rotate-180" />
+          <summary className="cursor-pointer font-medium ahi-text-fg select-none text-sm flex items-center gap-1.5 transition hover:text-[var(--ahi-brand-400)]">
+            <ChevronDown className="ahi-icon-xs shrink-0 transition-transform group-open:rotate-180" />
             <span>{renderInline(summaryText, `summary-${key}`)}</span>
           </summary>
-          <div className="mt-2 border-t border-[var(--vscode-editorWidget-border)] pt-2 space-y-1">
+          <div className="mt-2 border-t ahi-border-surface pt-2 space-y-1">
             {renderMarkdownBlocks(bodyLines.join('\n'))}
           </div>
         </details>
@@ -457,15 +482,19 @@ export function renderMarkdownBlocks(text: string): React.ReactNode[] {
       // Görsel ağırlık derinlikle azalır; anlamsal seviyeyle uyumlu.
       const sizeClass =
         level === 1
-          ? 'text-base font-semibold mt-3 mb-1.5'
+          ? 'ahi-md-h1'
           : level === 2
-            ? 'text-sm font-semibold mt-3 mb-1.5'
+            ? 'ahi-md-h2'
             : level === 3
-              ? 'text-xs font-semibold mt-2.5 mb-1'
-              : 'text-xs font-semibold mt-2 mb-1';
+              ? 'ahi-md-h3'
+              : level === 4
+                ? 'ahi-md-h4'
+                : level === 5
+                  ? 'ahi-md-h5'
+                  : 'ahi-md-h6';
       const HeadingTag = `h${level}` as keyof React.JSX.IntrinsicElements;
       blocks.push(
-        <HeadingTag key={`h-${key++}`} className={`${sizeClass} text-[var(--vscode-foreground)]`}>
+        <HeadingTag key={`h-${key++}`} className={sizeClass}>
           {renderInline(heading[2], `h-${key}`)}
         </HeadingTag>
       );
@@ -475,7 +504,7 @@ export function renderMarkdownBlocks(text: string): React.ReactNode[] {
 
     if (/^\s*([-*_])\1{2,}\s*$/.test(line)) {
       flushAll();
-      blocks.push(<hr key={`hr-${key++}`} className="my-2.5 border-[var(--vscode-editorWidget-border)]" />);
+      blocks.push(<hr key={`hr-${key++}`} className="my-2.5 ahi-border-surface" />);
       i++;
       continue;
     }

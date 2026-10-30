@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { AgentMode, ChatMessage, TaskState, ToolCall, UserSettings } from '../../shared/types';
-import { DEFAULT_PROVIDER_URLS } from '../../shared/constants';
+import { DEFAULT_PROVIDER_URLS, isChatConfigured } from '../../shared/constants';
 import { createModelProvider } from '../../providers';
 import { ModelProvider } from '../../providers/base';
 import { PermissionManager } from '../permission/PermissionManager';
@@ -19,6 +19,8 @@ import { ContextManager } from '../context/ContextManager';
 import { ProjectMemoryManager, ProjectMemoryStatus } from '../memory/ProjectMemoryManager';
 import { VectorMemory } from '../memory/VectorMemory';
 import { resolveWorkspacePath } from '../../tools/pathSafety';
+import { getLanguageIdForFile } from '../../shared/languageMap';
+import { AhiCodeDiffContentProvider } from '../../shared/diffContentProvider';
 import { getActiveWorkspaceRoot } from '../workspace/workspaceRoot';
 import { collectMentionSnippets } from './fileMentions';
 import { runInIntegratedTerminal } from './terminalExecution';
@@ -35,6 +37,7 @@ import { createLspLanguageService } from '../callgraph/languageService';
 import { KnowledgeCurator } from './KnowledgeCurator';
 import { SubagentTaskParams } from '../multiagent/SubagentManager';
 import { TaskPlanner } from '../plan/TaskPlanner';
+import { ModulePlanner } from '../plan/ModulePlanner';
 import { errorMessage } from '../../shared/errors';
 import { redactForAudit } from '../../shared/redaction';
 import { CommandCheckpoint, GitManager } from '../git/GitManager';
@@ -83,6 +86,7 @@ export class AgentCore implements AgentHost {
   public contextManager: ContextManager;
   public projectMemory = new ProjectMemoryManager();
   public planner = new TaskPlanner();
+  public modulePlanner = new ModulePlanner();
   public verificationManager = new VerificationManager();
   public modelRouter = new ModelRouter();
   public worktreeManager = new WorktreeManager();
@@ -120,6 +124,7 @@ export class AgentCore implements AgentHost {
   public runGeneration = 0;
   public messageSeq = 0;
   public activeAbortController?: AbortController;
+  public currentTurnId?: string;
   public pendingResolver?: (approved: boolean, reason?: string) => void;
   public pendingQuestionResolver?: (answer: string) => void;
   private messageLock = false;
@@ -132,6 +137,8 @@ export class AgentCore implements AgentHost {
   /** Görev sonu bilgi kaydı talimatının görev başına yalnızca bir kez çalışmasını sağlar. */
   public memoryRecordedForTask = false;
 
+  private hasCustomProvider = false;
+
   constructor(
     public context: vscode.ExtensionContext,
     settings: UserSettings,
@@ -141,6 +148,7 @@ export class AgentCore implements AgentHost {
     dependencies: AgentCoreDependencies = {}
   ) {
     this.settings = settings;
+    this.hasCustomProvider = Boolean(dependencies.provider);
     this.provider = dependencies.provider ?? createModelProvider(settings);
     this.permissionManager = new PermissionManager(settings);
     this.refreshEmbeddingIndex();
@@ -176,6 +184,7 @@ export class AgentCore implements AgentHost {
     const saved = lastSessionId ? this.historyManager.getTask(lastSessionId) : undefined;
     this.state = saved ? this.normalizeRestoredState(saved) : this.getInitialState();
     this.planner.hydrate(this.state.plan);
+    this.modulePlanner.hydrate(this.state.modules);
   }
 
   private createSubagentManager(): SubagentManager {
@@ -236,14 +245,14 @@ export class AgentCore implements AgentHost {
 
   /**
    * Eklenti yeniden yüklendiğinde yarıda kalan "running/waiting" durumlarını
-   * güvenli "idle" durumuna döndürür ve bekleyen onay/soru referanslarını temizler.
+   * güvenli "paused" durumuna döndürür ve görevin kaldığı yerden sürdürülebilmesini sağlar.
    */
   public normalizeRestoredState(saved: TaskState): TaskState {
     const transientStatuses = ['running', 'waiting_approval', 'waiting_user_input', 'paused'];
     return {
       ...this.getInitialState(saved.mode || 'code'),
       ...saved,
-      status: transientStatuses.includes(saved.status) ? 'idle' : saved.status,
+      status: transientStatuses.includes(saved.status) ? 'paused' : saved.status,
       pendingToolCall: undefined,
       pendingQuestion: undefined,
       checkpoints: undefined,
@@ -453,12 +462,14 @@ export class AgentCore implements AgentHost {
     };
     this.emitState();
 
+    this.isCancelled = false;
+    this.activeAbortController = new AbortController();
     try {
       const result = await this.subagentManager.runSubagent(
         { ...params, task },
         workspaceRoot,
         0,
-        this.activeAbortController?.signal
+        this.activeAbortController.signal
       );
       this.state.messages.push({
         id: this.nextMessageId(),
@@ -519,6 +530,41 @@ export class AgentCore implements AgentHost {
 
   public retryLastTurn(): Promise<void> {
     return this.sessionController.retryLastTurn();
+  }
+
+  /** Gönderilmiş bir kullanıcı mesajını düzenler ve istemi yeniden çalıştırır. */
+  public editMessage(messageId: string, text: string): Promise<void> {
+    return this.sessionController.editMessage(messageId, text);
+  }
+
+  /**
+   * Duraklatılmış veya VS Code yeniden açıldığında geri yüklenmiş görevi kaldığı yerden sürdürür.
+   */
+  public async resumeTask(): Promise<void> {
+    if (this.isBusy()) {
+      this.notify({ level: 'warning', message: 'Ajan şu anda meşgul.' });
+      return;
+    }
+    if (this.state.pendingApproval) {
+      this.notify({ level: 'info', message: 'Lütfen bekleyen spec veya plan onayını yanıtlayın.' });
+      return;
+    }
+
+    const currentStep = this.state.plan?.steps?.find(
+      (s) => s.status === 'in_progress' || s.status === 'pending'
+    );
+    const instruction = currentStep
+      ? `Görevin "${currentStep.title}" adımı üzerinde çalışmaya devam et. Gerekli araçları çalıştırarak hedefe ilerle.`
+      : this.state.plan?.goal
+        ? `"${this.state.plan.goal}" hedefine ulaşmak için görev planına göre çalışmaya devam et.`
+        : 'Görevin tamamlanması için kaldığın yerden devam et.';
+
+    this.state.status = 'running';
+    this.isCancelled = false;
+    this.emitState();
+    await this.saveCurrentState();
+
+    await this.handleSendMessage(instruction, this.state.mode, { internal: true });
   }
 
   public approveSpec(): Promise<boolean> {
@@ -600,6 +646,7 @@ export class AgentCore implements AgentHost {
     }
     this.state.checkpoints = this.checkpointManager.getSummaries();
     this.planner.hydrate(this.state.plan);
+    this.modulePlanner.hydrate(this.state.modules);
 
     if (rootChanged) {
       this.notify({
@@ -682,46 +729,70 @@ export class AgentCore implements AgentHost {
     return '\n\n' + contextSnippets.join('\n\n');
   }
 
-  /** Önerilen içeriği mevcut dosyayla karşılaştıran diff görünümü açar. */
+  /** Önerilen içeriği mevcut dosyayla karşılaştıran sanal diff görünümü açar. */
   public async openDiffPreview(filePath: string, proposedContent: string) {
     const workspaceRoot = getActiveWorkspaceRoot();
 
     try {
       const fullPath = workspaceRoot ? resolveWorkspacePath(filePath, workspaceRoot) : filePath;
-      const language = path.extname(fullPath).replace('.', '') || 'plaintext';
+      const language = getLanguageIdForFile(fullPath);
+      const diffProvider = AhiCodeDiffContentProvider.getInstance();
 
-      // Yeni bir dosyanın okunacak orijinali yoktur; URI'sini açmak VS Code'un
-      // her oluşturmada "Unable to read file" bildirmesine yol açıyordu. Bunun
-      // yerine boş bir bellek-içi belgeyle karşılaştır ve bunu başlıkta belirt.
+      // Yeni bir dosyanın okunacak orijinali yoktur; diskten okumak yerine sanal boş belge kullan.
+      // DİKKAT: 'untitled:' kullanılmaz; VS Code untitled belgeleri kirli (dirty) sayarak kaydetme uyarısı verir.
       let originalUri: vscode.Uri;
       let label: string;
       try {
         await fs.access(fullPath);
         originalUri = vscode.Uri.file(fullPath);
-        label = `${path.basename(fullPath)} ↔ AhiCode (Proposed Diff)`;
+        label = `${path.basename(fullPath)} ↔ AhiCode (Önerilen Fark)`;
       } catch {
-        const emptyDoc = await vscode.workspace.openTextDocument({ content: '', language });
-        originalUri = emptyDoc.uri;
-        label = `${path.basename(fullPath)} (New File) ↔ AhiCode`;
+        const emptyUri = vscode.Uri.from({
+          scheme: AhiCodeDiffContentProvider.scheme,
+          path: '/' + filePath,
+          query: `empty=${Date.now()}`
+        });
+        diffProvider.setDocumentContent(emptyUri, '');
+        originalUri = emptyUri;
+        label = `${path.basename(fullPath)} (Yeni Dosya) ↔ AhiCode`;
       }
 
-      const proposedDoc = await vscode.workspace.openTextDocument({
-        content: proposedContent,
-        language
+      // Sağ taraf: sanal önerilen içerik belgesi ('ahicode-diff' şeması).
+      // Salt-okunurdur, dirty state almaz ve sekme kapanırken kaydetme uyarısı sormaz.
+      const proposedUri = vscode.Uri.from({
+        scheme: AhiCodeDiffContentProvider.scheme,
+        path: '/' + filePath,
+        query: `proposed=${Date.now()}`
       });
+      diffProvider.setDocumentContent(proposedUri, proposedContent);
 
-      await vscode.commands.executeCommand('vscode.diff', originalUri, proposedDoc.uri, label);
+      // Sanal belgenin söz dizimi renklendirmesini (Syntax Highlighting) garantiye al
+      try {
+        const virtualDoc = await vscode.workspace.openTextDocument(proposedUri);
+        if (virtualDoc.languageId !== language) {
+          await vscode.languages.setTextDocumentLanguage(virtualDoc, language);
+        }
+      } catch {
+        // Dil atanmasa da diff açılır
+      }
+
+      await vscode.commands.executeCommand('vscode.diff', originalUri, proposedUri, label);
     } catch (err) {
       logWarning('Could not open the diff view automatically', err);
     }
   }
 
-  /** Değiştirilen veya yazılan dosyayı doğrudan VS Code editöründe açar ve odaklar. */
+  /** Değiştirilen veya yazılan dosyayı doğrudan VS Code editöründe açar, kaydeder ve odaklar. */
   public async openFileInEditor(filePath: string, workspaceRoot?: string): Promise<void> {
     try {
       const root = workspaceRoot ?? getActiveWorkspaceRoot();
       const fullPath = root ? resolveWorkspacePath(filePath, root) : filePath;
-      const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(fullPath));
+      const fileUri = vscode.Uri.file(fullPath);
+      const doc = await vscode.workspace.openTextDocument(fileUri);
+      // Dosyada bellekte bekleyen herhangi bir kaydedilmemiş değişiklik varsa diske anında kaydet
+      if (doc.isDirty) {
+        await doc.save();
+      }
       await vscode.window.showTextDocument(doc, { preview: true, preserveFocus: true });
     } catch (err) {
       logWarning('Could not open file in editor automatically', err);
@@ -753,6 +824,15 @@ export class AgentCore implements AgentHost {
   }
 
   private async handleSendMessageInner(text: string, mode?: AgentMode, options: SendMessageOptions = {}) {
+    // Model ayarı henüz yapılmadıysa veya sağlayıcı gereksinimleri eksikse mesajı reddet.
+    if (!options.internal && !this.hasCustomProvider && !isChatConfigured(this.settings)) {
+      this.notify({
+        level: 'warning',
+        message: 'Sohbeti başlatmak için lütfen önce Ayarlar bölümünden bir model sağlayıcısı yapılandırın.'
+      });
+      return;
+    }
+
     // Ajan soru sorduysa ana girişten gelen metni yanıt olarak ele al.
     if (this.state.status === 'waiting_user_input' && this.pendingQuestionResolver) {
       const resolver = this.pendingQuestionResolver;
@@ -833,6 +913,10 @@ export class AgentCore implements AgentHost {
       content: fullUserPrompt,
       timestamp: Date.now()
     };
+    // Tur kimliği: kullanıcı istemi ve ona ait tüm asistan adımları aynı
+    // kimliği taşır, arayüz bunları tek yanıt bloğunda toplar.
+    userMsg.turnId = userMsg.id;
+    this.currentTurnId = userMsg.id;
     this.state.messages.push(userMsg);
     this.state.status = 'running';
     this.emitState();
@@ -865,8 +949,12 @@ export class AgentCore implements AgentHost {
         this.state.stats.filesModified.length > filesModifiedBefore || this.changedFilesInLastTurn;
 
       // Model üzerinde çalıştığı adımı kapatmayı unuttuysa burada kapat ki
-      // gerçek iş yapılırken plan "0/N" üzerinde kalmasın.
-      if (changedFiles && this.activePlanStepId && this.isTaskCompleted()) {
+      // gerçek iş yapılırken plan "0/N" üzerinde kalmasın. İnceleme/araştırma
+      // görevlerinde dosya değişmese bile araçlar çalıştırılıp tur bittiğinde
+      // adım tamamlanır.
+      const lastMsg = this.state.messages[this.state.messages.length - 1];
+      const hasToolActivity = (lastMsg?.toolCalls?.length ?? 0) > 0;
+      if (this.activePlanStepId && (changedFiles || this.isTaskCompleted() || hasToolActivity)) {
         const step = this.planner.getPlan()?.steps.find((item) => item.id === this.activePlanStepId);
         if (step && step.status === 'in_progress') {
           this.state.plan = this.planner.setStepStatus(step.id, 'completed');

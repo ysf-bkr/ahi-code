@@ -66,17 +66,3 @@ export function extractJsonRpcFromSse(text: string): JsonRpcMessage | undefined 
 export function isEventStream(contentType: string | null): boolean {
   return (contentType ?? '').includes('text/event-stream');
 }
-
-/** `tools/list` sayfalarını birleştirir; tekrar eden araç adları korunur. */
-export function mergeToolPages<T extends { name: string }>(pages: T[][]): T[] {
-  const seen = new Set<string>();
-  const merged: T[] = [];
-  for (const page of pages) {
-    for (const tool of page) {
-      if (seen.has(tool.name)) continue;
-      seen.add(tool.name);
-      merged.push(tool);
-    }
-  }
-  return merged;
-}

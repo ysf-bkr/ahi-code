@@ -192,4 +192,38 @@ describe('SubagentManager: orchestration', () => {
       }
     }
   });
+
+  it('read-only mode propagates through nested delegation', async () => {
+    // Yönetici okuma modunda çalışırken uzmana devreder: uzman da salt-okunur
+    // kalmalı, aksi halde devretme aşama kilidinin arka kapısı olurdu.
+    const provider = new RecordingProvider([delegateCall, { text: 'rapor' }]);
+    const manager = new SubagentManager(provider);
+
+    await manager.runSubagent({ role: 'manager', task: 'incele', readOnly: true });
+
+    const specialistSystem = provider.requests[1]?.[0]?.content ?? '';
+    assert.match(specialistSystem, /READ-ONLY MODE|read-only/i);
+    assert.doesNotMatch(specialistSystem, /You are the "AhiCode - Backend Specialist"[\s\S]*write_file tool/);
+  });
+
+  it('read-only specialists never receive mutating tools', async () => {
+    const writeAttempt: ModelCompletionResponse = {
+      text: '',
+      toolCalls: [{ id: 'w1', name: 'write_file', arguments: { path: 'a.ts', content: 'x' } }]
+    };
+    const provider = new RecordingProvider([writeAttempt, { text: 'rapor' }]);
+    const manager = new SubagentManager(provider);
+
+    await manager.runSubagent({ role: 'backend', task: 'incele' }, undefined, 0, undefined, false);
+
+    // Kısıtsız çağrıda yazma denenebilir; kısıtlı çağrıda araç hiç verilmez.
+    const permissiveTool = provider.requests[1]?.find((message) => message.role === 'tool');
+    assert.ok(permissiveTool, 'kısıtsız çağrı araç sonucu üretmeli');
+
+    const readOnlyProvider = new RecordingProvider([writeAttempt, { text: 'rapor' }]);
+    const readOnlyManager = new SubagentManager(readOnlyProvider);
+    await readOnlyManager.runSubagent({ role: 'backend', task: 'incele', readOnly: true });
+    const toolMessage = readOnlyProvider.requests[1]?.find((message) => message.role === 'tool');
+    assert.match(String(toolMessage?.content), /not allowed to use tool 'write_file'/);
+  });
 });

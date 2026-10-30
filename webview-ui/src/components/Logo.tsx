@@ -12,7 +12,7 @@ export interface LogoProps {
  * Tek bir bileşik yoldur (evenodd), böylece küçük boyutlarda da net kalır.
  * Rengi `currentColor` ya da marka gradyanıdır; kapsayıcı tema rengini verir.
  */
-export const Logo: React.FC<LogoProps> = ({ className = 'h-4 w-4', colored = false }) => {
+export const Logo: React.FC<LogoProps> = ({ className = 'ahi-icon-md', colored = false }) => {
   const uid = `ahi-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
 
   const markPath =
@@ -22,9 +22,10 @@ export const Logo: React.FC<LogoProps> = ({ className = 'h-4 w-4', colored = fal
     <svg viewBox="0 0 512 512" className={className} aria-hidden="true" role="presentation">
       {colored && (
         <defs>
-          <linearGradient id={`${uid}-blue`} x1="0" y1="0" x2="0.75" y2="1">
-            <stop offset="0%" stopColor="#087cff" />
-            <stop offset="100%" stopColor="#0051f5" />
+          <linearGradient id={`${uid}-blue`} x1="0" y1="0" x2="0.8" y2="1">
+            <stop offset="0%" stopColor="#0092FA" />
+            <stop offset="50%" stopColor="#0073F9" />
+            <stop offset="100%" stopColor="#0051F1" />
           </linearGradient>
         </defs>
       )}

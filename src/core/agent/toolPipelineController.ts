@@ -17,7 +17,7 @@ import { errorMessage } from '../../shared/errors';
 import { AHI_DIR, AHI_SUBDIRS } from '../../shared/constants';
 import { resolveWorkspacePath } from '../../tools/pathSafety';
 import { coerceToolArguments, validateToolArguments, ToolDefinition } from '../../tools/base';
-import { parsePlanUpdateInput, parseSubagentTaskParams } from '../../tools/parsers';
+import { parseModulePlanInput, parsePlanUpdateInput, parseSubagentTaskParams } from '../../tools/parsers';
 import { logWarning } from '../../shared/logging';
 import type { AgentHost } from './agentHost';
 import type { SubagentTaskParams } from '../multiagent/SubagentManager';
@@ -25,6 +25,7 @@ import type { CommandCheckpoint } from '../git/GitManager';
 import { ROLE_ALIASES, getAgentDefinition } from '../../shared/agents';
 import { skipsApprovalGates } from './autonomy';
 import { MAX_INTAKE_QUESTIONS } from '../workflow/TaskWorkflow';
+import { describeWorkflow } from '../workflow/TaskWorkflow';
 
 /** Araç argümanından metin okur. */
 function toolArgString(args: Record<string, unknown>, key: string, fallback = ''): string {
@@ -138,6 +139,11 @@ export class ToolPipelineController {
           // kontrolleriyle devam eder; yine de nedeni görünür olsun.
           logWarning('Diff önizlemesi oluşturulamadı', diffErr);
         }
+      }
+
+      if (showDiff && !tc.requiresApproval) {
+        // Kullanıcının yapılan değişikliği (diff) ekranda net bir şekilde görebilmesi için insani inceleme süresi
+        await new Promise((resolve) => setTimeout(resolve, 800));
       }
     }
 
@@ -361,13 +367,19 @@ export class ToolPipelineController {
         if (rawTasks.length > 4) {
           throw new Error('A maximum of 4 parallel tasks can run at the same time.');
         }
+        // Okuma aşamasında paralel alt ajanlar da salt-okunur çalışır; yazma ve
+        // komut araçları onlara verilmez, böylece aşama kilidi atlanmaz.
+        const readOnly =
+          this.host.state.mode === 'plan' ||
+          describeWorkflow(this.host.workflow.getWorkflow(), this.host.state.mode).readOnly;
         const tasks: SubagentTaskParams[] = rawTasks
           .filter((item): item is Record<string, unknown> => isRecord(item))
           .map((item) => ({
             role: typeof item.role === 'string' ? item.role : 'coder',
             task: typeof item.task === 'string' ? item.task : '',
             context: typeof item.context === 'string' ? item.context : undefined,
-            isolate: true
+            isolate: true,
+            readOnly
           }))
           .filter((item) => item.task.trim().length > 0);
         if (tasks.length === 0) throw new Error('No valid task definitions found.');
@@ -410,9 +422,44 @@ export class ToolPipelineController {
       return { paused: false, filesChanged: false };
     }
 
+    if (tc.name === 'update_module_plan') {
+      try {
+        const input = parseModulePlanInput(tc.args);
+        const modules = this.host.modulePlanner.update(input);
+        this.host.state.modules = modules;
+        tc.status = 'completed';
+        tc.result = this.host.modulePlanner.formatForTool();
+        this.host.workflow.syncProgressToState();
+        this.host.emitState();
+      } catch (err) {
+        tc.status = 'error';
+        tc.error = errorMessage(err, 'Could not update the module plan.');
+      }
+      return { paused: false, filesChanged: false };
+    }
+
     if (tc.name === 'update_plan') {
       try {
-        const plan = this.host.planner.update(parsePlanUpdateInput(tc.args));
+        // Plan, modül haritasından türetilir: her adım bir modüle ve en az bir
+        // kabul kriterine bağlı olmalı. Harita yoksa önce onu iste.
+        if (!this.host.modulePlanner.hasPlan()) {
+          tc.status = 'error';
+          tc.error =
+            'No module map yet. Call update_module_plan first: split the work into layered modules ' +
+            '(shared → domain → infrastructure → application → interface), then write the plan steps against them.';
+          return { paused: false, filesChanged: false };
+        }
+        const moduleIds = new Set(this.host.modulePlanner.getPlan()?.modules.map((m) => m.id) ?? []);
+        const criteriaIds = this.currentCriteriaIds();
+        const plan = this.host.planner.update({
+          ...parsePlanUpdateInput(tc.args),
+          validation: {
+            moduleIds,
+            criteriaIds,
+            requireModule: true,
+            requireCriteria: criteriaIds.size > 0
+          }
+        });
         this.host.state.plan = plan;
         tc.status = 'completed';
         tc.result = this.host.planner.formatForTool();
@@ -431,15 +478,15 @@ export class ToolPipelineController {
 
     if (tc.name === 'invoke_subagent') {
       const subParams = parseSubagentTaskParams(tc.args);
-      const resolvedRole = (ROLE_ALIASES[subParams.role.toLowerCase()] || subParams.role).toLowerCase();
-      if (resolvedRole !== 'manager') {
-        tc.status = 'error';
-        tc.error =
-          `[Subagent Error]: Only the @manager role can be started at the top level. ` +
-          `Delegate the task to @manager with a clear goal; the manager picks and runs the specialists (${subParams.role} included).`;
-        return { paused: false, filesChanged: false };
-      }
-      const def = getAgentDefinition(resolvedRole);
+      const def = getAgentDefinition(
+        (ROLE_ALIASES[subParams.role.toLowerCase()] || subParams.role).toLowerCase()
+      );
+      // Okuma aşamasında (spec/plan onayı öncesi) alt ajan salt-okunur çalışır.
+      // Devretmenin kendisi engellenmez: keşif ve mimari analiz için alt ajan
+      // tam da bu aşamada gerekir.
+      const readOnly =
+        this.host.state.mode === 'plan' ||
+        describeWorkflow(this.host.workflow.getWorkflow(), this.host.state.mode).readOnly;
       this.host.state.activeSubagent = {
         role: subParams.role,
         displayName: def?.displayName || subParams.role,
@@ -452,7 +499,7 @@ export class ToolPipelineController {
       try {
         const snapshotCountBefore = this.host.snapshotManager.getSnapshots().length;
         const result = await this.host.subagentManager.runSubagent(
-          subParams,
+          { ...subParams, readOnly },
           workspaceRoot,
           0,
           this.host.activeAbortController?.signal
@@ -574,6 +621,14 @@ export class ToolPipelineController {
     return { paused: false, filesChanged: false };
   }
 
+  /** Geçerli spec'in kabul kriteri kimlikleri; spec yoksa boş küme. */
+  private currentCriteriaIds(): Set<string> {
+    const specId = this.host.workflow.getWorkflow().specId;
+    if (!specId) return new Set();
+    const spec = this.host.specStore.get(specId);
+    return new Set(spec?.acceptanceCriteria.map((criterion) => criterion.id) ?? []);
+  }
+
   /**
    * Plan adımını gerçek ilerlemeye bağlar.
    *
@@ -584,7 +639,8 @@ export class ToolPipelineController {
     this.host.activePlanStepId = undefined;
     if (this.host.state.mode === 'plan' || !this.host.planner.hasPlan()) return;
     const workflow = this.host.workflow.getWorkflow();
-    if (workflow.stage !== 'build' || !workflow.planApproved) return;
+    // Yönlendirilmiş iş akışı henüz build aşamasına gelmemişse ve plan onaylı değilse bekle
+    if (workflow.stage && workflow.stage !== 'build' && !workflow.planApproved) return;
 
     const ready = this.host.planner.getReadySteps();
     const inProgress = this.host.planner.getPlan()?.steps.find((step) => step.status === 'in_progress');

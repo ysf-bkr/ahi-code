@@ -20,15 +20,15 @@ export const ApprovalCard: React.FC<ApprovalCardProps> = ({ approval }) => {
   const Icon = isSpec ? FileText : ListChecks;
 
   return (
-    <Card className="flex flex-col gap-2 border-[var(--status-warning-border)] bg-[var(--status-warning-bg)]">
+    <Card className="flex flex-col gap-2 ahi-border-warning ahi-bg-warning">
       <div className="flex items-start gap-2">
-        <span className="ahi-toggle-row__icon h-7 w-7 text-[var(--status-warning-fg)]">
-          <Icon className="h-3.5 w-3.5" />
+        <span className="ahi-toggle-row__icon ahi-text-warning">
+          <Icon className="ahi-icon-sm" />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold text-[var(--ahi-fg)]">{approval.title}</div>
-          <div className="text-2xs mt-0.5 flex items-center gap-1 text-[var(--ahi-muted-fg)]">
-            <ShieldAlert className="h-2.5 w-2.5" />
+          <div className="ahi-title">{approval.title}</div>
+          <div className="text-2xs mt-0.5 flex items-center gap-1 ahi-text-muted">
+            <ShieldAlert className="ahi-icon-xs" />
             {isSpec
               ? 'Onaylamadan plan yapılmaz ve kod yazılmaz.'
               : 'Onaylamadan hiçbir dosya değiştirilmez.'}
@@ -36,7 +36,7 @@ export const ApprovalCard: React.FC<ApprovalCardProps> = ({ approval }) => {
         </div>
       </div>
 
-      <pre className="text-2xs max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded border border-[var(--ahi-surface-border)] bg-[var(--ahi-input-bg)] p-2 font-mono leading-relaxed text-[var(--ahi-fg)]">
+      <pre className="text-xs max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded border ahi-border-surface ahi-bg-input p-2 font-mono leading-relaxed ahi-text-fg">
         {approval.details}
       </pre>
 
@@ -64,7 +64,7 @@ export const ApprovalCard: React.FC<ApprovalCardProps> = ({ approval }) => {
                   payload: { reason: reason.trim() || undefined }
                 })
               }
-              icon={<X className="h-3 w-3" />}
+              icon={<X className="ahi-icon-xs" />}
             >
               Reddet ve geri dön
             </Button>
@@ -76,7 +76,7 @@ export const ApprovalCard: React.FC<ApprovalCardProps> = ({ approval }) => {
             variant="secondary"
             size="xs"
             onClick={() => setRejecting(true)}
-            icon={<X className="h-3 w-3" />}
+            icon={<X className="ahi-icon-xs" />}
           >
             Değişiklik iste
           </Button>
@@ -84,7 +84,7 @@ export const ApprovalCard: React.FC<ApprovalCardProps> = ({ approval }) => {
             variant="primary"
             size="xs"
             onClick={() => vscode.postMessage({ type: isSpec ? 'APPROVE_SPEC' : 'APPROVE_PLAN' })}
-            icon={<Check className="h-3 w-3" />}
+            icon={<Check className="ahi-icon-xs" />}
           >
             {isSpec ? 'Spec\u2019i onayla' : 'Planı onayla'}
           </Button>

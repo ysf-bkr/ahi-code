@@ -31,8 +31,6 @@ const FILE_TIMEOUT_MS = 20_000;
 const CONCURRENCY = 4;
 /** Büyük projelerde üst sınır. */
 const MAX_FILES = 5_000;
-/** Hata mesajında gösterilecek en fazla dosya sayısı. */
-const MAX_REPORTED_FILES = 10;
 
 export interface BuildOptions {
   signal?: AbortSignal;
@@ -559,12 +557,4 @@ export async function updateCallGraph(
   }
 
   return { document: finalizeMeta(document), unsupportedFiles: incremental.unsupportedFiles };
-}
-
-/** Hata raporunda gösterilecek dosya listesini kısaltır. */
-export function summarizeIncompleteFiles(document: CallGraphDocument): string[] {
-  return Object.entries(document.files)
-    .filter(([, meta]) => meta.status === 'partial' || meta.status === 'failed')
-    .map(([file]) => file)
-    .slice(0, MAX_REPORTED_FILES);
 }

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import { TaskHeader } from './components/TaskHeader';
 import { MessageList } from './components/MessageList';
 import { ChatInput } from './components/ChatInput';
+import { ChatMetaBar } from './components/ChatMetaBar';
 import { ChatStatusBar } from './components/ChatStatusBar';
 import { ComposerDock } from './components/ComposerDock';
 import { SettingsView } from './components/SettingsView';
@@ -15,12 +17,13 @@ import { Toast as ToastView } from './components/Toast';
 import {
   AgentMode,
   ExtensionToWebviewMessage,
+  EvrenQuota,
   NavigationDestination,
   TaskState,
   ToastNotification,
   UserSettings
 } from '@shared/types';
-import { DEFAULT_TASK_STATE, DEFAULT_USER_SETTINGS } from '@shared/constants';
+import { DEFAULT_TASK_STATE, DEFAULT_USER_SETTINGS, isChatConfigured } from '@shared/constants';
 import { vscode } from './utils/vscode';
 
 export const App: React.FC = () => {
@@ -44,6 +47,11 @@ export const App: React.FC = () => {
     setActiveTab(previous);
   };
 
+  const goToChat = () => {
+    setViewStack([]);
+    setActiveTab('chat');
+  };
+
   const [taskState, setTaskState] = useState<TaskState>(DEFAULT_TASK_STATE);
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_USER_SETTINGS);
 
@@ -51,6 +59,18 @@ export const App: React.FC = () => {
   // Her "mesajı düzenle" eyleminde artırılır; aynı mesaj üst üste iki kez
   // düzenlense bile besteci yeniden kurulup metni alsın.
   const [draftNonce, setDraftNonce] = useState(0);
+  /**
+   * Düzenlenen kullanıcı mesajının kimliği. Yalnızca o mesaj hâlâ geçmişte
+   * duruyorsa etkindir; yeni sohbet başlayınca kendiliğinden düşer.
+   */
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+
+  /** Sohbet altındaki model seçici için sağlayıcı model listesi. */
+  const [models, setModels] = useState<string[]>([]);
+  /** EVREN günlük kota bilgisi; diğer sağlayıcılarda boş kalır. */
+  const [quota, setQuota] = useState<EvrenQuota | undefined>(undefined);
+  const [quotaError, setQuotaError] = useState<string | undefined>(undefined);
+  const [loadingQuota, setLoadingQuota] = useState(false);
 
   useEffect(() => {
     vscode.postMessage({ type: 'REQUEST_SETTINGS' });
@@ -63,6 +83,14 @@ export const App: React.FC = () => {
           break;
         case 'SETTINGS_LOADED':
           setSettings(msg.payload);
+          break;
+        case 'MODELS_LOADED':
+          setModels(msg.payload.models ?? []);
+          break;
+        case 'QUOTA_LOADED':
+          setLoadingQuota(false);
+          setQuota(msg.payload.quota);
+          setQuotaError(msg.payload.error);
           break;
         case 'STREAM_CHUNK': {
           const { messageId, text } = msg.payload;
@@ -118,13 +146,75 @@ export const App: React.FC = () => {
   }, []);
 
   /**
+   * Model listesi ve EVREN kotası sağlayıcı değişince yenilenir.
+   * Kota okunamazsa sohbet çalışmaya devam eder; yalnızca çubukta not görünür.
+   */
+  const refreshQuota = () => {
+    if (settings.selectedProvider !== 'evren') {
+      setQuota(undefined);
+      setQuotaError(undefined);
+      return;
+    }
+    setLoadingQuota(true);
+    vscode.postMessage({ type: 'FETCH_QUOTA' });
+  };
+
+  useEffect(() => {
+    vscode.postMessage({
+      type: 'FETCH_MODELS',
+      payload: { provider: settings.selectedProvider }
+    });
+    setLoadingQuota(true);
+    vscode.postMessage({ type: 'FETCH_QUOTA' });
+  }, [settings.selectedProvider]);
+
+  // Uzun oturumlarda kota bayatlamasın: dakikada bir sessizce yenile.
+  useEffect(() => {
+    if (settings.selectedProvider !== 'evren') return;
+    const timer = setInterval(() => vscode.postMessage({ type: 'FETCH_QUOTA' }), 60_000);
+    return () => clearInterval(timer);
+  }, [settings.selectedProvider]);
+
+  // Her tur bittiğinde harcanan tokenlar kotaya yansısın.
+  useEffect(() => {
+    if (settings.selectedProvider !== 'evren') return;
+    if (
+      taskState.status === 'completed' ||
+      taskState.status === 'failed' ||
+      taskState.status === 'cancelled'
+    ) {
+      vscode.postMessage({ type: 'FETCH_QUOTA' });
+    }
+  }, [taskState.status, settings.selectedProvider]);
+
+  const handleModelChange = (model: string) => {
+    setSettings((prev) => ({ ...prev, selectedModel: model }));
+    vscode.postMessage({ type: 'SAVE_SETTINGS', payload: { selectedModel: model } });
+  };
+
+  /**
    * Sürekli sohbet: Gönderilen tüm mesajlar mevcut oturumda kalır!
+   *
+   * Düzenleme modundaysa yeni bir kullanıcı balonu eklenmez; seçilen mesajdan
+   * sonraki tur atılıp istem yerinde yeniden çalıştırılır.
    */
   const handleSendMessage = (text: string) => {
-    vscode.postMessage({
-      type: 'SEND_MESSAGE',
-      payload: { text, mode: taskState.mode }
-    });
+    const editingId =
+      editingMessageId && taskState.messages.some((message) => message.id === editingMessageId)
+        ? editingMessageId
+        : null;
+
+    vscode.postMessage(
+      editingId
+        ? { type: 'EDIT_MESSAGE', payload: { text, messageId: editingId, mode: taskState.mode } }
+        : { type: 'SEND_MESSAGE', payload: { text, mode: taskState.mode } }
+    );
+    setEditingMessageId(null);
+    setDraftPrompt('');
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessageId(null);
     setDraftPrompt('');
   };
 
@@ -134,42 +224,63 @@ export const App: React.FC = () => {
   };
 
   const handleSuggestionClick = (prompt: string) => {
+    setEditingMessageId(null);
     setDraftPrompt(prompt);
     setDraftNonce((value) => value + 1);
   };
 
-  /** Gönderilmiş bir mesayı düzenlenip yeniden gönderilmek üzere besteciye koyar. */
-  const handleEditMessage = (content: string) => {
+  /**
+   * Gönderilmiş bir mesajı düzenlemek için besteciye koyar ve hangi mesajın
+   * düzenlendiğini hatırlar; gönderim yeni mesaj eklemek yerine o turu yeniler.
+   */
+  const handleEditMessage = (content: string, messageId: string) => {
+    setEditingMessageId(messageId);
     setDraftPrompt(content);
     setDraftNonce((value) => value + 1);
   };
 
   return (
     <div className="ahi-app">
-      {/* Sabit Header — her ekranda en üstte sabit kalır */}
-      <TaskHeader
-        state={taskState}
-        settings={settings}
-        changedFileCount={taskState.stats.filesModified.length}
-        onSelectMenu={openView}
-      />
+      {/* Sabit Header — Sohbet ekranındayken TaskHeader; diğer ekranlar kendi ScreenHeader'ını tepe başlığı olarak kullanır */}
+      {activeTab === 'chat' && (
+        <TaskHeader
+          state={taskState}
+          changedFileCount={taskState.stats.filesModified.length}
+          onSelectMenu={openView}
+        />
+      )}
 
       {/* Ana Çalışma Alanı + Sabit Yan Menü */}
       <div className="ahi-app__body">
         <main className="ahi-main">
-          {activeTab === 'chat' && (
-            <div className="flex h-full min-h-0 w-full flex-col">
-              <MessageList
-                messages={taskState.messages}
-                pendingToolCall={taskState.pendingToolCall}
-                checkpoints={taskState.checkpoints}
-                onEditMessage={handleEditMessage}
-                onSuggestionClick={handleSuggestionClick}
-              />
+          {/* Sohbet ekranı her zaman DOM'da canlı tutulur; böylece sekmeler arası geçişte
+              arka plan işlemleri, veri akışı ve yazılan taslak metinler asla kaybolmaz. */}
+          <div className={`flex h-full min-h-0 w-full flex-col ${activeTab === 'chat' ? '' : 'hidden'}`}>
+            <MessageList
+              messages={taskState.messages}
+              pendingToolCall={taskState.pendingToolCall}
+              checkpoints={taskState.checkpoints}
+              onEditMessage={handleEditMessage}
+              onSuggestionClick={handleSuggestionClick}
+              isConfigured={isChatConfigured(settings)}
+              onOpenSettings={() => openView('settings')}
+            />
+            <div className="shrink-0 w-full border-t ahi-border-base ahi-bg-base">
               <ComposerDock state={taskState} />
-              <div className="relative shrink-0 w-full">
+              {isChatConfigured(settings) && (
+                <ChatMetaBar
+                  settings={settings}
+                  models={models}
+                  quota={quota}
+                  quotaError={quotaError}
+                  loadingQuota={loadingQuota}
+                  onRefreshQuota={refreshQuota}
+                  onModelChange={handleModelChange}
+                />
+              )}
+              <div className="relative w-full">
                 {toast && (
-                  <div className="absolute bottom-full left-2 right-2 z-50 mb-1">
+                  <div className="absolute bottom-full left-3 right-3 z-50 mb-1">
                     <ToastView toast={toast} onDismiss={() => setToast(null)} />
                   </div>
                 )}
@@ -179,6 +290,12 @@ export const App: React.FC = () => {
                   onSend={handleSendMessage}
                   onModeChange={handleModeChange}
                   initialValue={draftPrompt}
+                  isConfigured={isChatConfigured(settings)}
+                  onOpenSettings={() => openView('settings')}
+                  editing={Boolean(
+                    editingMessageId && taskState.messages.some((message) => message.id === editingMessageId)
+                  )}
+                  onCancelEdit={handleCancelEdit}
                 />
                 <ChatStatusBar
                   state={taskState}
@@ -186,21 +303,88 @@ export const App: React.FC = () => {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Diğer ekranlardayken arka planda görev sürüyorsa görünen dinamik durum şeridi */}
+          {activeTab !== 'chat' && (taskState.status === 'running' || taskState.activeSubagent) && (
+            <div
+              data-testid="background-task-indicator"
+              className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b ahi-border-brand ahi-bg-surface px-3 py-1.5"
+            >
+              <div className="flex min-w-0 items-center gap-1.5">
+                <Loader2 className="ahi-icon-sm shrink-0 animate-spin ahi-text-brand" />
+                <span className="truncate text-xs font-medium ahi-text-fg">
+                  {taskState.activeSubagent
+                    ? `Alt Ajan [${taskState.activeSubagent.displayName || taskState.activeSubagent.role}]: ${
+                        taskState.activeSubagent.currentTool
+                          ? `araç: ${taskState.activeSubagent.currentTool}`
+                          : 'çalışıyor…'
+                      }`
+                    : 'Arka planda görev devam ediyor…'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={goToChat}
+                className="shrink-0 text-2xs font-semibold ahi-text-brand hover:underline"
+              >
+                Sohbete Git →
+              </button>
+            </div>
           )}
 
-          {activeTab === 'history' && <HistoryView onBack={goBack} />}
+          {activeTab === 'history' && (
+            <HistoryView
+              onBack={goBack}
+              onSelectTask={goToChat}
+              onSelectMenu={openView}
+              changedFileCount={taskState.stats.filesModified.length}
+            />
+          )}
 
-          {activeTab === 'changes' && <ChangesView state={taskState} onBack={goBack} />}
+          {activeTab === 'changes' && (
+            <ChangesView
+              state={taskState}
+              onBack={goBack}
+              onSelectMenu={openView}
+              changedFileCount={taskState.stats.filesModified.length}
+            />
+          )}
 
           {activeTab === 'settings' && (
-            <SettingsView settings={settings} onBack={goBack} onOpenAbout={() => openView('about')} />
+            <SettingsView
+              settings={settings}
+              onBack={goBack}
+              onOpenAbout={() => openView('about')}
+              onSelectMenu={openView}
+              changedFileCount={taskState.stats.filesModified.length}
+            />
           )}
 
-          {activeTab === 'mcp' && <McpView onBack={goBack} />}
+          {activeTab === 'mcp' && (
+            <McpView
+              onBack={goBack}
+              onSelectMenu={openView}
+              changedFileCount={taskState.stats.filesModified.length}
+            />
+          )}
 
-          {activeTab === 'agents' && <AgentsView state={taskState} onBack={goBack} />}
+          {activeTab === 'agents' && (
+            <AgentsView
+              state={taskState}
+              onBack={goBack}
+              onSelectMenu={openView}
+              changedFileCount={taskState.stats.filesModified.length}
+            />
+          )}
 
-          {activeTab === 'about' && <AboutView onBack={goBack} />}
+          {activeTab === 'about' && (
+            <AboutView
+              onBack={goBack}
+              onSelectMenu={openView}
+              changedFileCount={taskState.stats.filesModified.length}
+            />
+          )}
 
           {/* Chat dışındaki sekmelerde bildirim alt kısımda gösterilir */}
           {toast && activeTab !== 'chat' && (

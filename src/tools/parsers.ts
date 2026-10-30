@@ -6,6 +6,7 @@
  * uydurduğu bir alan tip hatasına değil, anlaşılır bir hataya dönüşür.
  */
 import type { PlanStepInput, PlanUpdateInput } from '../core/plan/TaskPlanner';
+import type { ModuleInput, ModulePlanInput } from '../core/plan/ModulePlanner';
 import { PlanStepStatus } from '../shared/types';
 
 // Alt ajan parametreleri `shared` altında yaşar; burada yeniden dışa aktarılır.
@@ -44,6 +45,8 @@ export function parsePlanUpdateInput(args: Record<string, unknown>): PlanUpdateI
       dependsOn: asStringArray(step.dependsOn),
       completionCriteria: typeof step.completionCriteria === 'string' ? step.completionCriteria : undefined,
       files: asStringArray(step.files),
+      moduleId: typeof step.moduleId === 'string' ? step.moduleId : undefined,
+      criteria: asStringArray(step.criteria),
       ownerRole: typeof step.ownerRole === 'string' ? step.ownerRole : undefined
     });
   }
@@ -51,5 +54,31 @@ export function parsePlanUpdateInput(args: Record<string, unknown>): PlanUpdateI
   return {
     goal: typeof args.goal === 'string' ? args.goal : undefined,
     steps
+  };
+}
+
+/** `update_module_plan` argümanlarını doğrular; bilinmeyen alanları atar. */
+export function parseModulePlanInput(args: Record<string, unknown>): ModulePlanInput {
+  const rawModules = Array.isArray(args.modules) ? args.modules : [];
+  const modules: ModuleInput[] = [];
+
+  for (const raw of rawModules) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const module = raw as Record<string, unknown>;
+    modules.push({
+      id: typeof module.id === 'string' ? module.id : undefined,
+      name: typeof module.name === 'string' ? module.name : undefined,
+      layer: typeof module.layer === 'string' ? module.layer : undefined,
+      paths: asStringArray(module.paths),
+      responsibility: typeof module.responsibility === 'string' ? module.responsibility : undefined,
+      dependsOn: asStringArray(module.dependsOn),
+      ownerRole: typeof module.ownerRole === 'string' ? module.ownerRole : undefined,
+      criteria: asStringArray(module.criteria)
+    });
+  }
+
+  return {
+    goal: typeof args.goal === 'string' ? args.goal : undefined,
+    modules
   };
 }

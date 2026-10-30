@@ -5,7 +5,7 @@
  * anlık görüntüsünü değil: dosyalar bu arada değişmiş olabilir, bu yüzden
  * bağlam kopyalanmak yerine güncel durumdan yeniden kurulur.
  */
-export const EDITOR_CONTEXT_MARKERS = [
+const EDITOR_CONTEXT_MARKERS = [
   '\n\n[Referenced File Context (@',
   '\n\n[Selected Code in Active Editor (',
   '\n\n[Active File]: '

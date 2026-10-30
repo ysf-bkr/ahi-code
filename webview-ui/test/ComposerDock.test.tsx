@@ -110,4 +110,19 @@ describe('ComposerDock: yazma alanının üstündeki sabit blok', () => {
     assert.ok(screen.getByText('İzole Worktree'));
     assert.match(screen.getByText(/write_file \(3\/8\)/).textContent ?? '', /write_file \(3\/8\)/);
   });
+
+  it('duraklatılmış durumda kaldığı yerden devam et kartını gösterir', () => {
+    render(
+      <ComposerDock
+        state={baseState({
+          status: 'paused',
+          plan: undefined
+        })}
+      />
+    );
+
+    assert.ok(screen.getByTestId('paused-resume-card'));
+    assert.ok(screen.getByText('Görev Duraklatıldı'));
+    assert.ok(screen.getByRole('button', { name: /Devam Et/ }));
+  });
 });

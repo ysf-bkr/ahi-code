@@ -15,11 +15,15 @@ This file defines the core principles that the AhiCode agent must follow when wr
 - Agent-facing instructions stay in English: `AGENTS.md` and every `.md`
   file under `.agents/**`. These files are read by the agent itself, so an
   English-only rule keeps them unambiguous.
-- Everything else is Turkish: code comments, `README.md`, `docs/**`, release
-  and policy documents. Root community documents are bilingual: English
-  canonical files keep their standard names (`SECURITY.md`,
-  `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) for GitHub auto-detection, with
-  Turkish counterparts (`*.tr.md`) next to them.
+- User-facing project documentation is bilingual. English canonical files
+  keep their standard names (`README.md`, `docs/*.md`, `SECURITY.md`,
+  `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) so GitHub and the Marketplace
+  auto-detect them; Turkish counterparts live next to them (`*.tr.md`) and
+  must stay in sync with the English source.
+- Turkish is also the language of code comments, `CHANGELOG.md`, release
+  notes and policy documents written for the user. When an English and a
+  Turkish document disagree, the English canonical file is the source of
+  truth, so update both in the same change.
 - User-facing application UI, including VS Code setting descriptions, is
   Turkish.
 - Keep code comments short and explanatory: one or two lines that explain

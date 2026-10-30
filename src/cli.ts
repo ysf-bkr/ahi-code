@@ -344,7 +344,7 @@ async function main(): Promise<void> {
   process.exit(1);
 }
 
-export function isMainModule(): boolean {
+function isMainModule(): boolean {
   if (typeof process === 'undefined' || !process.argv[1]) return false;
   const script = process.argv[1].replace(/\\/g, '/');
   return (script.endsWith('/cli.ts') || script.endsWith('/cli.js')) && !process.argv.includes('--test');

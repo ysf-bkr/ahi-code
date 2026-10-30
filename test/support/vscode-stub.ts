@@ -307,7 +307,12 @@ const workspaceNs = {
     return { dispose() {} };
   },
   findFiles: async () => [],
-  openTextDocument: async () => ({ getText: () => '', uri: Uri.file('') })
+  openTextDocument: async () => ({
+    getText: () => '',
+    uri: Uri.file(''),
+    isDirty: false,
+    save: async () => true
+  })
 };
 
 export { commands, languages, window, workspaceNs as workspace };

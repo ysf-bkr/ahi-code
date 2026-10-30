@@ -53,7 +53,7 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
       case 'run_tests':
       case 'run_linter':
         return {
-          icon: <Terminal className="h-3.5 w-3.5 text-amber-400" />,
+          icon: <Terminal className="ahi-icon-sm ahi-text-warning" />,
           title:
             toolCall.name === 'run_tests'
               ? 'Testler çalıştırılıyor'
@@ -64,68 +64,68 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
         };
       case 'write_file':
         return {
-          icon: <FileCode className="h-3.5 w-3.5 text-emerald-400" />,
+          icon: <FileCode className="ahi-icon-sm ahi-text-success" />,
           title: 'Dosya oluşturuluyor',
           detail: text(toolCall.args.path)
         };
       case 'edit_file':
         return {
-          icon: <FileDiff className="h-3.5 w-3.5 text-[var(--ahi-brand-400)]" />,
+          icon: <FileDiff className="ahi-icon-sm ahi-text-brand" />,
           title: 'Dosya düzenleniyor',
           detail: text(toolCall.args.path)
         };
       case 'read_file':
         return {
-          icon: <FileCode className="h-3.5 w-3.5 text-indigo-400" />,
+          icon: <FileCode className="ahi-icon-sm ahi-text-brand" />,
           title: 'Dosya okunuyor',
           detail: text(toolCall.args.path)
         };
       case 'list_directory':
         return {
-          icon: <FolderTree className="h-3.5 w-3.5 text-teal-400" />,
+          icon: <FolderTree className="ahi-icon-sm ahi-text-info" />,
           title: 'Klasör taranıyor',
           detail: text(toolCall.args.path) || '.'
         };
       case 'search_files':
         return {
-          icon: <Search className="h-3.5 w-3.5 text-violet-400" />,
+          icon: <Search className="ahi-icon-sm ahi-text-brand" />,
           title: 'Kod aranıyor',
           detail: `"${text(toolCall.args.query)}"`
         };
       case 'invoke_subagent':
         return {
-          icon: <Bot className="h-3.5 w-3.5 text-pink-400" />,
+          icon: <Bot className="ahi-icon-sm ahi-text-warning" />,
           title: `Alt ajan: ${text(toolCall.args.role, 'uzman')}`,
           detail: text(toolCall.args.task)
         };
       case 'ask_followup_question':
         return {
-          icon: <HelpCircle className="h-3.5 w-3.5 text-[var(--ahi-brand-400)]" />,
+          icon: <HelpCircle className="ahi-icon-sm ahi-text-brand" />,
           title: 'Kullanıcıya soru soruluyor',
           detail: text(toolCall.args.question)
         };
       case 'read_skill':
         return {
-          icon: <BookOpen className="h-3.5 w-3.5 text-teal-400" />,
+          icon: <BookOpen className="ahi-icon-sm ahi-text-info" />,
           title: 'Beceri okunuyor',
           detail: text(toolCall.args.skill_name)
         };
       case 'get_diagnostics':
         return {
-          icon: <Stethoscope className="h-3.5 w-3.5 text-rose-400" />,
+          icon: <Stethoscope className="ahi-icon-sm ahi-text-error" />,
           title: 'Tanılar inceleniyor',
           detail: text(toolCall.args.path) || 'Tüm proje'
         };
       case 'git_status':
       case 'git_diff':
         return {
-          icon: <GitBranch className="h-3.5 w-3.5 text-zinc-400" />,
+          icon: <GitBranch className="ahi-icon-sm ahi-text-muted" />,
           title: toolCall.name === 'git_diff' ? 'Git farkı alınıyor' : 'Git durumu okunuyor',
           detail: 'Çalışma ağacı'
         };
       default:
         return {
-          icon: <GitBranch className="h-3.5 w-3.5 text-zinc-400" />,
+          icon: <GitBranch className="ahi-icon-sm ahi-text-muted" />,
           title: toolCall.name,
           detail: ''
         };
@@ -136,38 +136,38 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
     switch (toolCall.status) {
       case 'executing':
         return (
-          <span className="flex items-center gap-1 text-2xs font-medium text-[var(--ahi-brand-400)]">
-            <Loader2 className="h-2.5 w-2.5 animate-spin" /> çalışıyor
+          <span className="flex items-center gap-1 text-2xs font-medium ahi-text-brand">
+            <Loader2 className="ahi-icon-xs animate-spin" /> çalışıyor
           </span>
         );
       case 'completed':
         return (
-          <span className="flex items-center gap-1 text-2xs font-medium text-[var(--status-success-fg,#34d399)]">
-            <Check className="h-2.5 w-2.5" /> tamamlandı
+          <span className="flex items-center gap-1 text-2xs font-medium ahi-text-success">
+            <Check className="ahi-icon-xs" /> tamamlandı
           </span>
         );
       case 'error':
         return (
-          <span className="flex items-center gap-1 text-2xs font-medium text-[var(--vscode-errorForeground,#f87171)]">
-            <AlertTriangle className="h-2.5 w-2.5" /> hata
+          <span className="flex items-center gap-1 text-2xs font-medium ahi-text-error">
+            <AlertTriangle className="ahi-icon-xs" /> hata
           </span>
         );
       case 'rejected':
         return (
-          <span className="flex items-center gap-1 text-2xs font-medium text-[var(--vscode-descriptionForeground)]">
-            <X className="h-2.5 w-2.5" /> reddedildi
+          <span className="flex items-center gap-1 text-2xs font-medium ahi-text-muted">
+            <X className="ahi-icon-xs" /> reddedildi
           </span>
         );
       case 'pending':
         return (
-          <span className="flex items-center gap-1 text-2xs font-medium text-amber-400">
-            <AlertTriangle className="h-2.5 w-2.5" /> onay bekliyor
+          <span className="flex items-center gap-1 text-2xs font-medium ahi-text-warning">
+            <AlertTriangle className="ahi-icon-xs" /> onay bekliyor
           </span>
         );
       case 'approved':
         return (
-          <span className="flex items-center gap-1 text-2xs font-medium text-[var(--status-info-fg)]">
-            <Loader2 className="h-2.5 w-2.5 animate-spin" /> onaylandı, çalıştırılıyor
+          <span className="flex items-center gap-1 text-2xs font-medium ahi-text-info">
+            <Loader2 className="ahi-icon-xs animate-spin" /> onaylandı, çalıştırılıyor
           </span>
         );
       default:
@@ -177,59 +177,75 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
 
   return (
     <div
-      className={`overflow-hidden rounded-md border bg-[var(--vscode-sideBar-background)] transition ${
+      className={`overflow-hidden rounded-md border ahi-bg-base transition ${
         isPendingApproval
-          ? 'border-amber-500/50 shadow-sm'
-          : 'border-[var(--vscode-editorWidget-border)] hover:border-[var(--vscode-focusBorder)]'
+          ? 'ahi-border-warning ahi-shadow-sm'
+          : 'ahi-border-surface hover:border-[var(--ahi-focus)]'
       }`}
     >
       <button
         type="button"
         onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center gap-2 px-2 py-1.5 text-left transition hover:bg-[var(--vscode-list-hoverBackground)]"
+        className="flex w-full items-center gap-2 px-2 py-1.5 text-left transition hover:bg-[var(--ahi-hover-bg)]"
       >
-        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--vscode-editorWidget-background)] font-mono text-2xs font-semibold text-[var(--vscode-descriptionForeground)]">
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full ahi-bg-raised font-mono text-2xs font-semibold ahi-text-muted">
           {stepNumber}
         </span>
         <span className="shrink-0">{meta.icon}</span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-xs font-medium text-[var(--vscode-foreground)]">
-            {meta.title}
-          </span>
+          <span className="block truncate text-xs font-medium ahi-text-fg">{meta.title}</span>
           {meta.detail && (
-            <span className="block truncate font-mono text-2xs text-[var(--vscode-descriptionForeground)]">
-              {meta.detail}
-            </span>
+            <span className="block truncate font-mono text-2xs ahi-text-muted">{meta.detail}</span>
           )}
         </span>
         <span className="shrink-0">{statusChip}</span>
+        {toolCall.status === 'completed' &&
+          (toolCall.name === 'write_file' || toolCall.name === 'edit_file') && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => {
+                e.stopPropagation();
+                vscode.postMessage({ type: 'SHOW_TOOL_DIFF', payload: { toolCallId: toolCall.id } });
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation();
+                  vscode.postMessage({ type: 'SHOW_TOOL_DIFF', payload: { toolCallId: toolCall.id } });
+                }
+              }}
+              className="flex shrink-0 items-center gap-1 rounded border ahi-border-brand ahi-bg-brand-soft px-1.5 py-0.5 font-mono text-2xs font-medium ahi-text-brand transition hover:bg-[var(--ahi-brand-soft)] hover:text-[var(--ahi-fg)]"
+              title="Değişiklikleri fark (diff) görünümünde incele ve düzenle"
+            >
+              <FileDiff className="ahi-icon-xs" />
+              Diff
+            </span>
+          )}
         {expanded ? (
-          <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+          <ChevronDown className="ahi-icon-xs shrink-0 opacity-60" />
         ) : (
-          <ChevronRight className="h-3 w-3 shrink-0 opacity-60" />
+          <ChevronRight className="ahi-icon-xs shrink-0 opacity-60" />
         )}
       </button>
 
       {toolCall.explanation && !expanded && (
-        <div className="border-t border-[var(--vscode-editorWidget-border)] px-2 py-1 text-2xs text-[var(--vscode-descriptionForeground)]">
+        <div className="border-t ahi-border-surface px-2 py-1 text-2xs ahi-text-muted">
           {toolCall.explanation}
         </div>
       )}
 
       {expanded && (
-        <div className="border-t border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-textCodeBlock-background)]">
+        <div className="border-t ahi-border-surface ahi-bg-code">
           {toolCall.explanation && (
-            <div className="px-2.5 pt-1.5 text-2xs leading-relaxed text-[var(--vscode-descriptionForeground)]">
+            <div className="px-2.5 pt-1.5 text-2xs leading-relaxed ahi-text-muted">
               {toolCall.explanation}
             </div>
           )}
 
           {toolCall.result && (
             <div className="p-2">
-              <div className="mb-1 text-2xs font-semibold uppercase tracking-wider text-[var(--vscode-descriptionForeground)]">
-                Çıktı
-              </div>
-              <pre className="max-h-52 overflow-auto whitespace-pre-wrap break-words rounded border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-input-background)] p-2 font-mono text-2xs leading-relaxed text-[var(--vscode-editor-foreground)]">
+              <div className="mb-1 ahi-overline ahi-text-muted">Çıktı</div>
+              <pre className="max-h-52 overflow-auto whitespace-pre-wrap break-words rounded border ahi-border-surface ahi-bg-input p-2 font-mono text-2xs leading-relaxed ahi-text-fg">
                 {toolCall.result}
               </pre>
             </div>
@@ -237,18 +253,16 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
 
           {toolCall.error && (
             <div className="p-2">
-              <div className="mb-1 text-2xs font-semibold uppercase tracking-wider text-[var(--vscode-errorForeground,#f87171)]">
-                Hata
-              </div>
-              <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded border border-[var(--vscode-errorForeground,#f87171)] bg-[var(--vscode-input-background)] p-2 font-mono text-2xs leading-relaxed text-[var(--vscode-errorForeground,#f87171)]">
+              <div className="mb-1 ahi-overline ahi-text-error">Hata</div>
+              <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-words rounded border ahi-border-error ahi-bg-input p-2 font-mono text-2xs leading-relaxed ahi-text-error">
                 {toolCall.error}
               </pre>
             </div>
           )}
 
-          <div className="border-t border-[var(--vscode-editorWidget-border)] px-2.5 py-1.5">
+          <div className="border-t ahi-border-surface px-2.5 py-1.5">
             <Disclosure summary="Parametreler">
-              <pre className="mt-1 max-h-40 overflow-auto whitespace-pre rounded border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-input-background)] p-2 font-mono text-2xs text-[var(--vscode-descriptionForeground)]">
+              <pre className="mt-1 max-h-40 overflow-auto whitespace-pre rounded border ahi-border-surface ahi-bg-input p-2 font-mono text-2xs ahi-text-muted">
                 {JSON.stringify(toolCall.args, null, 2)}
               </pre>
             </Disclosure>
@@ -256,8 +270,8 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
 
           {toolCall.status === 'completed' &&
             (toolCall.name === 'execute_command' || toolCall.name === 'run_tests') && (
-              <div className="flex items-center justify-between gap-2 border-t border-[var(--vscode-editorWidget-border)] px-2 py-1.5">
-                <span className="text-2xs text-[var(--ahi-muted-fg)]">
+              <div className="flex items-center justify-between gap-2 border-t ahi-border-surface px-2 py-1.5">
+                <span className="text-2xs ahi-text-muted">
                   Komut çalıştı; dosya etkileri Git kontrol noktasından geri alınabilir.
                 </span>
                 <Button
@@ -267,7 +281,7 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
                     vscode.postMessage({ type: 'REVERT_COMMAND', payload: { toolCallId: toolCall.id } })
                   }
                   title="Bu komutun oluşturduğu ve değiştirdiği dosyaları geri al"
-                  icon={<Undo2 className="h-2.5 w-2.5" />}
+                  icon={<Undo2 className="ahi-icon-xs" />}
                 >
                   Komut etkisini geri al
                 </Button>
@@ -276,7 +290,7 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
 
           {toolCall.status === 'completed' &&
             (toolCall.name === 'write_file' || toolCall.name === 'edit_file') && (
-              <div className="flex items-center justify-end gap-1 border-t border-[var(--vscode-editorWidget-border)] px-2 py-1.5">
+              <div className="flex items-center justify-end gap-1 border-t ahi-border-surface px-2 py-1.5">
                 <Button
                   size="xs"
                   variant="secondary"
@@ -284,7 +298,7 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
                     vscode.postMessage({ type: 'SHOW_TOOL_DIFF', payload: { toolCallId: toolCall.id } })
                   }
                   title="Bu adımın dosya değişikliklerini fark olarak göster"
-                  icon={<FileDiff className="h-2.5 w-2.5" />}
+                  icon={<FileDiff className="ahi-icon-xs" />}
                 >
                   Diff
                 </Button>
@@ -295,7 +309,7 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
                     vscode.postMessage({ type: 'REVERT_TOOL_SNAPSHOT', payload: { toolCallId: toolCall.id } })
                   }
                   title="Bu dosya değişikliğini geri al"
-                  icon={<Undo2 className="h-2.5 w-2.5" />}
+                  icon={<Undo2 className="ahi-icon-xs" />}
                 >
                   Bu adımı geri al
                 </Button>
@@ -305,15 +319,28 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
       )}
 
       {isPendingApproval && (
-        <div className="flex items-center justify-between gap-2 border-t border-amber-500/30 bg-[var(--vscode-editorWidget-background)] p-2">
+        <div className="flex items-center justify-between gap-2 border-t ahi-border-warning ahi-bg-raised p-2">
           <div
-            className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-amber-400"
+            className="flex min-w-0 items-center gap-1.5 text-xs font-medium ahi-text-warning"
             title={toolCall.approvalReason || 'Bu işlem onayınızı bekliyor'}
           >
-            <AlertTriangle className="h-3 w-3 shrink-0" />
+            <AlertTriangle className="ahi-icon-xs shrink-0" />
             <span className="truncate">{toolCall.approvalReason || 'Bu işlem onayınızı bekliyor'}</span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
+            {(toolCall.name === 'write_file' || toolCall.name === 'edit_file') && (
+              <Button
+                size="xs"
+                variant="secondary"
+                onClick={() =>
+                  vscode.postMessage({ type: 'PREVIEW_TOOL_DIFF', payload: { toolCallId: toolCall.id } })
+                }
+                icon={<FileDiff className="ahi-icon-xs" />}
+                title="Önerilen değişikliği fark (diff) görünümünde incele"
+              >
+                Farkı Gör
+              </Button>
+            )}
             <Button
               size="xs"
               variant="secondary"
@@ -329,7 +356,7 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
               onClick={() =>
                 vscode.postMessage({ type: 'APPROVE_TOOL', payload: { toolCallId: toolCall.id } })
               }
-              icon={<Check className="h-3 w-3" />}
+              icon={<Check className="ahi-icon-xs" />}
             >
               Onayla
             </Button>

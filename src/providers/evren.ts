@@ -1,7 +1,9 @@
 import { OpenAICompatibleProvider } from './openai';
 import { ModelCompletionResponse, ProviderMessage } from './base';
+import type { EvrenQuota } from '../shared/types';
 import type { ToolDefinition } from '../tools/base';
 import { errorMessage, isRecord } from '../shared/errors';
+import { HTTP_TIMEOUT_MS } from '../shared/constants';
 import { logWarning } from '../shared/logging';
 
 export const EVREN_DEFAULT_BASE_URL = 'https://evren-llmapi.ssyz.org.tr/v1';
@@ -21,6 +23,41 @@ export interface EvrenModelItem {
   };
 }
 
+/** `GET /v1/quota` yanıtının arayüzde kullanılan, doğrulanmış alt kümesi. */
+export type EvrenQuotaStatus = EvrenQuota;
+
+const QUOTA_LEVELS = new Set(['ok', 'warn', 'critical', 'unknown']);
+
+function optionalNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function optionalString(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
+}
+
+function parseQuota(data: unknown): EvrenQuotaStatus {
+  if (!isRecord(data)) {
+    throw new Error('Unexpected EVREN quota response; quota could not be read.');
+  }
+  const level = typeof data.level === 'string' && QUOTA_LEVELS.has(data.level) ? data.level : 'unknown';
+
+  return {
+    usedTokens: optionalNumber(data.used_tokens),
+    windowCap: optionalNumber(data.cap),
+    windowMinutes: optionalNumber(data.window_minutes),
+    resetAt: optionalString(data.reset_at),
+    dailyUsedTokens: optionalNumber(data.daily_used_tokens),
+    dailyLimitTokens: optionalNumber(data.daily_limit_tokens),
+    dailyRemainingTokens: optionalNumber(data.daily_remaining_tokens),
+    dailyResetAt: optionalString(data.daily_reset_at),
+    level: level as EvrenQuotaStatus['level'],
+    remainingCredits: optionalString(data.remaining_cr),
+    concurrentRequests: optionalNumber(data.concurrent_requests),
+    concurrencyLimit: optionalNumber(data.concurrency_limit)
+  };
+}
+
 export class EvrenModelProvider extends OpenAICompatibleProvider {
   private evrenApiKey: string;
   private evrenBaseUrl: string;
@@ -32,7 +69,8 @@ export class EvrenModelProvider extends OpenAICompatibleProvider {
     baseURL: string = EVREN_DEFAULT_BASE_URL,
     model: string = 'auto',
     autoAcceptTerms = false,
-    promptCaching = true
+    promptCaching = true,
+    timeoutMs?: number
   ) {
     super({
       id: 'evren',
@@ -43,6 +81,7 @@ export class EvrenModelProvider extends OpenAICompatibleProvider {
       promptCaching,
       promptCachingStyle: 'cache_control',
       streamUsage: true,
+      timeoutMs,
       extraHeaders: {
         'X-API-Key': apiKey,
         'X-Client-Name': 'AhiCode-VSCode'
@@ -90,7 +129,7 @@ export class EvrenModelProvider extends OpenAICompatibleProvider {
   private async queryAndAcceptTerms(): Promise<void> {
     const statusRes = await fetch(`${this.evrenBaseUrl}/terms/status`, {
       headers: { 'X-API-Key': this.evrenApiKey },
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(30_000)
     });
 
     if (!statusRes.ok) {
@@ -121,7 +160,7 @@ export class EvrenModelProvider extends OpenAICompatibleProvider {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({ version: data.current_version }),
-          signal: AbortSignal.timeout(10000)
+          signal: AbortSignal.timeout(30_000)
         });
         if (!acceptRes.ok) {
           throw new Error(`Could not accept EVREN terms of use (HTTP ${acceptRes.status}).`);
@@ -162,7 +201,7 @@ export class EvrenModelProvider extends OpenAICompatibleProvider {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      signal: AbortSignal.timeout(15_000)
+      signal: AbortSignal.timeout(45_000)
     });
 
     if (!response.ok) {
@@ -177,5 +216,39 @@ export class EvrenModelProvider extends OpenAICompatibleProvider {
       );
     }
     return [];
+  }
+
+  /**
+   * Hesabın anlık kota durumunu (`GET /v1/quota`) okur.
+   *
+   * Kota yalnızca görüntülenir, gönderimi engellemez: sağlayıcı zaten kendi
+   * sınırını uygular ve burada bir hata görev akışını durdurmamalıdır.
+   */
+  public static async fetchQuota(
+    apiKey: string,
+    baseURL: string = EVREN_DEFAULT_BASE_URL,
+    signal?: AbortSignal
+  ): Promise<EvrenQuotaStatus> {
+    if (!apiKey) {
+      throw new Error('EVREN API key cannot be empty.');
+    }
+
+    const cleanBaseUrl = baseURL.replace(/\/+$/, '');
+    const response = await fetch(`${cleanBaseUrl}/quota`, {
+      method: 'GET',
+      headers: {
+        'X-API-Key': apiKey,
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      signal: signal ?? AbortSignal.timeout(HTTP_TIMEOUT_MS.modelList)
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Could not read EVREN quota [${response.status}]: ${errText}`);
+    }
+
+    return parseQuota(await response.json());
   }
 }

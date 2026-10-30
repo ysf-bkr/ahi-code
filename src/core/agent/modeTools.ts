@@ -25,6 +25,7 @@ export const PLAN_MODE_TOOLS: ReadonlySet<ToolName> = new Set<ToolName>([
   'read_skill',
   'ask_followup_question',
   'update_plan',
+  'update_module_plan',
   'get_references',
   'get_workspace_symbols',
   'index_workspace',
@@ -42,7 +43,10 @@ export const PLAN_MODE_TOOLS: ReadonlySet<ToolName> = new Set<ToolName>([
   'write_knowledge_file',
   // Çağrı haritası araçları salt-okunur ve anlama/planlama aşamalarında en
   // çok burada gerekir; kod yazma kilidini etkilemezler.
-  ...CALLGRAPH_TOOL_NAMES
+  ...CALLGRAPH_TOOL_NAMES,
+  // Tek uzmana devretme yazmaz: alt ajan okuma aşamasında salt-okunur araç
+  // setiyle çalışır. Paralel görevler izole worktree açar; okuma için gereksiz.
+  'invoke_subagent'
 ]);
 
 /**
@@ -51,12 +55,23 @@ export const PLAN_MODE_TOOLS: ReadonlySet<ToolName> = new Set<ToolName>([
 export const INTAKE_MODE_TOOLS: ReadonlySet<ToolName> = new Set<ToolName>([...PLAN_MODE_TOOLS]);
 
 /** Komut çalıştıran araçlar; dosya yazımından daha erken kilitlenir. */
-export const COMMAND_TOOLS: ReadonlySet<ToolName> = new Set<ToolName>([
+const COMMAND_TOOLS: ReadonlySet<ToolName> = new Set<ToolName>([
   'execute_command',
   'run_tests',
   'run_linter',
   'run_verification'
 ]);
+
+/**
+ * Okuma aşamasında serbest olan devretme aracı. Devretme yazmaz; alt ajan
+ * salt-okunur araç setiyle çalıştırılır, böylece aşama kilidi atlanmaz.
+ * Paralel görevler izole worktree açtığı için okuma aşamasında açılmaz.
+ */
+const DELEGATION_TOOLS: ReadonlySet<ToolName> = new Set<ToolName>(['invoke_subagent']);
+
+export function isDelegationTool(toolName: ToolName | string): boolean {
+  return DELEGATION_TOOLS.has(toolName as ToolName);
+}
 
 export function isToolAllowedInMode(toolName: ToolName | string, mode: AgentMode): boolean {
   if (mode === 'plan') {
@@ -75,7 +90,11 @@ export function isToolAllowed(
   options: { workflowReadOnly?: boolean; allowCommands?: boolean } = {}
 ): boolean {
   if (!isToolAllowedInMode(toolName, mode)) return false;
-  if (options.workflowReadOnly && !INTAKE_MODE_TOOLS.has(toolName as ToolName)) return false;
+  if (options.workflowReadOnly && !INTAKE_MODE_TOOLS.has(toolName as ToolName)) {
+    // Okuma aşamalarında devretme serbesttir; alt ajan yalnızca salt-okunur araç
+    // setiyle çalıştırılır, böylece aşama kilidi atlanmış olmaz.
+    return isDelegationTool(toolName);
+  }
   if (options.allowCommands === false && COMMAND_TOOLS.has(toolName as ToolName)) return false;
   return true;
 }

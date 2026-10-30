@@ -143,33 +143,49 @@ describe('ChatInput', () => {
 
     assert.deepEqual(messages, [{ type: 'CANCEL_TASK' }]);
   });
+
+  it('ayarlar yapılandırılmamışsa giriş alanını devre dışı bırakır ve uyarı verir', () => {
+    let settingsOpened = false;
+    render(
+      <ChatInput
+        state={createTaskState()}
+        onSend={() => assert.fail('Ayar yapılmadan mesaj gönderilmemeli')}
+        onModeChange={() => {}}
+        isConfigured={false}
+        onOpenSettings={() => {
+          settingsOpened = true;
+        }}
+      />
+    );
+
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+    assert.equal(textarea.disabled, true, 'metin alanı devre dışı olmalı');
+    assert.match(textarea.placeholder, /Ayarlar/);
+
+    const button = screen.getByRole('button', { name: 'Önce ayarları yapılandırın' }) as HTMLButtonElement;
+    assert.equal(button.disabled, true, 'gönder düğmesi devre dışı olmalı');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ayarları Yapılandır' }));
+    assert.equal(settingsOpened, true, 'ayarları yapılandır düğmesi çalışmalı');
+  });
 });
 
 describe('TaskHeader menu', () => {
-  it('shows the active mode independently from the selected model', () => {
+  it('shows the active mode and leaves model selection to the composer bar', () => {
     const { rerender } = render(
-      <TaskHeader
-        state={createTaskState({ mode: 'code' })}
-        settings={settings}
-        changedFileCount={0}
-        onSelectMenu={() => {}}
-      />
+      <TaskHeader state={createTaskState({ mode: 'code' })} changedFileCount={0} onSelectMenu={() => {}} />
     );
 
     assert.ok(screen.getByLabelText('Görev modu: Kodlama'));
-    assert.ok(screen.getByText(settings.selectedModel));
+    // Model seçimi sohbet altındaki çubuğa taşındı; üstbilgide yalnızca mod kalır.
+    assert.equal(screen.queryByText(settings.selectedModel), null);
 
     rerender(
-      <TaskHeader
-        state={createTaskState({ mode: 'plan' })}
-        settings={settings}
-        changedFileCount={0}
-        onSelectMenu={() => {}}
-      />
+      <TaskHeader state={createTaskState({ mode: 'plan' })} changedFileCount={0} onSelectMenu={() => {}} />
     );
 
     assert.ok(screen.getByLabelText('Görev modu: Planlama'));
-    assert.ok(screen.getByText(settings.selectedModel));
+    assert.equal(screen.queryByText(settings.selectedModel), null);
   });
 
   it('opens the menu and closes it after a destination is selected', () => {
@@ -177,7 +193,6 @@ describe('TaskHeader menu', () => {
     render(
       <TaskHeader
         state={createTaskState()}
-        settings={settings}
         changedFileCount={2}
         onSelectMenu={(destination) => selections.push(destination)}
       />
@@ -193,14 +208,7 @@ describe('TaskHeader menu', () => {
   });
 
   it('closes the menu when Escape is pressed', () => {
-    render(
-      <TaskHeader
-        state={createTaskState()}
-        settings={settings}
-        changedFileCount={0}
-        onSelectMenu={() => {}}
-      />
-    );
+    render(<TaskHeader state={createTaskState()} changedFileCount={0} onSelectMenu={() => {}} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Menüyü aç' }));
     fireEvent.keyDown(document, { key: 'Escape' });

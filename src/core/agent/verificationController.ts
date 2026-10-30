@@ -124,7 +124,8 @@ export class VerificationController {
       status: verification.status,
       attempts: this.host.repairAttempts,
       summary: verification.summary,
-      lastRunAt: verification.ranAt
+      lastRunAt: verification.ranAt,
+      skippedReason: verification.skippedReason
     };
     await this.host.saveCurrentState();
     this.host.emitState();

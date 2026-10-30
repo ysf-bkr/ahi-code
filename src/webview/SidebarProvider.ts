@@ -9,7 +9,9 @@ import {
   VsCodeThemeConfig,
   WorkspaceCustomizations
 } from '../shared/types';
+import { isChatConfigured } from '../shared/constants';
 import { AgentCore } from '../core/agent/AgentCore';
+import { EvrenModelProvider } from '../providers/evren';
 import { getActiveWorkspaceRoot } from '../core/workspace/workspaceRoot';
 import { resolveWorkspacePath } from '../tools/pathSafety';
 import { errorMessage } from '../shared/errors';
@@ -25,8 +27,10 @@ import {
   settingsDiffer
 } from './settingsStore';
 import { fetchModelIds } from './modelCatalog';
-import { collectGitChanges, readGitFileDiff } from './gitChanges';
+import { collectGitChanges } from './gitChanges';
 import { ROLE_ALIASES, getAgentDefinition } from '../shared/agents';
+import { AhiCodeDiffContentProvider } from './diffContentProvider';
+import { getLanguageIdForFile } from '../shared/languageMap';
 
 type WebviewMessageHandlerMap = {
   [K in WebviewToExtensionMessage['type']]: (
@@ -42,6 +46,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   private _settings: UserSettings;
   private _configListenerRegistered = false;
   private _pendingNewSession = false;
+  private _diffProvider = AhiCodeDiffContentProvider.getInstance();
 
   constructor(
     private readonly _extensionUri: vscode.Uri,
@@ -55,6 +60,17 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
    * Kurucular await edilemediği için activate() tarafından çağrılır.
    */
   public async initialize(): Promise<void> {
+    try {
+      this._context.subscriptions.push(
+        vscode.workspace.registerTextDocumentContentProvider(
+          AhiCodeDiffContentProvider.scheme,
+          this._diffProvider
+        )
+      );
+    } catch (err) {
+      logWarning('Failed to register diff content provider', err);
+    }
+
     try {
       this._settings = await restoreSettings(this._context, this._settings);
     } catch (err) {
@@ -246,8 +262,25 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   private createMessageHandlers(): WebviewMessageHandlerMap {
     return {
       SEND_MESSAGE: async (message) => {
+        if (!isChatConfigured(this._settings)) {
+          this.postMessage({
+            type: 'NOTIFICATION',
+            payload: {
+              level: 'warning',
+              message:
+                'Sohbeti başlatmak için lütfen önce Ayarlar bölümünden bir model sağlayıcısı yapılandırın.'
+            }
+          });
+          return;
+        }
         if (this._agentCore) {
           await this._agentCore.handleSendMessage(message.payload.text, message.payload.mode);
+        }
+      },
+
+      EDIT_MESSAGE: async (message) => {
+        if (this._agentCore) {
+          await this._agentCore.editMessage(message.payload.messageId, message.payload.text);
         }
       },
 
@@ -266,6 +299,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       CANCEL_TASK: async () => {
         if (this._agentCore) {
           await this._agentCore.cancelTask();
+        }
+      },
+
+      RESUME_TASK: async () => {
+        if (this._agentCore) {
+          await this._agentCore.resumeTask();
         }
       },
 
@@ -349,6 +388,27 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           this.postMessage({
             type: 'MODELS_LOADED',
             payload: { provider, models: [], error: errorMessage(err) }
+          });
+        }
+      },
+
+      FETCH_QUOTA: async () => {
+        const provider = this._settings.selectedProvider;
+        if (provider !== 'evren') {
+          this.postMessage({ type: 'QUOTA_LOADED', payload: { provider } });
+          return;
+        }
+        try {
+          const quota = await EvrenModelProvider.fetchQuota(
+            this._settings.apiKeys.evren || '',
+            this._settings.customBaseUrl || undefined
+          );
+          this.postMessage({ type: 'QUOTA_LOADED', payload: { provider, quota } });
+        } catch (err) {
+          // Kota bilgisi yardımcıdır; okunamaması sohbeti engellemez.
+          this.postMessage({
+            type: 'QUOTA_LOADED',
+            payload: { provider, error: errorMessage(err) }
           });
         }
       },
@@ -717,14 +777,65 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           return;
         }
         try {
-          const root = getActiveWorkspaceRoot();
-          const fullPath = root ? resolveWorkspacePath(snapshot.filePath, root) : snapshot.filePath;
-          const current = await fs.promises.readFile(fullPath, 'utf-8');
-          await this.showSnapshotDiff(snapshot.filePath, snapshot.originalContent ?? '', current);
+          await this.showSnapshotDiff(snapshot.filePath, snapshot.originalContent ?? '');
         } catch (err) {
           this.postMessage({
             type: 'NOTIFICATION',
             payload: { level: 'error', message: `Fark görünümü açılamadı: ${errorMessage(err)}` }
+          });
+        }
+      },
+
+      PREVIEW_TOOL_DIFF: async (message) => {
+        if (!this._agentCore) return;
+        const pending = this._agentCore.getState().pendingToolCall;
+        const targetTool =
+          pending && pending.id === message.payload.toolCallId
+            ? pending
+            : this._agentCore
+                .getState()
+                .messages.flatMap((m) => m.toolCalls || [])
+                .find((tc) => tc.id === message.payload.toolCallId);
+
+        if (!targetTool) {
+          this.postMessage({
+            type: 'NOTIFICATION',
+            payload: { level: 'warning', message: 'Önizlenecek araç adımı bulunamadı.' }
+          });
+          return;
+        }
+
+        const targetPath =
+          typeof targetTool.args?.path === 'string'
+            ? targetTool.args.path
+            : typeof targetTool.args?.filePath === 'string'
+              ? targetTool.args.filePath
+              : '';
+
+        if (!targetPath) return;
+
+        try {
+          const root = getActiveWorkspaceRoot();
+          if (targetTool.name === 'write_file') {
+            const content = typeof targetTool.args?.content === 'string' ? targetTool.args.content : '';
+            await this._agentCore.openDiffPreview(targetPath, content);
+          } else if (targetTool.name === 'edit_file') {
+            const safePath = root ? resolveWorkspacePath(targetPath, root) : targetPath;
+            const current = await fs.promises.readFile(safePath, 'utf-8');
+            const targetText =
+              typeof targetTool.args?.targetText === 'string' ? targetTool.args.targetText : '';
+            const replacementText =
+              typeof targetTool.args?.replacementText === 'string' ? targetTool.args.replacementText : '';
+            const allowMultiple = Boolean(targetTool.args?.allowMultiple);
+            const modified = allowMultiple
+              ? current.split(targetText).join(replacementText)
+              : current.replace(targetText, () => replacementText);
+            await this._agentCore.openDiffPreview(targetPath, modified);
+          }
+        } catch (err) {
+          this.postMessage({
+            type: 'NOTIFICATION',
+            payload: { level: 'error', message: `Diff önizlemesi açılamadı: ${errorMessage(err)}` }
           });
         }
       },
@@ -747,10 +858,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           return;
         }
         try {
-          const root = getActiveWorkspaceRoot();
-          const fullPath = root ? resolveWorkspacePath(snapshot.filePath, root) : snapshot.filePath;
-          const current = await fs.promises.readFile(fullPath, 'utf-8');
-          await this.showSnapshotDiff(snapshot.filePath, snapshot.originalContent ?? '', current);
+          await this.showSnapshotDiff(snapshot.filePath, snapshot.originalContent ?? '');
         } catch (err) {
           this.postMessage({
             type: 'NOTIFICATION',
@@ -797,7 +905,53 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     try {
       const workspaceRoot = getActiveWorkspaceRoot();
       const targetPath = resolveWorkspacePath(filePath, workspaceRoot ?? undefined);
+
+      let fileExists = true;
+      try {
+        await fs.promises.access(targetPath);
+      } catch {
+        fileExists = false;
+      }
+
+      if (!fileExists) {
+        const baseName = path.basename(targetPath).toLowerCase();
+        if (baseName === 'agents.md' || baseName === '.agents.md' || baseName === 'agent.md') {
+          if (workspaceRoot) {
+            await this._agentCore?.getSkillManager().createTemplateStructure(workspaceRoot);
+          } else {
+            const template = `# AhiCode Project Guidelines (AGENTS.md)\n\nThis file defines the core principles that the AhiCode agent must follow.\n`;
+            await fs.promises.writeFile(targetPath, template, 'utf-8');
+          }
+          this.postMessage({
+            type: 'NOTIFICATION',
+            payload: { level: 'info', message: 'Çalışma alanında AGENTS.md oluşturuldu ve açıldı.' }
+          });
+          if (workspaceRoot) {
+            this.postMessage({
+              type: 'CUSTOMIZATIONS_LOADED',
+              payload: await this.buildCustomizationsPayload(workspaceRoot)
+            });
+          }
+        } else if (baseName === '.ahirules' || baseName === 'ahirules') {
+          const rulesTemplate = `# Çalışma Alanı Kuralları (.ahirules)\n# Bu dosyaya projenize özel kodlama ve mimari kurallarını ekleyebilirsiniz.\n`;
+          await fs.promises.writeFile(targetPath, rulesTemplate, 'utf-8');
+          this.postMessage({
+            type: 'NOTIFICATION',
+            payload: { level: 'info', message: 'Çalışma alanında .ahirules oluşturuldu ve açıldı.' }
+          });
+        } else {
+          this.postMessage({
+            type: 'NOTIFICATION',
+            payload: { level: 'warning', message: `Dosya bulunamadı: ${path.basename(targetPath)}` }
+          });
+          return;
+        }
+      }
+
       const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(targetPath));
+      if (doc.isDirty) {
+        await doc.save();
+      }
       await vscode.window.showTextDocument(doc);
     } catch (err) {
       this.postMessage({
@@ -816,20 +970,53 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     this.postMessage({ type: 'GIT_CHANGES_LOADED', payload });
   }
 
-  /** Tek dosyanın commit edilmemiş farkını diff belgesinde gösterir. */
+  /** Tek dosyanın commit edilmemiş farkını düzenlenebilir diff görünümünde gösterir. */
   private async showGitFileDiff(filePath: string): Promise<void> {
     try {
-      const diff = await readGitFileDiff(
-        getActiveWorkspaceRoot(),
-        this._agentCore?.getGitManager(),
-        filePath
+      const root = getActiveWorkspaceRoot();
+      if (!root) throw new Error('Çalışma alanı kökü bulunamadı.');
+      const fullPath = resolveWorkspacePath(filePath, root);
+      const relPath = path.relative(root, fullPath).replace(/\\/g, '/');
+
+      let headContent = '';
+      try {
+        const gm = this._agentCore?.getGitManager();
+        if (gm) {
+          headContent = await gm.getFileHeadContent(root, relPath);
+        }
+      } catch {
+        headContent = '';
+      }
+
+      const originalUri = vscode.Uri.from({
+        scheme: AhiCodeDiffContentProvider.scheme,
+        path: '/' + relPath,
+        query: `git-head=${Date.now()}`
+      });
+      this._diffProvider.setDocumentContent(originalUri, headContent);
+
+      // Sanal belgenin söz dizimi renklendirmesini (Syntax Highlighting) garantiye al
+      try {
+        const langId = getLanguageIdForFile(relPath);
+        const virtualDoc = await vscode.workspace.openTextDocument(originalUri);
+        if (virtualDoc.languageId !== langId) {
+          await vscode.languages.setTextDocumentLanguage(virtualDoc, langId);
+        }
+      } catch {
+        // Renklendirme başarısız olsa da diff açılır
+      }
+
+      const fileUri = vscode.Uri.file(fullPath);
+      await vscode.commands.executeCommand(
+        'vscode.diff',
+        originalUri,
+        fileUri,
+        `${path.basename(filePath)} (HEAD ↔ Çalışma Kopyası [Düzenlenebilir])`
       );
-      const doc = await vscode.workspace.openTextDocument({ content: diff, language: 'diff' });
-      await vscode.window.showTextDocument(doc, { preview: true });
     } catch (err) {
       this.postMessage({
         type: 'NOTIFICATION',
-        payload: { level: 'warning', message: errorMessage(err) }
+        payload: { level: 'warning', message: `Fark görünümü açılamadı: ${errorMessage(err)}` }
       });
     }
   }
@@ -977,6 +1164,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     return {
       hasAgentsMd: Boolean(sm.getAgentsMd()),
+      agentsMdPath: sm.getAgentsMdPath(),
       agentsMdContent: sm.getAgentsMd(),
       skills: sm.getSkills().map((s) => ({ name: s.name, description: s.description, path: s.path })),
       agents: sm.getCustomAgents().map((a) => ({
@@ -992,21 +1180,34 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     };
   }
 
-  private async showSnapshotDiff(filePath: string, originalContent: string, newContent: string) {
-    const language = path.extname(filePath).replace('.', '') || 'plaintext';
-    const original = await vscode.workspace.openTextDocument({
-      content: originalContent,
-      language
+  private async showSnapshotDiff(filePath: string, originalContent: string) {
+    const root = getActiveWorkspaceRoot();
+    const fullPath = root ? resolveWorkspacePath(filePath, root) : filePath;
+    const fileUri = vscode.Uri.file(fullPath);
+
+    const originalUri = vscode.Uri.from({
+      scheme: AhiCodeDiffContentProvider.scheme,
+      path: '/' + filePath,
+      query: `snapshot=${Date.now()}`
     });
-    const modified = await vscode.workspace.openTextDocument({
-      content: newContent,
-      language
-    });
+    this._diffProvider.setDocumentContent(originalUri, originalContent);
+
+    // Sanal belgenin söz dizimi renklendirmesini (Syntax Highlighting) garantiye al
+    try {
+      const langId = getLanguageIdForFile(filePath);
+      const virtualDoc = await vscode.workspace.openTextDocument(originalUri);
+      if (virtualDoc.languageId !== langId) {
+        await vscode.languages.setTextDocumentLanguage(virtualDoc, langId);
+      }
+    } catch {
+      // Renklendirme başarısız olsa da diff açılır
+    }
+
     await vscode.commands.executeCommand(
       'vscode.diff',
-      original.uri,
-      modified.uri,
-      `${path.basename(filePath)} (Before / After)`
+      originalUri,
+      fileUri,
+      `${path.basename(filePath)} (Önceki ↔ Güncel [Düzenlenebilir])`
     );
   }
 

@@ -34,6 +34,7 @@ export class SessionController {
     }
     this.host.state.checkpoints = this.host.checkpointManager.getSummaries();
     this.host.planner.hydrate(this.host.state.plan);
+    this.host.modulePlanner.hydrate(this.host.state.modules);
 
     if (rootChanged) {
       this.host.notify({
@@ -61,6 +62,9 @@ export class SessionController {
    * Açıkça yeni ve temiz bir oturum başlatır
    */
   public async createNewSession(mode: AgentMode = this.host.state.mode) {
+    // Yeni sohbet, önceki sohbeti arka planda bırakmaz: çalışan tur, bekleyen
+    // onay/soru ve alt ajan isteği aynı anda iptal edilir.
+    const wasBusy = this.host.isBusy();
     this.host.isCancelled = true;
     this.host.runGeneration++;
     if (this.host.activeAbortController) {
@@ -87,14 +91,21 @@ export class SessionController {
     this.host.persistence.reset();
     this.host.commandCheckpoints.clear();
     this.host.state = this.host.getInitialState(mode);
+    this.host.currentTurnId = undefined;
     this.host.planner.clear();
+    this.host.modulePlanner.clear();
     this.host.repairAttempts = 0;
     this.host.autoContinuations = 0;
     this.host.baselineCaptured = false;
     this.host.lastVerificationSkip = '';
     await this.host.context.workspaceState.update('ahi_active_session_id', undefined);
     this.host.emitState();
-    this.host.notify({ level: 'info', message: 'Yeni bir sohbet oturumu başlatıldı.' });
+    this.host.notify({
+      level: 'info',
+      message: wasBusy
+        ? 'Önceki görev durduruldu ve yeni bir sohbet başlatıldı.'
+        : 'Yeni bir sohbet oturumu başlatıldı.'
+    });
   }
 
   /**
@@ -141,6 +152,7 @@ export class SessionController {
             : saved.status
       });
       this.host.planner.hydrate(this.host.state.plan);
+      this.host.modulePlanner.hydrate(this.host.state.modules);
       this.host.repairAttempts = 0;
       this.host.autoContinuations = 0;
       this.host.baselineCaptured = false;
@@ -230,6 +242,7 @@ export class SessionController {
     if (res.success && res.restoredState) {
       this.host.state = res.restoredState;
       this.host.planner.hydrate(this.host.state.plan);
+      this.host.modulePlanner.hydrate(this.host.state.modules);
       this.host.state.checkpoints = this.host.checkpointManager.getSummaries();
       await this.host.saveCurrentState();
       this.host.emitState();
@@ -394,6 +407,47 @@ export class SessionController {
     this.host.state.pendingApproval = undefined;
     this.host.state.pendingToolCall = undefined;
     this.host.state.pendingQuestion = undefined;
+    this.host.state.status = 'idle';
+    this.host.isCancelled = false;
+    this.host.emitState();
+    await this.host.saveCurrentState();
+
+    await this.host.handleSendMessage(prompt, this.host.state.mode);
+  }
+
+  /**
+   * Gönderilmiş bir kullanıcı mesajını düzenleyip yeniden çalıştırır.
+   *
+   * Eski davranış istemi ikinci kez *ekliyordu*; sohbette aynı soru ve iki
+   * yanıt kalıyordu. Düzenleme artık o mesajdan sonraki her şeyi (o turun
+   * yanıtı, araç çağrıları, sonraki turlar) atar ve istemi yerinde yeniden
+   * gönderir. Böylece geçmiş tek bir doğrusal sohbet olarak kalır.
+   */
+  public async editMessage(messageId: string, text: string): Promise<void> {
+    if (this.host.isBusy()) {
+      this.host.notify({
+        level: 'warning',
+        message: 'Ajan çalışırken mesaj düzenlenemez. Önce görevi durdurun.'
+      });
+      return;
+    }
+
+    const index = this.host.state.messages.findIndex((message) => message.id === messageId);
+    if (index < 0 || this.host.state.messages[index]?.role !== 'user') {
+      this.host.notify({ level: 'warning', message: 'Düzenlenecek kullanıcı mesajı bulunamadı.' });
+      return;
+    }
+
+    const prompt = text.trim();
+    if (!prompt) return;
+
+    // Düzenlenen mesaj ve sonrası atılır; handleSendMessage güncel istemi
+    // yeni bir tur olarak ekler.
+    this.host.state.messages = this.host.state.messages.slice(0, index);
+    this.host.state.pendingApproval = undefined;
+    this.host.state.pendingToolCall = undefined;
+    this.host.state.pendingQuestion = undefined;
+    this.host.state.activeSubagent = undefined;
     this.host.state.status = 'idle';
     this.host.isCancelled = false;
     this.host.emitState();

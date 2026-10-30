@@ -23,11 +23,13 @@ export class SkillManager {
   private skills: DiscoveredSkill[] = [];
   private customAgents: CustomAgentDef[] = [];
   private agentsMdContent: string = '';
+  private agentsMdPath?: string;
 
   public async loadWorkspaceCustomizations(workspaceRoot?: string): Promise<void> {
     this.skills = [];
     this.customAgents = [];
     this.agentsMdContent = '';
+    this.agentsMdPath = undefined;
 
     if (!workspaceRoot) return;
 
@@ -39,6 +41,7 @@ export class SkillManager {
         const content = await fs.readFile(p, 'utf-8');
         if (content.trim()) {
           this.agentsMdContent = content.trim();
+          this.agentsMdPath = p;
           break;
         }
       } catch {
@@ -149,6 +152,10 @@ export class SkillManager {
 
   public getAgentsMd(): string {
     return this.agentsMdContent;
+  }
+
+  public getAgentsMdPath(): string | undefined {
+    return this.agentsMdPath;
   }
 
   public getPromptContext(): string {

@@ -146,13 +146,13 @@ export const SearchField: React.FC<SearchFieldProps> = ({
 }) => (
   <div className={cx('ahi-input-group', 'ahi-input-group--leading')}>
     <span className="ahi-input-group__icon">
-      <Search className="h-3.5 w-3.5" />
+      <Search className="ahi-icon-sm" />
     </span>
     <Input type="search" value={value} onChange={(event) => onValueChange(event.target.value)} {...rest} />
     {value && (
       <span className="ahi-input-group__action">
         <IconButton label={clearLabel} small onClick={() => onValueChange('')}>
-          <X className="h-3 w-3" />
+          <X className="ahi-icon-xs" />
         </IconButton>
       </span>
     )}

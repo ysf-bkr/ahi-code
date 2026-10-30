@@ -87,8 +87,9 @@ describe('Typography: single scale', () => {
     assert.doesNotMatch(css, /ahi-text-3xs/);
   });
 
-  it('custom ahi-text-* class not used in components', () => {
-    const offenders = webviewSourceFiles().filter((file) => read(file).includes('ahi-text-'));
+  it('custom ahi-text-* typography class not used in components', () => {
+    const typographyClassRegex = /\bahi-text-(?:3xs|2xs|xs|sm|md|lg|xl)\b/;
+    const offenders = webviewSourceFiles().filter((file) => typographyClassRegex.test(read(file)));
     assert.deepEqual(offenders, [], `Old typography class: ${offenders.join(', ')}`);
   });
 

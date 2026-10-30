@@ -241,7 +241,7 @@ export const Disclosure: React.FC<DisclosureProps> = ({
     )}
   >
     <summary className="ahi-disclosure__summary">
-      <ChevronRight className="ahi-disclosure__chevron h-3 w-3" aria-hidden="true" />
+      <ChevronRight className="ahi-icon-xs ahi-disclosure__chevron" aria-hidden="true" />
       {icon}
       {title ?? summary}
     </summary>

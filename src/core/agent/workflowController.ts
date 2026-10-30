@@ -20,6 +20,7 @@ import { logWarning } from '../../shared/logging';
 import { skipsApprovalGates } from './autonomy';
 import { getActiveWorkspaceRoot } from '../workspace/workspaceRoot';
 import type { TaskSpec } from '../spec/SpecStore';
+import { checkSpecCoverage } from '../spec/SpecStore';
 import type { TaskPlan } from '../../shared/types';
 import type { AgentHost } from './agentHost';
 
@@ -41,6 +42,9 @@ export class WorkflowController {
   public syncProgressToState(): void {
     const workflow = this.getWorkflow();
     this.host.state.workflow = workflow;
+
+    // Modül haritası arayüzde ayrı bir bölüm olarak gösterilir.
+    this.host.state.modules = this.host.modulePlanner.getPlan();
 
     // Yalnızca bu iş akışına bağlı spec gösterilir. Herhangi bir onaylı
     // spece geri düşmek, temiz bir oturumda önceki görevin spec'ini gösteriyordu.
@@ -100,6 +104,7 @@ export class WorkflowController {
           workflow.specId && this.host.specStore.get(workflow.specId)?.status === 'approved'
         ),
         hasPlan: this.host.planner.hasPlan(),
+        hasModules: this.host.modulePlanner.hasPlan(),
         criteriaMet: this.currentSpecCriteriaMet(),
         verificationPassed: this.verificationPassed()
       },
@@ -123,9 +128,21 @@ export class WorkflowController {
     return this.host.specStore.isComplete(specId);
   }
 
+  /**
+   * Bitti kapısı için doğrulama yeterli mi?
+   *
+   * "Atlandı" tek başına yeterli değildir: projede test/lint komutu bulunamadıysa
+   * görev sessizce "tamamlandı" sayılmamalı. Yalnızca çalışma alanının
+   * bulunmadığı (komut çalıştırmanın imkânsız olduğu) durum kabul edilir.
+   */
   public verificationPassed(): boolean {
     const verification = this.host.state.stats.verification;
-    return verification?.status === 'passed' || verification?.status === 'skipped';
+    if (!verification) return false;
+    if (verification.status === 'passed') return true;
+    if (verification.status === 'skipped') {
+      return verification.skippedReason === 'no-workspace';
+    }
+    return false;
   }
 
   /**
@@ -316,7 +333,8 @@ export class WorkflowController {
         status: verification.status,
         attempts: this.host.repairAttempts,
         summary: verification.summary,
-        lastRunAt: verification.ranAt
+        lastRunAt: verification.ranAt,
+        skippedReason: verification.skippedReason
       };
       await this.host.saveCurrentState();
       this.host.emitState();
@@ -390,6 +408,31 @@ export class WorkflowController {
     if (!this.host.state.pendingApproval || this.host.state.pendingApproval.kind !== 'spec') {
       this.host.notify({ level: 'warning', message: 'Şu anda onay bekleyen bir spec yok.' });
       return false;
+    }
+
+    // Onay, sözleşmenin imzalandığı andır: kabul kriterleri üç boyutu
+    // kapsamıyorsa spec onaylanmaz, model eksik boyutu eklemek üzere uyarılır.
+    const spec = this.host.specStore.get(specId);
+    if (spec) {
+      const coverage = checkSpecCoverage(spec);
+      if (!coverage.ok) {
+        this.host.state.pendingApproval = undefined;
+        this.host.state.status = 'idle';
+        this.host.state.messages.push({
+          id: this.host.nextMessageId(),
+          role: 'system',
+          content: coverage.message,
+          timestamp: Date.now()
+        });
+        await this.host.saveCurrentState();
+        this.host.emitState();
+        this.host.notify({ level: 'warning', message: coverage.message });
+        this.resumeAfterApproval(
+          'Spec kabul kriterleri eksik olduğu için onaylanmadı. `write_spec` aracını yeniden çağırıp ' +
+            'eksik boyutları (mutlu yol, hata yolu, uç durum) kapsayan kriterleri ekle.'
+        );
+        return false;
+      }
     }
 
     await this.host.specStore.approve(this.workspaceRootForApproval(), specId);
@@ -515,6 +558,35 @@ export class WorkflowController {
     // planlamaya geçebilir. Spec içeriği ve kabul kriterleri yine görünür.
     if (skipsApprovalGates(this.host.settings)) {
       const root = getActiveWorkspaceRoot() || this.host.persistence.currentRoot || '';
+
+      // Otonom onay da aynı kalite kapısına tabidir: üç boyutu kapsamayan
+      // spec imzalanmaz, model eksik kriterleri eklemek üzere uyarılır.
+      const coverage = checkSpecCoverage(drafted);
+      if (!coverage.ok) {
+        this.host.closeRemainingToolCalls(
+          modelToolCalls,
+          toolCallId,
+          'Spec kabul kriterleri eksik; bu çağrı çalıştırılmadı.'
+        );
+        this.host.state.pendingApproval = undefined;
+        this.host.state.status = 'idle';
+        this.host.state.messages.push({
+          id: this.host.nextMessageId(),
+          role: 'system',
+          content: coverage.message,
+          timestamp: Date.now()
+        });
+        this.syncProgressToState();
+        await this.host.saveCurrentState();
+        this.host.emitState();
+        this.host.notify({ level: 'warning', message: coverage.message });
+        this.resumeAfterApproval(
+          'Spec kabul kriterleri eksik olduğu için onaylanmadı. `write_spec` aracını yeniden çağırıp ' +
+            'eksik boyutları (mutlu yol, hata yolu, uç durum) kapsayan kriterleri ekle.'
+        );
+        return true;
+      }
+
       try {
         await this.host.specStore.approve(root, drafted.id);
         currentWorkflow.specApproved = true;
@@ -594,7 +666,7 @@ export class WorkflowController {
         content:
           `Plan otomatik onaylandı (otonomi: ${this.host.settings.autonomy}). Rol atamaları:\n` +
           `${this.host.planner.formatAssignments()}\n` +
-          'Şimdi planı sırayla uygula. Uzman alt ajanları çalıştırmak gerekiyorsa orkestrasyonu `invoke_subagent` ile yalnızca @manager rolüne devret (uzmanları yalnızca @manager çalıştırabilir). ' +
+          'Şimdi planı sırayla uygula. Her adımı sahibi olan uzman role `invoke_subagent` ile devret (@backend, @frontend, @security...); birden çok uzmanın eşgüdümü gerekiyorsa @manager kullan, bağımsız adımları `run_parallel_tasks` ile koştur. ' +
           'Her adımı bitirince `update_plan` ile "completed" işaretle ve kabul kriterini güncelle. ' +
           'Bitirmeden "tamamlandı" deme.',
         timestamp: Date.now()

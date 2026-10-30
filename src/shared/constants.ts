@@ -8,7 +8,7 @@
  * bir yerdeki değişiklik diğerlerinden kopmaz.
  */
 import { EXTENSION_VERSION } from './version';
-import type { ModelProviderType, NavigationDestination, TaskState, UserSettings } from './types';
+import type { ModelProviderType, TaskState, UserSettings } from './types';
 
 /** MCP sunucularına ve HTTP kimlik başlıklarına bildirilen ad. */
 export const CLIENT_NAME = 'AhiCode';
@@ -55,7 +55,7 @@ export const HTTP_TIMEOUT_MS = {
   /** web_fetch / web_search istekleri. */
   web: 20_000,
   /** Sağlayıcı model listesi ve sağlık kontrolü istekleri. */
-  modelList: 15_000
+  modelList: 35_000
 } as const;
 
 /** Ayarlar ekranında sunulan varsayılan sağlayıcı adresleri. */
@@ -77,24 +77,18 @@ export const VALID_PROVIDERS: readonly ModelProviderType[] = [
 /** Güvenli kasada (SecretStorage) saklanan API anahtarı sağlayıcıları. */
 export const API_KEY_PROVIDERS = ['evren', 'openrouter', 'openaiCompatible'] as const;
 
-/** Webview içi ekran gezinme hedefleri listesi. */
-export const NAVIGATION_DESTINATIONS: readonly NavigationDestination[] = [
-  'chat',
-  'history',
-  'changes',
-  'mcp',
-  'agents',
-  'settings',
-  'about'
-] as const;
+/** Webview'a gerçek API anahtarı yerine gönderilen yer tutucu. */
+export const MASKED_KEY = '••••••••••••••••';
 
 /** İlk açılış ve sıfırlama için varsayılan kullanıcı ayarları. */
 export const DEFAULT_USER_SETTINGS: UserSettings = {
+  isConfigured: false,
   selectedProvider: 'ollama',
   selectedModel: 'llama3.1',
   apiKeys: {},
   autoAcceptTerms: false,
   ollamaBaseUrl: DEFAULT_PROVIDER_URLS.ollama,
+  requestTimeoutSeconds: 180,
   autoApprove: {
     readFiles: true,
     writeFiles: false,
@@ -108,6 +102,37 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   maxContinuations: 12,
   useIntegratedTerminal: true
 };
+
+/**
+ * Sohbetin etkinleşmesi için gereken minimum ayarların yapılıp yapılmadığını denetler.
+ * Kullanıcı henüz ayarları kaydetmediyse veya seçili sağlayıcının zorunlu
+ * alanları eksikse sohbet kilitli kalır.
+ */
+export function isChatConfigured(settings?: Partial<UserSettings>): boolean {
+  if (!settings || settings.isConfigured !== true) {
+    return false;
+  }
+  const provider = settings.selectedProvider;
+  if (!provider) {
+    return false;
+  }
+  if (provider === 'evren') {
+    return Boolean(settings.apiKeys?.evren || settings.apiKeyStatus?.evren);
+  }
+  if (provider === 'openrouter') {
+    return Boolean(settings.apiKeys?.openrouter || settings.apiKeyStatus?.openrouter);
+  }
+  if (provider === 'openai-compatible') {
+    return Boolean(
+      (settings.openAiCompatibleBaseUrl?.trim() || settings.customBaseUrl?.trim()) &&
+        settings.selectedModel?.trim()
+    );
+  }
+  if (provider === 'ollama') {
+    return Boolean(settings.selectedModel?.trim());
+  }
+  return true;
+}
 
 /** İlk oturum için boş görev durumu. */
 export const DEFAULT_TASK_STATE: TaskState = {

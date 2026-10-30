@@ -19,13 +19,13 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { id: 'chat', title: 'Sohbet', icon: <MessageSquare className="h-4 w-4" /> },
-  { id: 'changes', title: 'Değişiklikler', icon: <FileDiff className="h-4 w-4" /> },
-  { id: 'history', title: 'Görev Geçmişi', icon: <History className="h-4 w-4" /> },
-  { id: 'agents', title: 'Ajanlar & Beceriler', icon: <Bot className="h-4 w-4" /> },
-  { id: 'mcp', title: 'MCP Sunucuları', icon: <Server className="h-4 w-4" /> },
-  { id: 'settings', title: 'Ayarlar', icon: <Settings className="h-4 w-4" /> },
-  { id: 'about', title: 'Hakkında', icon: <Info className="h-4 w-4" /> }
+  { id: 'chat', title: 'Sohbet', icon: <MessageSquare className="ahi-icon-md" /> },
+  { id: 'changes', title: 'Değişiklikler', icon: <FileDiff className="ahi-icon-md" /> },
+  { id: 'history', title: 'Görev Geçmişi', icon: <History className="ahi-icon-md" /> },
+  { id: 'agents', title: 'Ajanlar & Beceriler', icon: <Bot className="ahi-icon-md" /> },
+  { id: 'mcp', title: 'MCP Sunucuları', icon: <Server className="ahi-icon-md" /> },
+  { id: 'settings', title: 'Ayarlar', icon: <Settings className="ahi-icon-md" /> },
+  { id: 'about', title: 'Hakkında', icon: <Info className="ahi-icon-md" /> }
 ];
 
 /**
@@ -61,7 +61,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
       <div className="ahi-nav__footer">
         <NavButton
-          icon={isOpen ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+          icon={isOpen ? <ChevronRight className="ahi-icon-sm" /> : <ChevronLeft className="ahi-icon-sm" />}
           label="Menüyü daralt"
           expanded={isOpen}
           title={isOpen ? 'Menüyü daralt (sabit ikon moduna geç)' : 'Menüyü genişlet'}

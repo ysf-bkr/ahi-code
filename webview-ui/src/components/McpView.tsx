@@ -11,13 +11,15 @@ import {
   Server,
   Loader2
 } from 'lucide-react';
-import { McpServerInfo } from '@shared/types';
+import { McpServerInfo, NavigationDestination } from '@shared/types';
 import { ScreenHeader } from './ScreenHeader';
 import { Button, Card, EmptyState, IconButton, ListButton, Section, SectionTitle } from './ui';
 import { vscode } from '../utils/vscode';
 
 interface McpViewProps {
   onBack: () => void;
+  onSelectMenu?: (destination: NavigationDestination) => void;
+  changedFileCount?: number;
 }
 
 const statusMeta = (status: McpServerInfo['status']) => {
@@ -25,35 +27,35 @@ const statusMeta = (status: McpServerInfo['status']) => {
     case 'connected':
       return {
         label: 'Bağlı',
-        dot: 'bg-emerald-400',
-        text: 'text-[var(--status-success-fg)]',
-        icon: <CheckCircle2 className="h-2.5 w-2.5" />
+        dot: 'ahi-bg-success-solid',
+        text: 'ahi-text-success',
+        icon: <CheckCircle2 className="ahi-icon-xs" />
       };
     case 'connecting':
       return {
         label: 'Bağlanıyor',
-        dot: 'bg-[var(--ahi-brand-400)] animate-pulse',
-        text: 'text-[var(--status-info-fg)]',
-        icon: <Loader2 className="h-2.5 w-2.5 animate-spin" />
+        dot: 'ahi-bg-brand animate-pulse',
+        text: 'ahi-text-info',
+        icon: <Loader2 className="ahi-icon-xs animate-spin" />
       };
     case 'error':
       return {
         label: 'Hata',
-        dot: 'bg-[var(--status-error-fg)]',
-        text: 'text-[var(--status-error-fg)]',
-        icon: <AlertCircle className="h-2.5 w-2.5" />
+        dot: 'ahi-bg-error-solid',
+        text: 'ahi-text-error',
+        icon: <AlertCircle className="ahi-icon-xs" />
       };
     default:
       return {
         label: 'Durduruldu',
-        dot: 'bg-[var(--vscode-disabledForeground,#6b7280)]',
-        text: 'text-[var(--ahi-muted-fg)]',
+        dot: 'ahi-bg-muted',
+        text: 'ahi-text-muted',
         icon: null
       };
   }
 };
 
-export const McpView: React.FC<McpViewProps> = ({ onBack }) => {
+export const McpView: React.FC<McpViewProps> = ({ onBack, onSelectMenu, changedFileCount }) => {
   const [servers, setServers] = useState<McpServerInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -83,9 +85,11 @@ export const McpView: React.FC<McpViewProps> = ({ onBack }) => {
         title="MCP sunucuları"
         subtitle="Model Context Protocol araçları"
         onBack={onBack}
+        onSelectMenu={onSelectMenu}
+        changedFileCount={changedFileCount}
         actions={
           <IconButton label="Sunucuları yeniden tara" onClick={handleRestart}>
-            <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin text-[var(--status-info-fg)]' : ''}`} />
+            <RefreshCw className={`ahi-icon-xs ${loading ? 'animate-spin ahi-text-info' : ''}`} />
           </IconButton>
         }
       />
@@ -93,35 +97,33 @@ export const McpView: React.FC<McpViewProps> = ({ onBack }) => {
       <div className="ahi-screen-body">
         <Card className="flex flex-col gap-2">
           <div className="flex items-start gap-2">
-            <span className="ahi-toggle-row__icon h-7 w-7 text-[var(--status-info-fg)]">
-              <Plug className="h-3.5 w-3.5" />
+            <span className="ahi-toggle-row__icon ahi-text-info">
+              <Plug className="ahi-icon-sm" />
             </span>
             <div className="min-w-0">
-              <div className="text-sm font-semibold text-[var(--ahi-fg)]">Harici araçlara bağlanın</div>
+              <div className="ahi-title">Harici araçlara bağlanın</div>
               <p className="ahi-caption mt-0.5">
                 GitHub, PostgreSQL, SQLite, dosya sistemi veya kendi MCP sunucunuzu ekleyerek ajanın
                 yeteneklerini genişletin.
               </p>
             </div>
           </div>
-          <Button variant="primary" block onClick={openConfig} icon={<FileCode className="h-3 w-3" />}>
+          <Button variant="primary" block onClick={openConfig} icon={<FileCode className="ahi-icon-xs" />}>
             mcp_config.json dosyasını aç
           </Button>
-          <div className="text-2xs text-center font-mono text-[var(--ahi-muted-fg)]">
-            .ahi/mcp_config.json
-          </div>
+          <div className="text-2xs text-center font-mono ahi-text-muted">.ahi/mcp_config.json</div>
         </Card>
 
         <Section>
-          <SectionTitle icon={<Server className="h-3 w-3" />} title="Sunucular" count={servers.length} />
+          <SectionTitle icon={<Server className="ahi-icon-xs" />} title="Sunucular" count={servers.length} />
 
           {loading ? (
             <div className="ahi-caption flex flex-col items-center gap-2 py-8">
-              <Loader2 className="h-4 w-4 animate-spin" /> Sunucu durumu yükleniyor...
+              <Loader2 className="ahi-icon-md animate-spin" /> Sunucu durumu yükleniyor...
             </div>
           ) : servers.length === 0 ? (
             <EmptyState
-              icon={<Server className="h-5 w-5 text-[var(--ahi-muted-fg)]" />}
+              icon={<Server className="ahi-icon-lg ahi-text-muted" />}
               title="Henüz MCP sunucusu yok"
               description="Yapılandırma dosyasına bir sunucu ekleyin, ardından yenile düğmesine tıklayın."
             />
@@ -137,7 +139,7 @@ export const McpView: React.FC<McpViewProps> = ({ onBack }) => {
                     icon={<span className={`h-2 w-2 shrink-0 rounded-full ${meta.dot}`} />}
                     title={server.name}
                     description={
-                      <span className="text-2xs flex items-center gap-1.5 text-[var(--ahi-muted-fg)]">
+                      <span className="text-2xs flex items-center gap-1.5 ahi-text-muted">
                         <span className={`flex items-center gap-1 ${meta.text}`}>
                           {meta.icon}
                           {meta.label}
@@ -154,28 +156,28 @@ export const McpView: React.FC<McpViewProps> = ({ onBack }) => {
                     }
                     trailing={
                       isOpen ? (
-                        <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                        <ChevronDown className="ahi-icon-sm shrink-0 opacity-60" />
                       ) : (
-                        <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-60" />
+                        <ChevronRight className="ahi-icon-sm shrink-0 opacity-60" />
                       )
                     }
                   />
 
                   {isOpen && (
-                    <div className="flex flex-col gap-2 border-t border-[var(--ahi-surface-border)] p-2.5">
-                      <div className="text-2xs flex items-start gap-1.5 rounded border border-[var(--ahi-surface-border)] bg-[var(--ahi-input-bg)] px-2 py-1.5 font-mono text-[var(--ahi-muted-fg)]">
-                        <Terminal className="mt-0.5 h-2.5 w-2.5 shrink-0" />
+                    <div className="flex flex-col gap-2 border-t ahi-border-surface p-2.5">
+                      <div className="text-2xs flex items-start gap-1.5 rounded border ahi-border-surface ahi-bg-input px-2 py-1.5 font-mono ahi-text-muted">
+                        <Terminal className="ahi-icon-xs mt-0.5 shrink-0" />
                         <span className="break-all">
                           {server.command || server.endpoint || '(komut yok)'}
                         </span>
                       </div>
 
                       {server.error && (
-                        <div className="rounded border border-[var(--status-error-border)] bg-[var(--ahi-input-bg)] p-2">
-                          <div className="text-2xs mb-1 flex items-center gap-1 font-semibold text-[var(--status-error-fg)]">
-                            <AlertCircle className="h-2.5 w-2.5" /> Bağlantı hatası
+                        <div className="rounded border ahi-border-error ahi-bg-input p-2">
+                          <div className="text-2xs mb-1 flex items-center gap-1 font-semibold ahi-text-error">
+                            <AlertCircle className="ahi-icon-xs" /> Bağlantı hatası
                           </div>
-                          <pre className="text-2xs whitespace-pre-wrap break-words font-mono text-[var(--status-error-fg)]">
+                          <pre className="text-2xs whitespace-pre-wrap break-words font-mono ahi-text-error">
                             {server.error}
                           </pre>
                         </div>
@@ -188,9 +190,9 @@ export const McpView: React.FC<McpViewProps> = ({ onBack }) => {
                             {server.tools.map((tool) => (
                               <div
                                 key={tool.name}
-                                className="rounded border border-[var(--ahi-surface-border)] bg-[var(--ahi-input-bg)] px-2 py-1.5"
+                                className="rounded border ahi-border-surface ahi-bg-input px-2 py-1.5"
                               >
-                                <div className="text-2xs truncate font-mono font-medium text-[var(--ahi-brand-400)]">
+                                <div className="text-2xs truncate font-mono font-medium ahi-text-brand">
                                   {tool.name}
                                 </div>
                                 {tool.description && (

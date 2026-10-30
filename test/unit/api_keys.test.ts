@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
 import { MASKED_KEY, maskApiKeys, mergeApiKeys } from '../../src/webview/apiKeys';
+import { isChatConfigured } from '../../src/shared/constants';
 
 describe('apiKeys: masking and merging', () => {
   it('masks real keys to the UI', () => {
@@ -55,5 +56,105 @@ describe('apiKeys: masking and merging', () => {
     const result = mergeApiKeys(current, { openrouter: '' });
     assert.strictEqual(current.openrouter, 'gercek');
     assert.notStrictEqual(result.keys, current);
+  });
+
+  it('evren API anahtarını kaydeder ve siler', () => {
+    const ekle = mergeApiKeys({}, { evren: 'evren-secret-key' });
+    assert.strictEqual(ekle.keys.evren, 'evren-secret-key');
+    assert.deepStrictEqual(ekle.store, [{ provider: 'evren', key: 'evren-secret-key' }]);
+
+    const sil = mergeApiKeys({ evren: 'evren-secret-key' }, { evren: '' });
+    assert.strictEqual(sil.keys.evren, undefined);
+    assert.deepStrictEqual(sil.remove, ['evren']);
+  });
+});
+
+describe('isChatConfigured: sohbet kilit ve ayar denetimi', () => {
+  it('ayarlar yapılandırılmamışsa sohbet kilitlidir', () => {
+    assert.strictEqual(isChatConfigured(undefined), false);
+    assert.strictEqual(isChatConfigured({ isConfigured: false }), false);
+    assert.strictEqual(
+      isChatConfigured({ isConfigured: false, selectedProvider: 'ollama', selectedModel: 'llama3.1' }),
+      false
+    );
+  });
+
+  it('yapılandırılmış ollama sağlayıcısı model varsa geçerlidir', () => {
+    assert.strictEqual(
+      isChatConfigured({ isConfigured: true, selectedProvider: 'ollama', selectedModel: 'llama3.1' }),
+      true
+    );
+    assert.strictEqual(
+      isChatConfigured({ isConfigured: true, selectedProvider: 'ollama', selectedModel: '' }),
+      false
+    );
+  });
+
+  it('evren sağlayıcısı anahtar gerektirir', () => {
+    assert.strictEqual(
+      isChatConfigured({ isConfigured: true, selectedProvider: 'evren', selectedModel: 'auto', apiKeys: {} }),
+      false
+    );
+    assert.strictEqual(
+      isChatConfigured({
+        isConfigured: true,
+        selectedProvider: 'evren',
+        selectedModel: 'auto',
+        apiKeys: { evren: 'key' }
+      }),
+      true
+    );
+    assert.strictEqual(
+      isChatConfigured({
+        isConfigured: true,
+        selectedProvider: 'evren',
+        selectedModel: 'auto',
+        apiKeys: {},
+        apiKeyStatus: { evren: true, openrouter: false, openaiCompatible: false }
+      }),
+      true
+    );
+  });
+
+  it('openrouter sağlayıcısı anahtar gerektirir', () => {
+    assert.strictEqual(
+      isChatConfigured({
+        isConfigured: true,
+        selectedProvider: 'openrouter',
+        selectedModel: 'claude',
+        apiKeys: {}
+      }),
+      false
+    );
+    assert.strictEqual(
+      isChatConfigured({
+        isConfigured: true,
+        selectedProvider: 'openrouter',
+        selectedModel: 'claude',
+        apiKeys: { openrouter: 'or-key' }
+      }),
+      true
+    );
+  });
+
+  it('openai-compatible uç nokta ve model gerektirir', () => {
+    assert.strictEqual(
+      isChatConfigured({
+        isConfigured: true,
+        selectedProvider: 'openai-compatible',
+        openAiCompatibleBaseUrl: '',
+        selectedModel: 'gpt-4o'
+      }),
+      false
+    );
+    assert.strictEqual(
+      isChatConfigured({
+        isConfigured: true,
+        selectedProvider: 'openai-compatible',
+        openAiCompatibleBaseUrl: 'http://localhost:1234/v1',
+        selectedModel: 'gpt-4o'
+      }),
+      true
+    );
   });
 });

@@ -48,25 +48,27 @@ Useful individual commands:
 
 - Keep code modular and readable; TypeScript type safety is a priority.
 - Do not add external dependencies unless strictly necessary.
-- All tool calls must validate arguments and honour the workspace path jail.
+- All tool calls must validate arguments and honor the workspace path jail.
 - Never weaken the permission/approval flow. New tools need an explicit
   `requiresApproval` decision and a deny-rule check.
 - Do not log secrets. Audit log arguments are redacted by key name; keep it that way.
-- Add or update tests for behaviour changes. Security-sensitive changes require a
+- Add or update tests for behavior changes. Security-sensitive changes require a
   regression test.
 
 ## Language policy
 
 - Agent-facing instructions stay in English: `AGENTS.md` and every `.md`
   file under `.agents/**`.
-- `README.md`, `CHANGELOG.md`, files under `docs/**`, code comments, and
-  user-facing application UI (including VS Code setting descriptions) are in Turkish.
+- Project documentation is bilingual: English canonical files (`README.md`,
+  `docs/*.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) keep
+  their standard names for GitHub/Marketplace auto-detection, with Turkish
+  counterparts (`*.tr.md`) next to them.
+- `CHANGELOG.md`, code comments, and user-facing application UI (including
+  VS Code setting descriptions) are in Turkish.
 - Code identifiers, tests, logs, and filenames stay in English so tooling,
   automation, and security channels remain consistent.
-- Root community documents are bilingual: the English canonical files keep their
-  standard names (`SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) so
-  GitHub auto-detects them, and Turkish counterparts live next to them
-  (`SECURITY.tr.md`, `CONTRIBUTING.tr.md`, `CODE_OF_CONDUCT.tr.md`).
+- Keep both sides of a bilingual pair in sync; when they disagree, the
+  English canonical file is the source of truth.
 
 ## Commit messages
 

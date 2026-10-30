@@ -62,6 +62,7 @@ describe('Workflow: stages by mode', () => {
       state: createWorkflowState({ stage: 'plan', planApproved: true }),
       hasApprovedSpec: false,
       hasPlan: true,
+      hasModules: true,
       criteriaMet: false,
       verificationPassed: false
     };
@@ -74,6 +75,7 @@ describe('Workflow: stages by mode', () => {
       state: createWorkflowState({ stage: 'review' }),
       hasApprovedSpec: false,
       hasPlan: false,
+      hasModules: false,
       criteriaMet: false,
       verificationPassed: false
     };
@@ -108,6 +110,7 @@ describe('Workflow: post-approval progress (stuck regression)', () => {
       state: createWorkflowState({ stage: 'verify', planApproved: true }),
       hasApprovedSpec: true,
       hasPlan: true,
+      hasModules: true,
       criteriaMet: true,
       verificationPassed: true
     };

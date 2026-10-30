@@ -68,7 +68,39 @@ const specCall: ModelCompletionResponse = {
     {
       id: 'c_spec',
       name: 'write_spec',
-      arguments: { goal: 'Dosya ekle', scope: ['src'], acceptanceCriteria: ['Dosya var'] }
+      arguments: {
+        goal: 'Dosya ekle',
+        scope: ['src'],
+        acceptanceCriteria: [
+          'src/a.ts dosyası oluşturulur ve export çalışır',
+          'Geçersiz yol için hata döner',
+          'Boş dosya sınırında çökmez'
+        ]
+      }
+    }
+  ]
+};
+
+const moduleCall: ModelCompletionResponse = {
+  text: '',
+  toolCalls: [
+    {
+      id: 'c_modules',
+      name: 'update_module_plan',
+      arguments: {
+        goal: 'Dosya ekle',
+        modules: [
+          {
+            id: 'src-core',
+            name: 'Kaynak',
+            layer: 'application',
+            paths: ['src'],
+            responsibility: 'Kaynak dosyaları',
+            ownerRole: 'backend',
+            criteria: ['ac-1']
+          }
+        ]
+      }
     }
   ]
 };
@@ -79,7 +111,10 @@ const planCall: ModelCompletionResponse = {
     {
       id: 'c_plan',
       name: 'update_plan',
-      arguments: { goal: 'Dosya ekle', steps: [{ title: 'Yaz', files: ['src/a.ts'] }] }
+      arguments: {
+        goal: 'Dosya ekle',
+        steps: [{ title: 'Yaz', files: ['src/a.ts'], moduleId: 'src-core', criteria: ['ac-1'] }]
+      }
     }
   ]
 };
@@ -113,7 +148,7 @@ describe('Ajan döngüsü: tur içi aşama geçişi', () => {
       (state) => states.push(state),
       () => {},
       undefined,
-      { provider: new ScriptedProvider([specCall, planCall, writeCall, { text: 'bitti' }]) }
+      { provider: new ScriptedProvider([specCall, moduleCall, planCall, writeCall, { text: 'bitti' }]) }
     );
     stub.testState.workspaceRoot = root;
 
@@ -132,6 +167,31 @@ describe('Ajan döngüsü: tur içi aşama geçişi', () => {
     // "not allowed at this stage" hatası alırdık ve dosya oluşmazdı.
     const written = await fs.readFile(path.join(root, 'src/a.ts'), 'utf-8').catch(() => null);
     assert.ok(written, 'write_file aynı tur içinde çalışmalı (araç listesi taze olmalı)');
+
+    await core.cancelTask();
+  });
+
+  it('modül haritası olmadan plan yazılamaz', async () => {
+    const root = await workspace();
+    const core = new AgentCore(
+      stub.createExtensionContext() as never,
+      settings,
+      () => {},
+      () => {},
+      undefined,
+      { provider: new ScriptedProvider([specCall, planCall, { text: 'bitti' }]) }
+    );
+    stub.testState.workspaceRoot = root;
+
+    await core.handleSendMessage('dosya ekle');
+
+    // Plan reddedildi: adım modüle bağlanamadığı için plan oluşmamalı.
+    assert.equal(core.getTaskPlanner().hasPlan(), false, 'modülsüz plan kabul edilmemeli');
+    const planError = core
+      .getState()
+      .messages.flatMap((message) => message.toolCalls ?? [])
+      .find((call) => call.name === 'update_plan')?.error;
+    assert.match(String(planError), /update_module_plan/);
 
     await core.cancelTask();
   });

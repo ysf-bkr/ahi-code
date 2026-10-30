@@ -5,9 +5,23 @@
  * yukarıdan gelen form verisini ve geri çağrıları kullanır. Böylece ayarlar
  * ekranı okunabilir kalır.
  */
-import React from 'react';
-import { CheckCircle2, Cpu, Globe, HardDrive, Info, Key, RefreshCw, Shield, Trash2, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import {
+  CheckCircle2,
+  Cpu,
+  Eye,
+  EyeOff,
+  Globe,
+  HardDrive,
+  Info,
+  Key,
+  RefreshCw,
+  Shield,
+  Trash2,
+  Zap
+} from 'lucide-react';
 import { ModelProviderType, UserSettings } from '@shared/types';
+import { MASKED_KEY } from '@shared/constants';
 import {
   Card,
   Disclosure,
@@ -33,35 +47,35 @@ export const PROVIDERS: ProviderMeta[] = [
     id: 'ollama',
     name: 'Yerel model',
     description: 'Ollama (yerel sunucu)',
-    icon: <HardDrive className="h-3.5 w-3.5 text-emerald-400" />,
+    icon: <HardDrive className="ahi-icon-sm ahi-text-success" />,
     defaultModel: 'llama3.1'
   },
   {
     id: 'evren',
     name: 'EVREN LLM',
     description: 'evren.ssyz.org.tr uç noktası',
-    icon: <Zap className="h-3.5 w-3.5 text-amber-400" />,
+    icon: <Zap className="ahi-icon-sm ahi-text-warning" />,
     defaultModel: 'auto'
   },
   {
     id: 'openrouter',
     name: 'OpenRouter',
     description: 'Birden fazla model sağlayıcısı',
-    icon: <Globe className="h-3.5 w-3.5 text-[var(--ahi-brand-400)]" />,
+    icon: <Globe className="ahi-icon-sm ahi-text-brand" />,
     defaultModel: 'anthropic/claude-3.5-sonnet'
   },
   {
     id: 'openai-compatible',
     name: 'OpenAI uyumlu API',
     description: 'LM Studio, vLLM ve diğer uyumlu sunucular',
-    icon: <Globe className="h-3.5 w-3.5 text-violet-400" />,
+    icon: <Globe className="ahi-icon-sm ahi-text-brand" />,
     defaultModel: 'auto'
   }
 ];
 
 export interface ProviderSectionProps {
   formData: UserSettings;
-  updateForm: (updater: (previous: UserSettings) => UserSettings) => void;
+  updateForm: (updater: (previous: UserSettings) => UserSettings, immediate?: boolean) => void;
   onProviderChange: (provider: ModelProviderType) => void;
   onApiKeyChange: (provider: 'evren' | 'openrouter' | 'openaiCompatible', key: string) => void;
   onClearApiKey: (provider: 'evren' | 'openrouter' | 'openaiCompatible') => void;
@@ -86,21 +100,24 @@ export const ProviderSection: React.FC<ProviderSectionProps> = ({
   modelsError,
   modelsLoadedMsg
 }) => {
-  const apiKeyProvider =
-    formData.selectedProvider === 'openai-compatible' ? 'openaiCompatible' : formData.selectedProvider;
-  const apiKeyValue =
-    apiKeyProvider === 'openrouter' || apiKeyProvider === 'openaiCompatible'
-      ? formData.apiKeys[apiKeyProvider] || ''
-      : '';
-  const hasStoredKey =
-    apiKeyProvider === 'openrouter' || apiKeyProvider === 'openaiCompatible'
-      ? Boolean(formData.apiKeyStatus?.[apiKeyProvider])
-      : false;
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  type ApiKeyProvider = 'evren' | 'openrouter' | 'openaiCompatible';
+  const apiKeyProvider: ApiKeyProvider | undefined =
+    formData.selectedProvider === 'openai-compatible'
+      ? 'openaiCompatible'
+      : formData.selectedProvider === 'ollama'
+        ? undefined
+        : (formData.selectedProvider as ApiKeyProvider);
+
+  const hasStoredKey = apiKeyProvider ? Boolean(formData.apiKeyStatus?.[apiKeyProvider]) : false;
+  const rawKey = apiKeyProvider ? formData.apiKeys[apiKeyProvider] || '' : '';
+  const apiKeyValue = rawKey === MASKED_KEY ? '' : rawKey;
 
   return (
     <>
       <Section>
-        <SectionTitle icon={<Cpu className="h-3 w-3" />} title="Model sağlayıcısı" />
+        <SectionTitle icon={<Cpu className="ahi-icon-xs" />} title="Model sağlayıcısı" />
         <div className="flex flex-col gap-1.5">
           {PROVIDERS.map((provider) => {
             const active = formData.selectedProvider === provider.id;
@@ -109,13 +126,11 @@ export const ProviderSection: React.FC<ProviderSectionProps> = ({
                 key={provider.id}
                 onClick={() => onProviderChange(provider.id)}
                 active={active}
-                icon={<span className="ahi-toggle-row__icon h-7 w-7">{provider.icon}</span>}
+                icon={provider.icon}
                 title={provider.name}
                 description={provider.description}
                 trailing={
-                  active ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--ahi-brand-400)]" />
-                  ) : undefined
+                  active ? <CheckCircle2 className="ahi-icon-sm shrink-0 ahi-text-brand" /> : undefined
                 }
               />
             );
@@ -126,58 +141,64 @@ export const ProviderSection: React.FC<ProviderSectionProps> = ({
       <Card className="flex flex-col gap-2.5">
         <div className="flex items-center justify-between gap-2">
           <div className="text-xs flex items-center gap-1.5 font-semibold">
-            <Zap className="h-3 w-3 text-amber-400" /> {currentProvider.name}
+            <Zap className="ahi-icon-xs ahi-text-warning" /> {currentProvider.name}
           </div>
           {loadingModels && (
-            <span className="text-2xs flex items-center gap-1 text-[var(--ahi-brand-400)]">
-              <RefreshCw className="h-2.5 w-2.5 animate-spin" /> yükleniyor
+            <span className="text-2xs flex items-center gap-1 ahi-text-brand">
+              <RefreshCw className="ahi-icon-xs animate-spin" /> yükleniyor
             </span>
           )}
           {!loadingModels && !modelsError && modelsLoadedMsg && (
-            <span className="text-2xs flex items-center gap-1 text-[var(--status-success-fg)]">
-              <CheckCircle2 className="h-2.5 w-2.5" /> {modelsLoadedMsg}
+            <span className="text-2xs flex items-center gap-1 ahi-text-success">
+              <CheckCircle2 className="ahi-icon-xs" /> {modelsLoadedMsg}
             </span>
           )}
         </div>
 
-        {formData.selectedProvider !== 'ollama' && (
+        {formData.selectedProvider !== 'ollama' && apiKeyProvider && (
           <TextField
             label="API anahtarı"
-            labelIcon={<Key className="h-3 w-3 text-[var(--ahi-muted-fg)]" />}
-            type="password"
+            labelIcon={<Key className="ahi-icon-xs ahi-text-muted" />}
+            type={showApiKey ? 'text' : 'password'}
             value={apiKeyValue}
             onChange={(event) => {
-              const allowed: Array<'openrouter' | 'openaiCompatible'> = ['openrouter', 'openaiCompatible'];
-              if (allowed.includes(apiKeyProvider as never)) {
-                onApiKeyChange(apiKeyProvider as 'openrouter' | 'openaiCompatible', event.target.value);
-              }
+              onApiKeyChange(apiKeyProvider, event.target.value);
             }}
             onKeyDown={(event) => {
               if (event.key === 'Enter') onFetchModels();
             }}
-            placeholder={hasStoredKey ? 'Kayıtlı anahtar korunuyor' : 'API anahtarı'}
-            hint="Anahtar VS Code SecretStorage içinde saklanır; arayüzde maskelenir."
+            placeholder={hasStoredKey ? '•••••••••••••••• (Kayıtlı anahtar korunuyor)' : 'API anahtarı girin'}
+            hint="Anahtar VS Code SecretStorage (güvenli kasa) içinde saklanır; arayüzde asla açık tutulmaz."
             trailing={
               <div className="flex items-center gap-1">
-                {hasStoredKey && <Shield className="h-3 w-3 text-[var(--status-success-fg)]" />}
+                <IconButton
+                  label={showApiKey ? 'Anahtarı gizle' : 'Anahtarı göster'}
+                  onClick={() => setShowApiKey((prev) => !prev)}
+                  small
+                >
+                  {showApiKey ? (
+                    <EyeOff className="ahi-icon-xs ahi-text-muted" />
+                  ) : (
+                    <Eye className="ahi-icon-xs ahi-text-muted" />
+                  )}
+                </IconButton>
+                {hasStoredKey && (
+                  <span title="Kayıtlı anahtar SecretStorage kasasında güvende">
+                    <Shield className="ahi-icon-xs ahi-text-success" />
+                  </span>
+                )}
                 <IconButton label="Modelleri yenile" onClick={onFetchModels} small>
-                  <RefreshCw className={`h-3 w-3 ${loadingModels ? 'animate-spin' : ''}`} />
+                  <RefreshCw className={`ahi-icon-xs ${loadingModels ? 'animate-spin' : ''}`} />
                 </IconButton>
                 {hasStoredKey && (
                   <IconButton
                     label="Anahtarı sil"
                     small
                     onClick={() => {
-                      const allowed: Array<'openrouter' | 'openaiCompatible'> = [
-                        'openrouter',
-                        'openaiCompatible'
-                      ];
-                      if (allowed.includes(apiKeyProvider as never)) {
-                        onClearApiKey(apiKeyProvider as 'openrouter' | 'openaiCompatible');
-                      }
+                      onClearApiKey(apiKeyProvider);
                     }}
                   >
-                    <Trash2 className="h-3 w-3 text-[var(--status-danger-fg)]" />
+                    <Trash2 className="ahi-icon-xs ahi-text-error" />
                   </IconButton>
                 )}
               </div>
@@ -190,7 +211,9 @@ export const ProviderSection: React.FC<ProviderSectionProps> = ({
             label="Ollama adresi"
             type="text"
             value={formData.ollamaBaseUrl ?? ''}
-            onChange={(event) => updateForm((prev) => ({ ...prev, ollamaBaseUrl: event.target.value }))}
+            onChange={(event) =>
+              updateForm((prev) => ({ ...prev, ollamaBaseUrl: event.target.value }), false)
+            }
             placeholder="http://localhost:11434"
             mono
           />
@@ -202,7 +225,7 @@ export const ProviderSection: React.FC<ProviderSectionProps> = ({
             type="text"
             value={formData.openAiCompatibleBaseUrl ?? ''}
             onChange={(event) =>
-              updateForm((prev) => ({ ...prev, openAiCompatibleBaseUrl: event.target.value }))
+              updateForm((prev) => ({ ...prev, openAiCompatibleBaseUrl: event.target.value }), false)
             }
             placeholder="http://localhost:1234/v1"
             mono
@@ -213,9 +236,9 @@ export const ProviderSection: React.FC<ProviderSectionProps> = ({
         {modelsError && (
           <p
             role="status"
-            className="text-2xs flex items-start gap-1 rounded border border-[var(--status-warning-border)] bg-[var(--status-warning-bg)] px-1.5 py-1 text-[var(--status-warning-fg)]"
+            className="text-2xs flex items-start gap-1 rounded border ahi-border-warning ahi-bg-warning px-1.5 py-1 ahi-text-warning"
           >
-            <Info className="mt-0.5 h-2.5 w-2.5 shrink-0" />
+            <Info className="ahi-icon-xs mt-0.5 shrink-0" />
             <span className="break-words">
               Model listesi alınamadı: {modelsError}
               <br />
@@ -231,7 +254,7 @@ export const ProviderSection: React.FC<ProviderSectionProps> = ({
             onChange={(event) => {
               const value = event.target.value;
               if (value === '__custom__') return;
-              updateForm((prev) => ({ ...prev, selectedModel: value }));
+              updateForm((prev) => ({ ...prev, selectedModel: value }), true);
             }}
             mono
             hint="Listede olmayan bir model kimliği kullanmak için aşağıdaki alanı kullanın."
@@ -250,7 +273,9 @@ export const ProviderSection: React.FC<ProviderSectionProps> = ({
             label="Model"
             type="text"
             value={formData.selectedModel}
-            onChange={(event) => updateForm((prev) => ({ ...prev, selectedModel: event.target.value }))}
+            onChange={(event) =>
+              updateForm((prev) => ({ ...prev, selectedModel: event.target.value }), false)
+            }
             placeholder={currentProvider.defaultModel}
             mono
           />
@@ -261,25 +286,50 @@ export const ProviderSection: React.FC<ProviderSectionProps> = ({
             label="Özel model kimliği"
             type="text"
             value={formData.selectedModel}
-            onChange={(event) => updateForm((prev) => ({ ...prev, selectedModel: event.target.value }))}
+            onChange={(event) =>
+              updateForm((prev) => ({ ...prev, selectedModel: event.target.value }), false)
+            }
             placeholder={currentProvider.defaultModel}
             mono
           />
         )}
 
-        {formData.selectedProvider === 'evren' && (
-          <Disclosure summary="Gelişmiş: uç nokta">
+        <Disclosure summary="Gelişmiş: bağlantı ve zaman aşımı">
+          <div className="mt-2 flex flex-col gap-2">
             <TextField
-              containerClassName="mt-1"
-              type="text"
-              aria-label="EVREN uç noktası"
-              value={formData.customBaseUrl ?? ''}
-              placeholder="https://evren-llmapi.ssyz.org.tr/v1"
-              onChange={(event) => updateForm((prev) => ({ ...prev, customBaseUrl: event.target.value }))}
-              mono
+              label="İstek zaman aşımı (saniye)"
+              type="number"
+              min={30}
+              max={900}
+              step={15}
+              value={formData.requestTimeoutSeconds ?? 180}
+              onChange={(event) =>
+                updateForm(
+                  (prev) => ({
+                    ...prev,
+                    requestTimeoutSeconds: Math.max(30, Number(event.target.value) || 180)
+                  }),
+                  false
+                )
+              }
+              placeholder="180"
+              hint="Yavaş yanıt veren modeller veya yerel sunucularda (Ollama, LM Studio) bağlantının kopmasını önlemek için süreyi artırabilirsiniz (varsayılan: 180 sn)."
             />
-          </Disclosure>
-        )}
+            {formData.selectedProvider === 'evren' && (
+              <TextField
+                type="text"
+                label="EVREN uç noktası"
+                aria-label="EVREN uç noktası"
+                value={formData.customBaseUrl ?? ''}
+                placeholder="https://evren-llmapi.ssyz.org.tr/v1"
+                onChange={(event) =>
+                  updateForm((prev) => ({ ...prev, customBaseUrl: event.target.value }), false)
+                }
+                mono
+              />
+            )}
+          </div>
+        </Disclosure>
       </Card>
     </>
   );

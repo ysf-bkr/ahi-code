@@ -149,4 +149,44 @@ describe('ChatStatusBar: tek durum satırı', () => {
     // Adım konumu, composer dock'taki tıklanabilir plan çubuğuna taşındı.
     assert.doesNotMatch(text, /adım/);
   });
+
+  it('otomatik doğrulama sonucunu durum satırının sonunda gösterir', () => {
+    render(
+      <ChatStatusBar
+        state={createTaskState({
+          status: 'completed',
+          stats: {
+            totalTokens: 0,
+            stepsCount: 0,
+            filesModified: [],
+            verification: { status: 'passed', attempts: 1, summary: 'npm test' }
+          }
+        })}
+        onRetry={() => {}}
+      />
+    );
+
+    const text = screen.getByRole('status').textContent ?? '';
+    assert.match(text, /Yanıt tamamlandı/);
+    assert.match(text, /Doğrulandı · 1/);
+  });
+
+  it('doğrulama yalnızca çalışırken de durum satırını gösterir', () => {
+    render(
+      <ChatStatusBar
+        state={createTaskState({
+          status: 'idle',
+          stats: {
+            totalTokens: 0,
+            stepsCount: 0,
+            filesModified: [],
+            verification: { status: 'running', attempts: 0 }
+          }
+        })}
+        onRetry={() => {}}
+      />
+    );
+
+    assert.match(screen.getByRole('status').textContent ?? '', /Doğrulanıyor/);
+  });
 });

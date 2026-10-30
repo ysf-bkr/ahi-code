@@ -12,6 +12,11 @@ export interface SubagentTaskParams {
   context?: string;
   /** Doğruysa alt ajan ana çalışma alanı yerine yalıtılmış bir Git worktree'de çalışır. */
   isolate?: boolean;
+  /**
+   * Doğruysa alt ajan yalnızca salt-okunur araçlarla çalışır. Ana ajan okuma
+   * aşamasındayken (spec/plan onayı öncesi) devredilen işlerde kullanılır.
+   */
+  readOnly?: boolean;
 }
 
 function asString(value: unknown): string {

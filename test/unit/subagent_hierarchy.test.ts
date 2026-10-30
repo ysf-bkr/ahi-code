@@ -19,16 +19,12 @@ const provider: ModelProvider = {
   sendMessage: async () => ({ text: 'Rapor' })
 };
 
-describe('SubagentManager: yönetici hiyerarşisi', () => {
-  it('rejects a specialist at the top level', async () => {
+describe('SubagentManager: yönetici ve uzman ajan hiyerarşisi', () => {
+  it('runs specialists directly at the top level', async () => {
     const manager = new SubagentManager(provider);
     for (const role of ['security', 'backend', 'quality', 'coder']) {
       const result = await manager.runSubagent({ role, task: 'x' });
-      assert.match(
-        result,
-        /Only the @manager role can be started at the top level/,
-        `${role} en üstten başlatılamamalı`
-      );
+      assert.match(result, /Rapor/, `${role} en üstten doğrudan başlatılabilmeli`);
     }
   });
 

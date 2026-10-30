@@ -8,7 +8,7 @@
 import { CallGraphDocument, CallGraphImpactResult, CallGraphNeighbor, CallGraphNode } from './types';
 
 /** Derinlik varsayılanı. Üst sınır yoktur; gezinme iterative olduğu için derinlik yığın taşması yapmaz. */
-export const DEFAULT_DEPTH = 1;
+const DEFAULT_DEPTH = 1;
 
 /** Etki alanı bu sayıdan büyükse sonuç özetlenir. */
 const WIDE_IMPACT_THRESHOLD = 50;

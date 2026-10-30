@@ -90,3 +90,70 @@ describe('MessageList: kullanıcı mesajı eylemleri', () => {
     assert.deepEqual(written, ['Projeyi incele ve raporla']);
   });
 });
+
+describe('MessageList: tur akordeonu', () => {
+  const turnMessages = (streaming: boolean): ChatMessage[] => [
+    { id: 'u1', role: 'user', content: 'görev', timestamp: 1, turnId: 't1' },
+    {
+      id: 'a1',
+      role: 'assistant',
+      content: 'İlk adım tamamlandı.',
+      timestamp: 2,
+      turnId: 't1',
+      isStreaming: streaming
+    },
+    { id: 'a2', role: 'assistant', content: 'İkinci adım tamamlandı.', timestamp: 3, turnId: 't1' }
+  ];
+
+  it('biten turu kapatır, yanıtları tek blokta toplar ve özet gösterir', () => {
+    render(<MessageList messages={turnMessages(false)} />);
+
+    const body = document.getElementById('turn-t1');
+    assert.ok(body, 'tur gövdesi bulunmalı');
+    assert.equal(body?.hidden, true, 'biten tur daraltılmış olmalı');
+    // İçerik DOM'da kalır; kullanıcı başlığa tıklayınca açılır.
+    assert.ok(screen.getByText('İlk adım tamamlandı.'));
+    assert.equal(
+      screen.getAllByText('İkinci adım tamamlandı.').length,
+      2,
+      'başlıkta son yanıtın özeti de görünmeli'
+    );
+  });
+
+  it('çalışan turu açık tutar', () => {
+    render(<MessageList messages={turnMessages(true)} />);
+
+    const body = document.getElementById('turn-t1');
+    assert.equal(body?.hidden, false, 'süren yanıt görünür kalmalı');
+  });
+});
+
+describe('MessageList: boş durum ve ayar kontrolü', () => {
+  it('ayarlar yapılandırılmamışsa uyarı kartı gösterir', () => {
+    let settingsOpened = false;
+    render(
+      <MessageList
+        messages={[]}
+        isConfigured={false}
+        onOpenSettings={() => {
+          settingsOpened = true;
+        }}
+      />
+    );
+
+    assert.ok(screen.getByText('Model Ayarları Yapılandırılmadı'));
+    fireEvent.click(screen.getByRole('button', { name: 'Ayarları Yapılandır' }));
+    assert.equal(settingsOpened, true, 'ayarları açma düğmesi çalışmalı');
+  });
+
+  it('ayarlar yapılandırılmışsa hızlı başlangıç önerilerini gösterir', () => {
+    const selected: string[] = [];
+    render(
+      <MessageList messages={[]} isConfigured={true} onSuggestionClick={(prompt) => selected.push(prompt)} />
+    );
+
+    assert.ok(screen.getByText('Hızlı başlangıç'));
+    fireEvent.click(screen.getByRole('button', { name: /Projeyi analiz et/ }));
+    assert.equal(selected.length, 1);
+  });
+});

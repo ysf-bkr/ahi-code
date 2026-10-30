@@ -101,6 +101,40 @@ function normalizeCriteria(value: unknown): AcceptanceCriterion[] {
   return result.slice(0, 40);
 }
 
+/**
+ * Kabul kriterlerinin üç boyutu: mutlu yol, hata yolu ve uç durum.
+ *
+ * Sınıflandırma "kanıt arar": hata ya da uç durum işareti taşımayan bir kriter
+ * mutlu yol sayılır. Böylece iyi yazılmış ama sözlükte olmayan bir kriter
+ * yanlışlıkla reddedilmez; buna karşılık yalnızca "her şey çalışır" diyen bir
+ * spec yakalanır.
+ */
+const ERROR_MARKERS =
+  /\b(hata|hatası|hatasını|başarısız|başarısızlık|reddet|reddedil|geçersiz|engelle|engellen|izin|yetki|istisna|çökme|error|fail|reject|invalid|denied|blocked|unauthori[sz]ed|exception|throw|panic)/i;
+
+const EDGE_MARKERS =
+  /\b(boş|sınır|sınırda|uç durum|limit|maksimum|minimum|çok büyük|çok küçük|taşma|eşzaman|paralel|iptal|zaman aşımı|tekrar|çift|negatif|sıfır|edge|empty|boundary|overflow|concurren|cancel|timeout|abort|negative|zero|duplicate)/i;
+
+/** Kriterlerin hangi boyutları kapsadığını döndürür. */
+export function criteriaCoverage(criteria: Array<{ text: string }>): {
+  happy: boolean;
+  error: boolean;
+  edge: boolean;
+  missing: string[];
+} {
+  const error = criteria.some((criterion) => ERROR_MARKERS.test(criterion.text));
+  const edge = criteria.some((criterion) => EDGE_MARKERS.test(criterion.text));
+  const happy = criteria.some(
+    (criterion) => !ERROR_MARKERS.test(criterion.text) && !EDGE_MARKERS.test(criterion.text)
+  );
+
+  const missing: string[] = [];
+  if (!happy) missing.push('happy path');
+  if (!error) missing.push('error handling');
+  if (!edge) missing.push('edge cases');
+  return { happy, error, edge, missing };
+}
+
 export function validateSpec(input: TaskSpec): void {
   if (!input.goal.trim()) {
     throw new SpecValidationError('A spec must have a goal.');
@@ -111,6 +145,31 @@ export function validateSpec(input: TaskSpec): void {
   if (input.scope.length === 0) {
     throw new SpecValidationError('A spec must list at least one in-scope item.');
   }
+}
+
+/**
+ * Onay kapısı için kapsam denetimi.
+ *
+ * Taslak yazılırken eksik boyut kabul edilir (model henüz düşünüyor olabilir),
+ * ama spec **onaylanırken** üç boyut da bulunmalıdır: mutlu yol, hata yolu ve
+ * uç durum. Aksi halde sözleşme "her şey yolunda giderse" varsayımıyla
+ * imzalanmış olur ve savunmacı mühendislik kâğıt üzerinde kalır.
+ */
+export function checkSpecCoverage(spec: TaskSpec): {
+  ok: boolean;
+  missing: string[];
+  message: string;
+} {
+  const coverage = criteriaCoverage(spec.acceptanceCriteria);
+  if (coverage.missing.length === 0) return { ok: true, missing: [], message: '' };
+  return {
+    ok: false,
+    missing: coverage.missing,
+    message:
+      `Spec onaylanamadı: kabul kriterleri üç boyutu kapsamıyor (eksik: ${coverage.missing.join(', ')}). ` +
+      'Mutlu yol, hata yolu (sad path) ve uç durum/sınır için en az birer kriter eklemek üzere ' +
+      '`write_spec` aracını yeniden çağır.'
+  };
 }
 
 export function renderSpecMarkdown(spec: TaskSpec): string {

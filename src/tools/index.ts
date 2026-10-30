@@ -46,6 +46,7 @@ import {
   invokeSubagentTool,
   runParallelTasksTool,
   runVerificationTool,
+  updateModulePlanTool,
   updatePlanTool
 } from './agent';
 import { webFetchTool, webSearchTool } from './web';
@@ -83,6 +84,7 @@ const ALL_TOOL_OBJECTS: Record<ToolName, ToolDefinition> = {
   get_definition: getDefinitionTool,
   get_hover: getHoverTool,
   update_plan: updatePlanTool,
+  update_module_plan: updateModulePlanTool,
   run_verification: runVerificationTool,
   get_references: getReferencesTool,
   get_workspace_symbols: getWorkspaceSymbolsTool,

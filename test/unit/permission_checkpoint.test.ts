@@ -198,6 +198,10 @@ describe('PermissionManager: glob and permission priority', () => {
     assert.strictEqual(settingsManager.requiresApproval('execute_command', { command: 'npm test' }), false);
     assert.strictEqual(
       settingsManager.requiresApproval('execute_command', { command: 'npm test && echo done' }),
+      false
+    );
+    assert.strictEqual(
+      settingsManager.requiresApproval('execute_command', { command: 'npm test; rm -rf build' }),
       true
     );
   });

@@ -104,4 +104,33 @@ describe('İptal akışı: kalıntı temizliği', () => {
     const refused = notifications.some((message) => message.includes('Onay bekleyen'));
     assert.strictEqual(refused, false, 'iptal sonrası yeni mesaj onay kartına takılmamalı');
   });
+
+  it('normalizes interrupted task to paused and allows resumeTask', async () => {
+    const root = await workspace();
+    stub.testState.workspaceRoot = root;
+    const core = new AgentCore(
+      stub.createExtensionContext() as never,
+      settings,
+      () => {},
+      () => {},
+      undefined,
+      { provider: new ScriptedProvider([{ text: 'devam edildi ve bitti' }]) }
+    );
+
+    const savedState = {
+      ...core.getState(),
+      status: 'running' as const,
+      messages: [{ id: 'm1', role: 'user' as const, content: 'ilk görev', timestamp: Date.now() }]
+    };
+
+    // Yeniden açılışta yarıda kalan görev duraklatılmış olarak geri yüklenir
+    const restored = core.normalizeRestoredState(savedState);
+    assert.strictEqual(restored.status, 'paused', 'kesintiye uğrayan görev paused olarak kurtarılmalı');
+
+    core.state = restored;
+    await core.resumeTask();
+    assert.strictEqual(core.getState().status, 'completed', 'resumeTask görevi tamamlamalı');
+    const lastMsg = core.getState().messages.slice(-1)[0];
+    assert.strictEqual(lastMsg?.content, 'devam edildi ve bitti');
+  });
 });

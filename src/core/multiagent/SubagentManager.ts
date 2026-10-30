@@ -38,11 +38,33 @@ function toolsForAgent(agent: AgentDefinition): ToolDefinition[] {
   return resolved;
 }
 
+/** Dosya/komut durumunu değiştiren araçlar; salt-okunur alt ajanda verilmez. */
+const MUTATING_TOOLS: ReadonlySet<string> = new Set([
+  'write_file',
+  'edit_file',
+  'execute_command',
+  'run_tests',
+  'run_linter',
+  'run_verification',
+  'git_create_branch',
+  'git_commit',
+  'merge_worktree',
+  'write_knowledge_file',
+  'add_knowledge_note',
+  'undo_change',
+  'update_acceptance_criteria'
+]);
+
 function buildSubagentPrompt(agent: AgentDefinition): string {
   const parts = [
     `You are the "AhiCode - ${agent.displayName}" (${agent.role}) subagent.`,
     `Identity: ${agent.instructions.identity}`,
     `Mission: ${agent.instructions.mission}`,
+    '',
+    'MANDATORY CODING STANDARD - STRICT ENGLISH IDENTIFIERS:',
+    '- ALL code symbols, types, interfaces, classes, methods, functions, variables, parameters, and filenames MUST BE 100% IN ENGLISH.',
+    '- NEVER use Turkish terms in code identifiers or filenames (strictly forbidden: ayarlariAl, MailAyar, ilerlemeBildir; mandatory: getSettings, MailSettings, notifyProgress).',
+    '- Brief comments (explaining "why") and user explanations are in Turkish, but all code syntax, types, and identifiers are strictly English.',
     '',
     'Chain of Thought Protocol:',
     agent.instructions.chainOfThought,
@@ -138,19 +160,7 @@ Note: Changes were not automatically applied to the main workspace. Review and a
 
     const resolvedRole = (ROLE_ALIASES[params.role.toLowerCase()] || params.role).toLowerCase();
 
-    // Hiyerarşi kuralı: en üstte yalnızca yönetici ajan çalışır.
-    //
-    // Ana ajan ve kullanıcı uzmanları (security, backend, ...) doğrudan
-    // başlatamaz; işi @manager'a devreder, yönetici uzmanları seçer ve
-    // dağıtır. Bu kural prompt'a değil yürütmeye bağlıdır: model uysa da
-    // uymasa da geçerli. İç içe yönetici de yoktur; yöneticinin altındakiler
-    // uzmandır ve delege edemez.
-    if (depth === 0 && resolvedRole !== 'manager') {
-      return (
-        `[Subagent Error]: Only the @manager role can be started at the top level. ` +
-        `Delegate the whole task to @manager with a clear goal; the manager picks and runs the specialists (${params.role} included).`
-      );
-    }
+    // İç içe yönetici çağrısı engellenir; yönetici doğrudan uzmanlara devreder.
     if (depth > 0 && resolvedRole === 'manager') {
       return '[Subagent Error]: Nested managers are not allowed. The manager delegates to specialists directly.';
     }
@@ -209,6 +219,16 @@ Note: Changes were not automatically applied to the main workspace. Review and a
       tools = Object.values(ALL_TOOLS).filter(
         (t) => t.name !== 'invoke_subagent' && t.name !== 'ask_followup_question'
       );
+    }
+
+    // Okuma aşamasında ana ajanın aşama kilidi alt ajana da uygulanır; yazma ve
+    // komut araçları verilmez. Böylece devretme, spec/plan onayından önce
+    // dosya değiştirmenin arka kapısı olmaz.
+    if (params.readOnly) {
+      // Paralel görevler izole worktree açar ve yazar; okuma modunda gereksiz.
+      tools = tools.filter((tool) => !MUTATING_TOOLS.has(tool.name) && tool.name !== 'run_parallel_tasks');
+      basePrompt +=
+        '\n\nREAD-ONLY MODE: The main agent is still in the analysis stage. Do not modify files and do not run commands; inspect and report only.';
     }
 
     const allowedToolNames = new Set(tools.map((t) => t.name));
@@ -352,7 +372,8 @@ Complete your task and provide a clear report of the results to the main agent w
                 workspaceRoot,
                 depth,
                 signal,
-                isolated
+                isolated,
+                params.readOnly === true
               );
               if ('error' in delegated) {
                 messages.push({ role: 'tool', toolCallId: tc.id, content: delegated.error });
@@ -451,7 +472,8 @@ Complete your task and provide a clear report of the results to the main agent w
     workspaceRoot: string | undefined,
     depth: number,
     signal: AbortSignal | undefined,
-    isolated: boolean
+    isolated: boolean,
+    readOnly = false
   ): Promise<{ output: string } | { error: string }> {
     if (toolName === 'invoke_subagent') {
       let delegated: SubagentTaskParams;
@@ -460,7 +482,17 @@ Complete your task and provide a clear report of the results to the main agent w
       } catch (err) {
         return { error: `[Argument Error]: ${errorMessage(err)}` };
       }
-      return { output: await this.runSubagent(delegated, workspaceRoot, depth + 1, signal, isolated) };
+      // Okuma modu zincir boyunca taşınır: kısıtlı bir alt ajan, kendi
+      // devrettiği uzmana yazma yetkisi veremez.
+      return {
+        output: await this.runSubagent(
+          { ...delegated, readOnly: readOnly || delegated.readOnly === true },
+          workspaceRoot,
+          depth + 1,
+          signal,
+          isolated
+        )
+      };
     }
 
     const raw = args.tasks;
@@ -471,7 +503,9 @@ Complete your task and provide a clear report of the results to the main agent w
         role: typeof item.role === 'string' ? item.role : 'backend',
         task: typeof item.task === 'string' ? item.task : '',
         context: typeof item.context === 'string' ? item.context : undefined,
-        isolate: item.isolate === true
+        isolate: item.isolate === true,
+        // Okuma modu paralel görevlere de geçer.
+        readOnly: readOnly || item.readOnly === true
       }))
       .filter((item) => item.task.trim().length > 0);
 

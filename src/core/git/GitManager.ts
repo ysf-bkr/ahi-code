@@ -32,7 +32,7 @@ async function git(args: string[], cwd: string, options: { raw?: boolean } = {})
 }
 
 /** `git status --short` satırlarını yapılandırılmış dosya değişikliklerine çevirir. */
-export function parseGitStatusShort(output: string): GitFileChange[] {
+function parseGitStatusShort(output: string): GitFileChange[] {
   const changes: GitFileChange[] = [];
   for (const line of output.split('\n')) {
     if (line.length < 4) continue;
@@ -54,7 +54,7 @@ export function parseGitStatusShort(output: string): GitFileChange[] {
 }
 
 /** `git log --oneline` satırlarını yapılandırılmış commit'lere çevirir. */
-export function parseGitLogOneline(output: string): GitCommitSummary[] {
+function parseGitLogOneline(output: string): GitCommitSummary[] {
   const commits: GitCommitSummary[] = [];
   for (const line of output.split('\n')) {
     const trimmed = line.trim();
@@ -176,6 +176,15 @@ export class GitManager {
       throw new Error('Geçersiz dosya yolu.');
     }
     return git(['diff', 'HEAD', '--', rel], workspaceRoot);
+  }
+
+  /** Dosyanın Git HEAD sürümünün içeriğini okur; dosya yeni veya izlenmiyorsa boş döner. */
+  public async getFileHeadContent(workspaceRoot: string, filePath: string): Promise<string> {
+    const rel = filePath.replace(/\\/g, '/').trim();
+    if (!rel || rel.includes('..') || rel.startsWith('/')) {
+      throw new Error('Geçersiz dosya yolu.');
+    }
+    return git(['show', `HEAD:${rel}`], workspaceRoot, { raw: true }).catch(() => '');
   }
 
   public async createBranch(workspaceRoot: string, name: string): Promise<string> {

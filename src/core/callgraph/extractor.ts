@@ -97,7 +97,7 @@ export function buildFileNodes(relativePath: string, content: string, symbols: R
 }
 
 /** Konum verilen düğümün gövdesi içinde mi? */
-export function containsLine(node: CallGraphNode, line: number): boolean {
+function containsLine(node: CallGraphNode, line: number): boolean {
   return line >= node.startLine && line <= node.endLine;
 }
 

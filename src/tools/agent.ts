@@ -8,14 +8,14 @@ import { ToolDefinition } from './base';
 export const invokeSubagentTool: ToolDefinition = {
   name: 'invoke_subagent',
   description:
-    'Delegates the whole task to the @manager subagent. Only "manager" can be targeted at the top level; the manager picks and runs the specialists (backend, frontend, security, ...) itself.',
+    'Delegates a focused unit of work to a specialist subagent. Use the step ownerRole as the role (@backend, @frontend, @security, ...). Use role "manager" when several specialists must be coordinated; parallel independent work can run with run_parallel_tasks.',
   parameters: {
     type: 'object',
     properties: {
       role: {
         type: 'string',
         description:
-          'Subagent role to handle the task. Top level accepts only "manager"; specialists are chosen by the manager.'
+          'Subagent role: manager, analyst, architect, backend, frontend, mobile, native, database, devops, explorer, git, quality, security.'
       },
       task: {
         type: 'string',
@@ -52,7 +52,7 @@ export const askFollowupQuestionTool: ToolDefinition = {
 export const updatePlanTool: ToolDefinition = {
   name: 'update_plan',
   description:
-    'Breaks large tasks into steps with dependencies and completion criteria, and updates plan status. Call this first for multi-step tasks and update each step as it is completed. When updating, resend every step in the current plan, including id and status.',
+    'Breaks the approved module map into concrete steps with dependencies, module ownership and acceptance criteria, and updates plan status. Call this after update_module_plan. When updating, resend every step in the current plan, including id and status.',
   parameters: {
     type: 'object',
     properties: {
@@ -86,6 +86,16 @@ export const updatePlanTool: ToolDefinition = {
               items: { type: 'string' },
               description: 'Related files.'
             },
+            moduleId: {
+              type: 'string',
+              description:
+                'Id of the module from update_module_plan this step belongs to. Steps may only touch files inside that module.'
+            },
+            criteria: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Acceptance criteria ids this step satisfies (for example "ac-1").'
+            },
             ownerRole: {
               type: 'string',
               description:
@@ -99,6 +109,63 @@ export const updatePlanTool: ToolDefinition = {
     required: ['steps']
   },
   execute: async () => 'The plan is updated by AgentCore.'
+};
+
+export const updateModulePlanTool: ToolDefinition = {
+  name: 'update_module_plan',
+  description:
+    'Splits the project into layered modules before planning any code: which layer each module belongs to, which paths it owns, its single responsibility, dependencies and owning specialist. Required after the spec is approved and before update_plan. ' +
+    'Layers: shared, domain, infrastructure, application, interface, test, docs. Dependencies must point toward the domain (interface -> application -> domain; infrastructure and shared sit below).',
+  parameters: {
+    type: 'object',
+    properties: {
+      goal: { type: 'string', description: 'The task goal in one sentence.' },
+      modules: {
+        type: 'array',
+        description:
+          'Modules: { id?, name, layer, paths, responsibility, dependsOn?, ownerRole?, criteria? }',
+        items: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', description: 'Stable module id (optional, derived from the name).' },
+            name: { type: 'string', description: 'Human readable module name.' },
+            layer: {
+              type: 'string',
+              enum: ['shared', 'domain', 'infrastructure', 'application', 'interface', 'test', 'docs'],
+              description: 'Architectural layer of the module.'
+            },
+            paths: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Workspace-relative files or directories this module owns.'
+            },
+            responsibility: {
+              type: 'string',
+              description: 'One line describing what this module is responsible for.'
+            },
+            dependsOn: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Ids of modules this module uses. Lower layers only.'
+            },
+            ownerRole: {
+              type: 'string',
+              description:
+                'Specialist role that writes this module: manager, analyst, architect, backend, frontend, mobile, native, database, devops, explorer, git, quality, security.'
+            },
+            criteria: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Acceptance criteria ids this module satisfies (for example "ac-1").'
+            }
+          },
+          required: ['name', 'layer', 'paths', 'responsibility']
+        }
+      }
+    },
+    required: ['modules']
+  },
+  execute: async () => 'The module plan is updated by AgentCore.'
 };
 
 export const runParallelTasksTool: ToolDefinition = {

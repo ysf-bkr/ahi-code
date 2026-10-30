@@ -1,105 +1,122 @@
-# Marketplace yayını
+# Marketplace Publishing Guide
 
-Bu depo, VS Code Marketplace'e yayın için etiket tabanlı bir GitHub Actions akışı içerir.
-Uzantı Marketplace'te yayımlanana kadar Marketplace kurulum bağlantısı kullanılamaz.
+[🇹🇷 Türkçe](PUBLISHING.tr.md) | **English**
 
-## Marketplace ve GitHub proje bilgileri
+This repository contains a tag-triggered GitHub Actions workflow that publishes
+to the Visual Studio Marketplace. Until the extension is published there, the
+Marketplace install link stays unavailable.
 
-Marketplace sayfası uzantı manifestindeki metadata'yı ve depodaki `README.md` dosyasını kullanır.
-Bu projede temel bilgiler tanımlıdır:
+## 1. Marketplace and GitHub project metadata
 
-| Bilgi | Değer / kaynak |
+The Marketplace page uses metadata from the extension manifest and the
+repository `README.md`. The core values are defined in this project:
+
+| Field | Value / source |
 | --- | --- |
-| Uzantı kimliği | `ysf-bkr.ahi-code` (`publisher` + `name`) |
-| Görünen ad ve kısa açıklama | `package.json` içindeki `displayName` ve `description` |
-| Yayıncı | `ysf-bkr` |
-| Simge | `resources/icon.png` |
-| Lisans | `MIT` ve `LICENSE` dosyası |
-| Kategori ve arama etiketleri | `package.json` içindeki `categories` ve `keywords` |
-| Kurulum, kullanım, gizlilik ve destek bilgisi | GitHub ve Marketplace'te gösterilen kök `README.md` |
-| Ayrıntılı veri işleme açıklaması | [`docs/PRIVACY.md`](./PRIVACY.md) |
-| Değişiklik geçmişi | [`CHANGELOG.md`](../CHANGELOG.md) |
-| Kaynak kodu ve hata bildirme | `package.json` içindeki `repository`, `homepage` ve `bugs` |
+| Extension ID | `ysf-bkr.ahi-code` (`publisher` + `name`) |
+| Display name and short description | `displayName` and `description` in `package.json` |
+| Publisher | `ysf-bkr` |
+| Icon | `resources/icon.png` |
+| License | `MIT` and the `LICENSE` file |
+| Categories and search keywords | `categories` and `keywords` in `package.json` |
+| Install, usage, privacy, and support info | Root `README.md` shown on GitHub and the Marketplace |
+| Detailed data-handling notice | [`docs/PRIVACY.md`](./PRIVACY.md) |
+| Change history | [`CHANGELOG.md`](../CHANGELOG.md) |
+| Source code and issue tracker | `repository`, `homepage`, `bugs` in `package.json` |
 
-Bu bilgiler için ayrıca GitHub'a PAT veya gizli anahtar eklenmez. Yalnızca yayın otomasyonu için
-gereken `VSCE_PAT`, GitHub deposunda **Settings → Secrets and variables → Actions** altında
-secret olarak tutulur; değerini README'ye, issue'lara veya kaynak koduna eklemeyin.
+No PAT or secret is needed for this metadata. Only `VSCE_PAT`, required by the
+release automation, is stored as a secret under **Settings → Secrets and
+variables → Actions**; never put its value in the README, issues, or source code.
 
-Marketplace sayfası için kurulum adımları, sağlayıcı/veri akışı, gereksinimler ve destek adresi
-README'de bulunmalıdır. Bu başlıklar kök README'ye eklenmiştir; yayın öncesinde açıklama, publisher,
-simge ve lisansın doğru olduğunu tekrar kontrol edin.
+The Marketplace page should document installation steps, provider/data flow,
+requirements, and a support address. Those sections live in the root README;
+before publishing, re-check the description, publisher, icon, and license.
 
-### Bağımlılık güvenliği: `@azure/msal-node` override'ı
+### Dependency security: the `@azure/msal-node` override
 
-`package.json` içindeki `overrides` bloğunda yer alan `@azure/msal-node: ^7.1.1` kaydı,
-`@vscode/vsce` paketleyicisinin bağımlılığı olan `@azure/identity` paketinin çektiği
-güvenlik açıklı eski 6.x sürümünü düzeltmek içindir (`npm audit` temizliği).
-Proje çalışma zamanında doğrudan Azure servislerini kullanmaz.
+The `@azure/msal-node: ^7.1.1` entry in the `package.json` `overrides` block
+fixes the vulnerable old 6.x line pulled by `@azure/identity`, a dependency of
+the `@vscode/vsce` packager (keeping `npm audit` clean). The project does not use
+Azure services directly at runtime.
 
-## İlk yayın öncesi
+## 2. Before the first release
 
-1. Visual Studio Marketplace Publisher yönetiminde bir publisher oluşturun veya mevcut publisher'ı doğrulayın.
-2. `package.json` içindeki `publisher` değeri, publisher kimliğiyle harfiyen eşleşmelidir. Doğrulanan kimlik `ysf-bkr` olarak ayarlanmıştır.
-3. Azure DevOps'ta Marketplace yayınlama yetkisi olan bir Personal Access Token oluşturun.
-4. Depodaki **Settings → Secrets and variables → Actions** bölümüne `VSCE_PAT` adlı repository secret ekleyin.
-5. Token'ı kaynak dosyalara, commit'e, issue'lara veya sohbet mesajlarına koymayın.
+1. Create a publisher in Visual Studio Marketplace Publisher Management, or
+   verify the existing one.
+2. The `publisher` value in `package.json` must match the publisher ID exactly.
+   The verified ID is set to `ysf-bkr`.
+3. Create a Personal Access Token in Azure DevOps with Marketplace publishing
+   rights.
+4. Add a repository secret named `VSCE_PAT` under **Settings → Secrets and
+   variables → Actions**.
+5. Never place the token in source files, commits, issues, or chat messages.
 
-## Yerel paket ve yayın
+## 3. Local packaging and publishing
 
-Paket oluşturmak için:
+To build the package:
 
 ```bash
 npm run package
 ```
 
-Yayın öncesi VSIX dosyası `out/ahi-code-<sürüm>.vsix` konumuna yazılır. Yerel ortamda `VSCE_PAT`
-tanımlıysa yayın komutu şudur:
+The VSIX is written to `out/ahi-code-<version>.vsix`. With `VSCE_PAT` defined
+locally, the publish command is:
 
 ```bash
 npm run publish:ext
 ```
 
-Komut, manifestteki sürümü kullanır ve derleme/paketleme sonrasında VSIX'i yayınlar. Marketplace
-yayını geri alınması zor bir işlemdir; publisher ve sürüm bilgilerini önceden kontrol edin.
+The command uses the manifest version and publishes the VSIX after building and
+packaging. Unpublishing from the Marketplace is hard to reverse; verify the
+publisher and version first.
 
-## GitHub Actions ile yayın
+## 4. Publishing with GitHub Actions
 
-1. Değişiklikleri ve sürüm numarasını kontrol edip `package.json`, `package-lock.json` ve
-   `webview-ui/package.json` sürümlerini birlikte güncelleyin.
-2. Sürüm numarasıyla aynı etiketi oluşturup gönderin. Örnek:
+1. Review the changes and update the version together in `package.json`,
+   `package-lock.json`, and `webview-ui/package.json`.
+2. Create and push a tag matching the version, for example:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.0.2
+git push origin v0.0.2
 ```
 
-3. `v<package.json sürümü>` biçimiyle eşleşen etiket, `.github/workflows/marketplace.yml`
-   iş akışını başlatır. İş akışı testleri çalıştırır, VSIX oluşturur ve `VSCE_PAT` ile Marketplace'e
-   yayınlar.
+3. A tag matching the `v<package.json version>` form starts the
+   `.github/workflows/marketplace.yml` workflow. It runs the tests, builds the
+   VSIX, and publishes it with `VSCE_PAT`.
 
-Bir sürüm Marketplace'te yayımlandıktan ve kullanıcılar Marketplace kaynağından kurduktan sonra
-VS Code'un uzantı otomatik güncelleme sistemi yeni sürümleri sunabilir. VSIX'ten elle kurulumda
-otomatik güncelleme varsayılan olarak kapalıdır.
+Once a release is live and users install it from the Marketplace, VS Code's
+automatic extension updates can deliver new versions. Manual VSIX installs do
+not receive automatic updates by default.
 
-## Open VSX Registry yayını (VSCodium, Gitpod ve açık kaynak editörler)
+## 5. Open VSX Registry (VSCodium, Gitpod, open-source editors)
 
-VSCodium, Gitpod ve Eclipse Theia gibi açık kaynak VS Code türevleri Microsoft Marketplace yerine [Open VSX Registry](https://open-vsx.org/) kullanır.
+Open-source VS Code derivatives such as VSCodium, Gitpod, and Eclipse Theia use
+the [Open VSX Registry](https://open-vsx.org/) instead of the Microsoft
+Marketplace.
 
-Aynı VSIX paketini Open VSX'e yayınlamak için:
-1. `open-vsx.org` üzerinde bir hesap açıp `ysf-bkr` adında bir namespace (yayıncı) oluşturun.
-2. Access Token üreterek yerel ortamda şu komutla yayınlayabilirsiniz:
+To publish the same VSIX to Open VSX manually:
+
+1. Create an account on `open-vsx.org` and claim a namespace named `ysf-bkr`.
+2. Generate an Access Token and publish locally:
+
    ```bash
-   npx ovsx publish out/ahi-code-0.0.1.vsix -p <OVSX_TOKEN>
+   npx ovsx publish out/ahi-code-0.0.2.vsix -p <OVSX_TOKEN>
    ```
-3. GitHub Actions iş akışına `OVSX_PAT` secret'ı eklenerek çift yayın (Marketplace + Open VSX) otomatikleştirilebilir.
 
-## Kullanıcıların Marketplace'ten kurulumu
+3. Dual publishing (Marketplace + Open VSX) can be automated by adding an
+   `OVSX_PAT` secret and an Open VSX step to the workflow. The current
+   `.github/workflows/marketplace.yml` publishes to the Visual Studio
+   Marketplace only, so this step is not wired up yet.
 
-İlk yayın tamamlandıktan sonra kullanıcılar:
+## 6. Installing from the Marketplace
 
-1. VS Code'da **Extensions** görünümünü açıp `AhiCode` veya `ysf-bkr.ahi-code` aratabilir.
-2. Yayıncının `ysf-bkr` olduğunu doğrulayıp **Install**'a tıklayabilir.
-3. Terminalden `code --install-extension ysf-bkr.ahi-code` komutunu çalıştırabilir.
+After the first release, users can:
 
-Uzantı Marketplace'te yayımlanmadan önce bu arama ve komut çalışmaz. O zamana kadar VSIX kurulumu
-için README'deki yerel paketleme adımlarını kullanın.
+1. Open the **Extensions** view in VS Code and search for `AhiCode` or
+   `ysf-bkr.ahi-code`.
+2. Verify the publisher is `ysf-bkr` and click **Install**.
+3. Or run `code --install-extension ysf-bkr.ahi-code` from a terminal.
+
+Until the extension is published, neither the search nor the command works. Use
+the local packaging steps in the README until then.

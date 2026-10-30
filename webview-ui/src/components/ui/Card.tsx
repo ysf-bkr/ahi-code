@@ -58,7 +58,7 @@ export const SectionTitle: React.FC<SectionTitleProps> = ({ icon, title, count, 
       {title}
     </div>
     {action}
-    {count !== undefined && <span className="text-2xs font-mono text-[var(--ahi-muted-fg)]">{count}</span>}
+    {count !== undefined && <span className="text-2xs font-mono ahi-text-muted">{count}</span>}
   </div>
 );
 

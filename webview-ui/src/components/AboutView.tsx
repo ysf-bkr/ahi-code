@@ -19,7 +19,7 @@ import {
   BookOpen,
   Bug
 } from 'lucide-react';
-import { AboutInfo } from '@shared/types';
+import { AboutInfo, NavigationDestination } from '@shared/types';
 import { ScreenHeader } from './ScreenHeader';
 import { Logo } from './Logo';
 import { Button, IconButton, LinkButton, ListButton } from './ui';
@@ -27,6 +27,8 @@ import { vscode } from '../utils/vscode';
 
 interface AboutViewProps {
   onBack: () => void;
+  onSelectMenu?: (destination: NavigationDestination) => void;
+  changedFileCount?: number;
 }
 
 const REPO_URL = 'https://github.com/ysf-bkr/ahi-code';
@@ -35,32 +37,32 @@ const DEVELOPER_EMAIL = 'ybekar@msn.com';
 
 const FEATURES = [
   {
-    icon: <Zap className="h-3.5 w-3.5 text-amber-400" />,
+    icon: <Zap className="ahi-icon-sm ahi-text-warning" />,
     title: 'Otonom ReAct',
     desc: 'Planlar, uygular, test eder ve düzeltir.'
   },
   {
-    icon: <Compass className="h-3.5 w-3.5 text-[var(--ahi-brand-400)]" />,
+    icon: <Compass className="ahi-icon-sm ahi-text-brand" />,
     title: 'Planlama / Kodlama modları',
     desc: 'Planlama sırasında salt okunur korumalar.'
   },
   {
-    icon: <Plug className="h-3.5 w-3.5 text-violet-400" />,
+    icon: <Plug className="ahi-icon-sm ahi-text-info" />,
     title: 'MCP desteği',
     desc: 'Harici araçlar ve sunucular.'
   },
   {
-    icon: <Layers className="h-3.5 w-3.5 text-emerald-400" />,
+    icon: <Layers className="ahi-icon-sm ahi-text-success" />,
     title: 'LSP entegrasyonu',
     desc: 'Tanılar, tanımlara gitme ve üzerine gelme.'
   },
   {
-    icon: <Bot className="h-3.5 w-3.5 text-pink-400" />,
+    icon: <Bot className="ahi-icon-sm ahi-text-brand" />,
     title: 'Alt ajanlar',
     desc: 'Görevleri uzman rollere devreder.'
   },
   {
-    icon: <ShieldCheck className="h-3.5 w-3.5 text-rose-400" />,
+    icon: <ShieldCheck className="ahi-icon-sm ahi-text-error" />,
     title: 'Güvenlik',
     desc: 'Yol kısıtlamaları, izinler ve denetim.'
   }
@@ -73,7 +75,7 @@ const SHORTCUTS = [
 
 const openUrl = (url: string) => vscode.postMessage({ type: 'OPEN_EXTERNAL', payload: { url } });
 
-export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
+export const AboutView: React.FC<AboutViewProps> = ({ onBack, onSelectMenu, changedFileCount }) => {
   const [info, setInfo] = useState<AboutInfo | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -117,43 +119,43 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
   const version = info?.extensionVersion || __APP_VERSION__;
 
   return (
-    <div className="flex h-full flex-col bg-[var(--vscode-sideBar-background)] text-[var(--vscode-sideBar-foreground)]">
+    <div className="ahi-screen">
       <ScreenHeader
         title="Hakkında"
         subtitle="AhiCode bilgileri ve tanılama"
         onBack={onBack}
+        onSelectMenu={onSelectMenu}
+        changedFileCount={changedFileCount}
         actions={
           <IconButton label="Bilgileri yenile" onClick={refreshInfo} small>
-            <RefreshCw className={`h-3 w-3 ${!info ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`ahi-icon-xs ${!info ? 'animate-spin' : ''}`} />
           </IconButton>
         }
       />
 
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-2.5 pb-6">
-        <div className="ahi-soft-card flex flex-col items-center rounded-lg border border-[var(--vscode-editorWidget-border)] p-4 text-center">
-          <div className="ahi-avatar-soft flex h-14 w-14 items-center justify-center rounded-2xl border">
-            <Logo className="h-8 w-8" colored strokeWidth={1.3} />
+      <div className="ahi-screen-body">
+        <div className="ahi-soft-card flex flex-col items-center rounded-lg border ahi-border-surface p-4 text-center">
+          <div className="ahi-avatar ahi-avatar-soft ahi-avatar--xl">
+            <Logo className="ahi-icon-2xl" colored strokeWidth={1.3} />
           </div>
-          <div className="mt-2 text-sm font-semibold tracking-tight text-[var(--vscode-foreground)]">
-            AhiCode
-          </div>
+          <div className="mt-2 text-sm font-semibold tracking-tight ahi-text-fg">AhiCode</div>
           <div className="mt-0.5 flex items-center gap-1.5">
-            <span className="rounded-full bg-[var(--ahi-brand-500)] px-1.5 py-0.5 font-mono text-2xs text-white">
+            <span className="rounded-full ahi-bg-accent px-1.5 py-0.5 font-mono ahi-text-on-accent text-2xs">
               v{version}
             </span>
-            <span className="rounded-full border border-[var(--vscode-editorWidget-border)] px-1.5 py-0.5 text-2xs text-[var(--vscode-descriptionForeground)]">
+            <span className="rounded-full border ahi-border-surface px-1.5 py-0.5 text-2xs ahi-text-muted">
               MIT
             </span>
-            <span className="rounded-full border border-[var(--vscode-editorWidget-border)] px-1.5 py-0.5 text-2xs text-[var(--vscode-descriptionForeground)]">
+            <span className="rounded-full border ahi-border-surface px-1.5 py-0.5 text-2xs ahi-text-muted">
               Açık kaynak
             </span>
           </div>
-          <p className="mt-2 max-w-[280px] text-xs leading-relaxed text-[var(--vscode-descriptionForeground)]">
+          <p className="mt-2 max-w-[280px] text-xs leading-relaxed ahi-text-muted">
             Ahilik zanaat disiplini ve mühendislik titizliğiyle projenizi anlayan, mimariyi kavrayan, kod
             yazan ve testlerle doğrulayan yapay zekâ yazılım ajanı.
           </p>
-          <div className="mt-2 text-2xs text-[var(--vscode-descriptionForeground)]">
-            Geliştirici: <span className="font-medium text-[var(--vscode-foreground)]">{DEVELOPER_NAME}</span>
+          <div className="mt-2 text-2xs ahi-text-muted">
+            Geliştirici: <span className="font-medium ahi-text-fg">{DEVELOPER_NAME}</span>
           </div>
           <LinkButton
             plain
@@ -168,7 +170,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
               variant="primary"
               size="xs"
               onClick={() => openUrl(REPO_URL)}
-              icon={<Github className="h-3 w-3" />}
+              icon={<Github className="ahi-icon-xs" />}
             >
               GitHub
             </Button>
@@ -176,7 +178,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
               variant="secondary"
               size="xs"
               onClick={() => openUrl(`${REPO_URL}#readme`)}
-              icon={<BookOpen className="h-3 w-3" />}
+              icon={<BookOpen className="ahi-icon-xs" />}
             >
               README
             </Button>
@@ -184,65 +186,54 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
         </div>
 
         <section className="space-y-1.5">
-          <div className="px-0.5 text-2xs font-semibold uppercase tracking-[0.12em] text-[var(--vscode-descriptionForeground)]">
-            Özellikler
-          </div>
+          <div className="px-0.5 ahi-overline ahi-text-muted">Özellikler</div>
           <div className="grid grid-cols-2 gap-1.5">
             {FEATURES.map((feature) => (
-              <div
-                key={feature.title}
-                className="rounded-md border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-editorWidget-background)] p-2"
-              >
+              <div key={feature.title} className="rounded-md border ahi-border-surface ahi-bg-raised p-2">
                 <div className="flex items-center gap-1.5">
                   {feature.icon}
-                  <span className="text-xs font-medium text-[var(--vscode-foreground)]">{feature.title}</span>
+                  <span className="text-xs font-medium ahi-text-fg">{feature.title}</span>
                 </div>
-                <div className="mt-0.5 text-2xs leading-relaxed text-[var(--vscode-descriptionForeground)]">
-                  {feature.desc}
-                </div>
+                <div className="mt-0.5 text-2xs leading-relaxed ahi-text-muted">{feature.desc}</div>
               </div>
             ))}
           </div>
         </section>
 
         <section className="space-y-1.5">
-          <div className="px-0.5 text-2xs font-semibold uppercase tracking-[0.12em] text-[var(--vscode-descriptionForeground)]">
-            Ortam
-          </div>
-          <div className="space-y-1 rounded-md border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-editorWidget-background)] p-2.5">
+          <div className="px-0.5 ahi-overline ahi-text-muted">Ortam</div>
+          <div className="space-y-1 rounded-md border ahi-border-surface ahi-bg-raised p-2.5">
             <div className="flex items-center justify-between gap-2 text-2xs">
-              <span className="flex items-center gap-1 text-[var(--vscode-descriptionForeground)]">
-                <Code2 className="h-2.5 w-2.5" /> Eklenti
+              <span className="flex items-center gap-1 ahi-text-muted">
+                <Code2 className="ahi-icon-xs" /> Eklenti
               </span>
-              <span className="font-mono text-[var(--vscode-foreground)]">v{version}</span>
+              <span className="font-mono ahi-text-fg">v{version}</span>
             </div>
             <div className="flex items-center justify-between gap-2 text-2xs">
-              <span className="flex items-center gap-1 text-[var(--vscode-descriptionForeground)]">
-                <Monitor className="h-2.5 w-2.5" /> VS Code
+              <span className="flex items-center gap-1 ahi-text-muted">
+                <Monitor className="ahi-icon-xs" /> VS Code
               </span>
-              <span className="font-mono text-[var(--vscode-foreground)]">
-                {info?.vscodeVersion || '...'}
-              </span>
+              <span className="font-mono ahi-text-fg">{info?.vscodeVersion || '...'}</span>
             </div>
             <div className="flex items-center justify-between gap-2 text-2xs">
-              <span className="flex items-center gap-1 text-[var(--vscode-descriptionForeground)]">
-                <Info className="h-2.5 w-2.5" /> İşletim sistemi
+              <span className="flex items-center gap-1 ahi-text-muted">
+                <Info className="ahi-icon-xs" /> İşletim sistemi
               </span>
-              <span className="font-mono text-[var(--vscode-foreground)]">{info?.platform || '...'}</span>
+              <span className="font-mono ahi-text-fg">{info?.platform || '...'}</span>
             </div>
             <div className="flex items-center justify-between gap-2 text-2xs">
-              <span className="flex items-center gap-1 text-[var(--vscode-descriptionForeground)]">
-                <FolderOpen className="h-2.5 w-2.5" /> Çalışma alanı
+              <span className="flex items-center gap-1 ahi-text-muted">
+                <FolderOpen className="ahi-icon-xs" /> Çalışma alanı
               </span>
-              <span className="max-w-[140px] truncate font-mono text-[var(--vscode-foreground)]">
+              <span className="max-w-[140px] truncate font-mono ahi-text-fg">
                 {info?.workspaceFolders?.length ? info.workspaceFolders.join(', ') : '(açık değil)'}
               </span>
             </div>
             <div className="flex items-center justify-between gap-2 text-2xs">
-              <span className="flex items-center gap-1 text-[var(--vscode-descriptionForeground)]">
-                <ShieldCheck className="h-2.5 w-2.5" /> Güven
+              <span className="flex items-center gap-1 ahi-text-muted">
+                <ShieldCheck className="ahi-icon-xs" /> Güven
               </span>
-              <span className={`font-mono ${info?.isTrusted ? 'text-emerald-400' : 'text-amber-400'}`}>
+              <span className={`font-mono ${info?.isTrusted ? 'ahi-text-success' : 'ahi-text-warning'}`}>
                 {info ? (info.isTrusted ? 'güvenilir' : 'kısıtlı') : '...'}
               </span>
             </div>
@@ -254,7 +245,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
               onClick={diagnostics}
               className="mt-1"
               icon={
-                copied ? <Check className="h-2.5 w-2.5 text-emerald-400" /> : <Copy className="h-2.5 w-2.5" />
+                copied ? <Check className="ahi-icon-xs ahi-text-success" /> : <Copy className="ahi-icon-xs" />
               }
             >
               {copied ? 'Tanılama bilgileri kopyalandı' : 'Tanılama bilgilerini kopyala'}
@@ -263,17 +254,15 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
         </section>
 
         <section className="space-y-1.5">
-          <div className="px-0.5 text-2xs font-semibold uppercase tracking-[0.12em] text-[var(--vscode-descriptionForeground)]">
-            Kısayollar
-          </div>
-          <div className="rounded-md border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-editorWidget-background)] p-2">
+          <div className="px-0.5 ahi-overline ahi-text-muted">Kısayollar</div>
+          <div className="rounded-md border ahi-border-surface ahi-bg-raised p-2">
             {SHORTCUTS.map((shortcut, index) => (
               <div
                 key={shortcut.keys}
-                className={`flex items-center justify-between gap-2 py-0.5 text-2xs ${index > 0 ? 'border-t border-[var(--vscode-editorWidget-border)]' : ''}`}
+                className={`flex items-center justify-between gap-2 py-0.5 text-2xs ${index > 0 ? 'border-t ahi-border-surface' : ''}`}
               >
-                <span className="text-[var(--vscode-descriptionForeground)]">{shortcut.desc}</span>
-                <kbd className="rounded border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-input-background)] px-1 py-0.5 font-mono text-2xs text-[var(--vscode-foreground)]">
+                <span className="ahi-text-muted">{shortcut.desc}</span>
+                <kbd className="rounded border ahi-border-surface ahi-bg-input px-1 py-0.5 font-mono text-2xs ahi-text-fg">
                   {shortcut.keys}
                 </kbd>
               </div>
@@ -282,42 +271,40 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack }) => {
         </section>
 
         <section className="space-y-1.5">
-          <div className="px-0.5 text-2xs font-semibold uppercase tracking-[0.12em] text-[var(--vscode-descriptionForeground)]">
-            Bağlantılar
-          </div>
+          <div className="px-0.5 ahi-overline ahi-text-muted">Bağlantılar</div>
           <div className="space-y-1">
             <ListButton
               onClick={() => openUrl(`${REPO_URL}/issues`)}
-              icon={<Bug className="h-3.5 w-3.5 text-rose-400" />}
+              icon={<Bug className="ahi-icon-sm ahi-text-error" />}
               title="Sorun bildir"
-              trailing={<ExternalLink className="h-3 w-3 opacity-50" />}
+              trailing={<ExternalLink className="ahi-icon-xs opacity-50" />}
             />
             <ListButton
               onClick={() => openUrl(REPO_URL)}
-              icon={<Github className="h-3.5 w-3.5 text-[var(--ahi-brand-400)]" />}
+              icon={<Github className="ahi-icon-sm ahi-text-brand" />}
               title="Kaynak kod"
-              trailing={<ExternalLink className="h-3 w-3 opacity-50" />}
+              trailing={<ExternalLink className="ahi-icon-xs opacity-50" />}
             />
           </div>
         </section>
 
-        <section className="rounded-md border border-[var(--vscode-editorWidget-border)] bg-[var(--vscode-editorWidget-background)] p-2.5">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--vscode-foreground)]">
-            <Scale className="h-3 w-3 text-[var(--ahi-brand-400)]" /> Lisans ve yasal bilgiler
+        <section className="rounded-md border ahi-border-surface ahi-bg-raised p-2.5">
+          <div className="flex items-center gap-1.5 ahi-title">
+            <Scale className="ahi-icon-xs ahi-text-brand" /> Lisans ve yasal bilgiler
           </div>
-          <p className="mt-1 text-2xs leading-relaxed text-[var(--vscode-descriptionForeground)]">
+          <p className="mt-1 text-2xs leading-relaxed ahi-text-muted">
             AhiCode eklentisi MIT lisansı altında lisanslanmıştır ve {DEVELOPER_NAME} tarafından bağımsız açık
             kaynaklı bir proje olarak geliştirilmektedir.
           </p>
-          <div className="mt-1.5 flex flex-wrap gap-1 text-2xs text-[var(--vscode-descriptionForeground)]">
-            <span className="rounded bg-[var(--vscode-sideBar-background)] px-1.5 py-0.5">React</span>
-            <span className="rounded bg-[var(--vscode-sideBar-background)] px-1.5 py-0.5">Lucide</span>
-            <span className="rounded bg-[var(--vscode-sideBar-background)] px-1.5 py-0.5">esbuild</span>
-            <span className="rounded bg-[var(--vscode-sideBar-background)] px-1.5 py-0.5">VS Code API</span>
+          <div className="mt-1.5 flex flex-wrap gap-1 text-2xs ahi-text-muted">
+            <span className="rounded ahi-bg-base px-1.5 py-0.5">React</span>
+            <span className="rounded ahi-bg-base px-1.5 py-0.5">Lucide</span>
+            <span className="rounded ahi-bg-base px-1.5 py-0.5">esbuild</span>
+            <span className="rounded ahi-bg-base px-1.5 py-0.5">VS Code API</span>
           </div>
         </section>
 
-        <div className="pb-2 text-center text-2xs text-[var(--vscode-descriptionForeground)]">
+        <div className="pb-2 text-center text-2xs ahi-text-muted">
           AhiCode · {DEVELOPER_NAME} · Bağımsız açık kaynaklı proje
         </div>
       </div>

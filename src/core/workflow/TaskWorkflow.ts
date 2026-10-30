@@ -21,13 +21,6 @@ export interface WorkflowGateResult {
   reason?: string;
 }
 
-export interface WorkflowStageInfo {
-  id: WorkflowStage;
-  label: string;
-  /** İlerleme şeridinde ipucu olarak gösterilen kısa açıklama. */
-  hint: string;
-}
-
 export const MAX_INTAKE_QUESTIONS = 8;
 
 /** Kod modunun aşama sırası (dosya yazma ve komut çalıştırma). */
@@ -139,6 +132,8 @@ export interface TransitionContext {
   hasApprovedSpec: boolean;
   /** Planda en az bir adım var mı? */
   hasPlan: boolean;
+  /** Kod yazmadan önce çıkarılmış modül haritası var mı? */
+  hasModules: boolean;
   /** Tüm kabul kriterleri işaretli mi? */
   criteriaMet: boolean;
   /** Doğrulama geçti mi (ya da bilinçli olarak atlandı mı)? */
@@ -170,6 +165,13 @@ export function gateForStage(
       if (!context.hasApprovedSpec) {
         return { allowed: false, reason: 'Write and approve a spec before planning.' };
       }
+      // Endüstriyel akış: plan, katmanlı modül haritasından türetilir.
+      if (!context.hasModules) {
+        return {
+          allowed: false,
+          reason: 'Split the work into layered modules with update_module_plan before writing the plan.'
+        };
+      }
       return { allowed: true };
 
     case 'build':
@@ -178,6 +180,12 @@ export function gateForStage(
       }
       if (!context.hasApprovedSpec) {
         return { allowed: false, reason: 'The spec must be approved before code is written.' };
+      }
+      if (!context.hasModules) {
+        return {
+          allowed: false,
+          reason: 'No module map: split the work into layered modules before writing code.'
+        };
       }
       if (!context.hasPlan) {
         return { allowed: false, reason: 'A plan with at least one step is required before building.' };

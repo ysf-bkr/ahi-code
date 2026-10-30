@@ -84,9 +84,23 @@ async function buildStageAgent(root: string, acceptanceCriteria: string[]) {
   });
   // Gerçek akışta spec onaylanınca SpecStore'da 'approved' olur.
   await core.getSpecStore().approve(root, spec.id);
+  // Endüstriyel akış: plan bir modül haritasından türetilir.
+  core.getState().modules = core.modulePlanner.update({
+    goal: 'test',
+    modules: [
+      {
+        id: 'core',
+        name: 'Core',
+        layer: 'application',
+        paths: ['src'],
+        responsibility: 'Çekirdek',
+        ownerRole: 'backend'
+      }
+    ]
+  });
   const plan = core.getTaskPlanner().update({
     goal: 'test',
-    steps: [{ title: 'Adım 1', status: 'pending' }]
+    steps: [{ title: 'Adım 1', status: 'pending', moduleId: 'core' }]
   });
   core.getState().plan = plan;
 
@@ -175,6 +189,37 @@ describe('AgentCore: aşama ilerlemesi', () => {
 
     assert.strictEqual(result.ok, false);
     assert.ok(result.reason?.includes('Verification') || result.reason?.includes('doğrulama'));
+  });
+
+  it('test komutu bulunamadığı için atlanan doğrulama görevi kapatmaz', async () => {
+    const root = await workspace();
+    const { core, spec } = await buildStageAgent(root, ['a']);
+
+    for (const criterion of spec.acceptanceCriteria) {
+      await core.getSpecStore().setCriterionDone(root, spec.id, criterion.id, true);
+    }
+    // Projede test/lint komutu yok: doğrulama atlandı. Bu "geçti" sayılmamalı,
+    // yoksa hiç test çalışmadan görev sessizce kapanır.
+    core.getState().stats.verification = {
+      status: 'skipped',
+      attempts: 0,
+      summary: 'no test command',
+      skippedReason: 'no-commands'
+    };
+
+    core.getState().workflow!.stage = 'verify';
+    const blocked = await core.setWorkflowStage('done');
+    assert.strictEqual(blocked.ok, false, 'komut yokluğu bitti kapısını kapatmalı');
+    assert.strictEqual(core.workflow.verificationPassed(), false);
+
+    // Çalışma alanı hiç yoksa doğrulama imkânsızdır; bu tek istisna kabul edilir.
+    core.getState().stats.verification = {
+      status: 'skipped',
+      attempts: 0,
+      summary: 'no workspace',
+      skippedReason: 'no-workspace'
+    };
+    assert.strictEqual(core.workflow.verificationPassed(), true);
   });
 });
 
