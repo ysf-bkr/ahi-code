@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { TaskHeader } from './components/TaskHeader';
 import { MessageList } from './components/MessageList';
@@ -14,11 +14,13 @@ import { AboutView } from './components/AboutView';
 import { ChangesView } from './components/ChangesView';
 import { NavigationSidebar } from './components/NavigationSidebar';
 import { Toast as ToastView } from './components/Toast';
+import { Button } from './components/ui';
 import {
   AgentMode,
   ExtensionToWebviewMessage,
   EvrenQuota,
   NavigationDestination,
+  SessionInfoLoaded,
   TaskState,
   ToastNotification,
   UserSettings
@@ -28,6 +30,11 @@ import { vscode } from './utils/vscode';
 
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<NavigationDestination>('chat');
+  /**
+   * Etkin oturum anahtarının anlık kopyası. Mesaj işleyicisi render dışında
+   * çalıştığı için state yerine ref okunur; yoksa eski değer görülür.
+   */
+  const activeSessionRef = useRef<string | undefined>(undefined);
   // Basit gezinme yığını: "Geri" her zaman sohbete değil, kullanıcının geldiği
   // ekrana dönsün (örn. Ayarlar -> Hakkında -> Geri -> Ayarlar).
   const [viewStack, setViewStack] = useState<NavigationDestination[]>([]);
@@ -71,6 +78,10 @@ export const App: React.FC = () => {
   const [quota, setQuota] = useState<EvrenQuota | undefined>(undefined);
   const [quotaError, setQuotaError] = useState<string | undefined>(undefined);
   const [loadingQuota, setLoadingQuota] = useState(false);
+  /** Arayüzün çizdiği oturumun anahtarı; arka plan oturumları yok sayılır. */
+  const [activeSessionKey, setActiveSessionKey] = useState<string | undefined>(undefined);
+  /** Bellekteki oturumlar (arka planda çalışanlar dahil). */
+  const [sessions, setSessions] = useState<SessionInfoLoaded[]>([]);
 
   useEffect(() => {
     vscode.postMessage({ type: 'REQUEST_SETTINGS' });
@@ -79,7 +90,28 @@ export const App: React.FC = () => {
       const msg = event.data;
       switch (msg.type) {
         case 'TASK_STATE_UPDATE':
+          // Arka plan oturumunun durumu gelirse yok say: görünen sohbet
+          // kullanıcının seçtiği oturumdur.
+          if (msg.sessionKey && activeSessionRef.current && msg.sessionKey !== activeSessionRef.current) {
+            break;
+          }
+          if (msg.sessionKey && !activeSessionRef.current) {
+            activeSessionRef.current = msg.sessionKey;
+            setActiveSessionKey(msg.sessionKey);
+          }
           setTaskState(msg.payload);
+          break;
+        case 'SESSION_ACTIVATED':
+          activeSessionRef.current = msg.payload.sessionKey;
+          setActiveSessionKey(msg.payload.sessionKey);
+          // Oturum değişti: yarım kalan düzenleme ve besteci taslağı o sohbete
+          // ait değil. `draftNonce` artırılarak besteci yeniden kurulur.
+          setEditingMessageId(null);
+          setDraftPrompt('');
+          setDraftNonce((value) => value + 1);
+          break;
+        case 'SESSIONS_CHANGED':
+          setSessions(msg.payload.sessions);
           break;
         case 'SETTINGS_LOADED':
           setSettings(msg.payload);
@@ -93,6 +125,7 @@ export const App: React.FC = () => {
           setQuotaError(msg.payload.error);
           break;
         case 'STREAM_CHUNK': {
+          if (msg.sessionKey && msg.sessionKey !== activeSessionRef.current) break;
           const { messageId, text } = msg.payload;
           setTaskState((prev) => ({
             ...prev,
@@ -218,6 +251,17 @@ export const App: React.FC = () => {
     setDraftPrompt('');
   };
 
+  /** Etkin olmayan, çalışmaya devam eden sohbetler. */
+  const backgroundSessions = sessions.filter(
+    (session) => session.running && session.key !== activeSessionKey
+  );
+
+  /** Başka bir sohbeti öne alır; arka plandaki çalışma durmaz. */
+  const switchToSession = (sessionId: string) => {
+    vscode.postMessage({ type: 'SELECT_SESSION', payload: { sessionId } });
+    goToChat();
+  };
+
   const handleModeChange = (mode: AgentMode) => {
     setTaskState((prev) => ({ ...prev, mode }));
     vscode.postMessage({ type: 'SET_MODE', payload: { mode } });
@@ -304,6 +348,31 @@ export const App: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Başka sohbetler arka planda çalışıyorsa: tek tıkla o sohbete geç. */}
+          {backgroundSessions.length > 0 && (
+            <div
+              data-testid="background-sessions-bar"
+              className="sticky top-0 z-30 flex items-center gap-2 overflow-x-auto border-b ahi-border-brand ahi-bg-surface px-3 py-1.5"
+            >
+              <Loader2 className="ahi-icon-sm shrink-0 animate-spin ahi-text-brand" />
+              <span className="shrink-0 text-2xs font-semibold ahi-text-fg">
+                Arka planda çalışan {backgroundSessions.length} sohbet
+              </span>
+              {backgroundSessions.map((session) => (
+                <Button
+                  key={session.key}
+                  size="xs"
+                  variant="secondary"
+                  onClick={() => switchToSession(session.id || session.key)}
+                  title={session.prompt || 'Sohbete git'}
+                  className="max-w-[220px] shrink-0"
+                >
+                  <span className="truncate">{session.prompt || 'Yeni sohbet'}</span>
+                </Button>
+              ))}
+            </div>
+          )}
 
           {/* Diğer ekranlardayken arka planda görev sürüyorsa görünen dinamik durum şeridi */}
           {activeTab !== 'chat' && (taskState.status === 'running' || taskState.activeSubagent) && (

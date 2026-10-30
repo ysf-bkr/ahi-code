@@ -15,6 +15,7 @@ Kod yazma akışı endüstriyel bir modül akışına dönüştürüldü; alt aj
 - **Modül haritası arayüzde:** Besteci altındaki yeni `ModuleStrip`, modülleri katman sırasıyla, sahip rolü, yolları ve bağlı plan adımının durumuyla gösteriyor; plan onaylanana kadar `kod öncesi` işareti görünüyor.
 - **Üç boyutlu kabul kriteri kapısı:** Spec onayı (manuel ve otonom) artık kabul kriterlerinin mutlu yol, hata yolu ve uç durum boyutlarını kapsamasını istiyor. Eksikse spec imzalanmıyor; model eksik kriterleri eklemek üzere açık bir sistem mesajıyla uyarılıyor.
 - **Alt ajanları görünür kılan modül rolleri:** Plan adımlarındaki `ownerRole` ile devretme aynı dile bağlandı; her adımın sahibi uzman `invoke_subagent` ile çağrılabiliyor, eşgüdüm gerektiğinde `@manager` kullanılıyor.
+- **Arka planda çalışan sohbetler:** Her sohbet kendi ajan çekirdeğinde yaşıyor; başka bir sohbete geçmek ya da yeni sohbet açmak çalışan turu ve alt ajanları durdurmuyor. Ağır servisler (MCP sunucuları, dil sunucusu, çağrı haritası, bilgi tabanı) oturumlar arasında paylaşılıyor, böylece ikinci bir sohbet açmak maliyetli bir yeniden kurulum yapmıyor. Çalışan arka plan sohbetleri sohbet alanının üstündeki şeritte tek tıkla erişilebilir; onların bilgi bildirimleri kullanıcıyı meşgul etmiyor, yalnızca uyarı ve hatalar gösteriliyor.
 
 ### Düzeltilen
 
@@ -22,12 +23,12 @@ Kod yazma akışı endüstriyel bir modül akışına dönüştürüldü; alt aj
 - **`.ahi` bilgi tabanı okunmuyordu:** `KnowledgeStore.load()`, JSON indeksi yok ya da bozuksa erken dönüp `project.md`, `conventions.md`, `decisions.md` ve `notes.md` dosyalarını hiç yüklemiyordu. Bu yüzden `.ahi` dolu olsa bile ajan proje bilgisini görmeden her şeyi yeniden soruyordu. İnsan dosyaları artık indeksten bağımsız olarak her durumda yükleniyor; indeks yoksa depo haritası arka planda üretiliyor.
 - **Test komutu bulunamayan projede görev sessizce kapanıyordu:** "Atlandı" durumundaki doğrulama "geçti" sayılıyordu; projede `test`/`lint` script'i yoksa görev hiç test çalışmadan "bitti" olabiliyordu. Artık atlanan doğrulama bitti kapısını yalnızca çalışma alanı hiç yokken tatmin ediyor; diğer durumlarda görev dürüstçe açık kalıyor.
 - **Düzenlenen istem ikinci kez gönderiliyordu:** `editMessage` eklendi; düzenlenen mesajdan sonraki tüm turlar atılıp istem yerinde yeniden çalıştırılıyor.
-- **Yeni sohbet önceki turu durduruyor:** Yeni sohbet başlatıldığında çalışan tur, bekleyen onay/soru ve alt ajan isteği aynı anda iptal ediliyor; yarım kalan tur arka planda sürüp durumu karıştırmıyor.
+- **Yeni sohbet artık önceki turu durdurmuyor:** Sohbet değiştirmek ya da yeni sohbet açmak çalışan görevi sonlandırmıyor; önceki sohbet (ve alt ajanları) arka planda sürüyor.
 
 ### Bilinen Sınırlamalar
 
-- **Sohbetler arka planda sürdürülmüyor:** Bu sürümde aynı anda tek oturum çalışıyor; başka bir sohbete geçmek ya da yeni sohbet açmak çalışan turu (ve alt ajanları) durduruyor. Oturum başına ayrı ajan çalıştırma (arka planda devam) sonraki sürüme bırakıldı.
 - **`execute_command` yan etkileri geri alınamaz:** Snapshot ve checkpoint yalnızca `write_file` / `edit_file` değişikliklerini kapsar.
+- **Onay bekleyen arka plan turu kullanıcıyı bekler:** Arka plandaki bir sohbet onay istediğinde o sohbete geçilene kadar tur durur; onay kartı yalnızca etkin sohbette gösterilir.
 
 ## [0.0.1] - 2026-10-29
 

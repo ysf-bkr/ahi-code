@@ -59,6 +59,7 @@ ahi-code/
 │       │   ├── workflowController.ts # Aşama geçişleri ve onay kapıları
 │       │   ├── toolPipelineController.ts # Araç kapı zinciri ve yürütme
 │       │   ├── verificationController.ts # Doğrulama + onarım döngüsü
+│       │   ├── SessionRegistry.ts    # Her sohbet için bir canlı AgentCore (arka plan)
 │       │   ├── sessionController.ts  # Oturum, iptal, geri alma
 │       │   ├── modeTools.ts          # Plan/kod araç kilidi
 │       │   ├── turnAssembly.ts       # Sağlayıcı mesaj kurgusu
@@ -143,7 +144,30 @@ AgentCore
 
 ---
 
-## 3. Güvenilirlik ve Güvenlik Sözleşmeleri
+## 3. Oturumlar ve Arka Plan Çalışması
+
+Bir sohbet görünüm durumu değil, yaşayan bir `AgentCore` örneğidir.
+
+- `SessionRegistry` her sohbet için bir çekirdek tutar. Sohbet değiştirmek
+  (ya da yeni sohbet açmak) yalnızca hangi çekirdeğin **etkin** olduğunu
+  değiştirir; önceki çekirdek turunu ve alt ajanlarını arka planda sürdürür.
+- Tek örnek olması gereken ağır servisler `SharedServices` üzerinden
+  paylaşılır (`McpHub`, `LspClient`, `CallGraphManager`, `KnowledgeStore`,
+  spec deposu, worktree ve git yöneticileri). Böylece ikinci sohbet yeni bir
+  MCP yığını açmaz, indeksi yeniden kurmaz.
+- Oturuma özel durum çekirdekte kalır: plan, modül haritası, snapshot'lar,
+  checkpoint'ler, doğrulama baseline'ı ve abort denetleyicisi.
+- Durum güncellemeleri `sessionKey` ile etiketlenir; arayüz yalnızca etkin
+  oturumu çizer, diğer çalışan sohbetleri sohbet alanının üstündeki şeritte
+  gösterir.
+- Arka plan sohbetleri yalnızca uyarı ve hataları öne çıkarır; alt ajan
+  ilerlemesi etkin sohbeti meşgul etmez.
+- Bir sohbet silinirken önce çekirdeği kapatılır; silinen oturum kendi kaydını
+  geçmişe geri yazamaz.
+
+---
+
+## 4. Güvenilirlik ve Güvenlik Sözleşmeleri
 
 | Konu                 | Tasarım Tercihi ve Davranış                                                              |
 | -------------------- | ---------------------------------------------------------------------------------------- |
@@ -158,7 +182,7 @@ AgentCore
 
 ---
 
-## 4. Geliştirici Scriptleri ve Araç Zinciri
+## 5. Geliştirici Scriptleri ve Araç Zinciri
 
 | Komut                          | Açıklama                                                                     |
 | ------------------------------ | ---------------------------------------------------------------------------- |
@@ -187,7 +211,7 @@ AgentCore
 
 ---
 
-## 5. Endüstriyel Modül Akışı
+## 6. Endüstriyel Modül Akışı
 
 Kod, plandan doğrudan yazılmaz. Ajan önce katmanlı bir modül haritası kurar;
 böylece "ne nereye gidecek" ve "hangi sırayla yazılacak" sorusu tek bir dosyaya
@@ -216,7 +240,7 @@ ve hangi modülün işlendiği tek bakışta izlenir.
 
 ---
 
-## 6. Arayüz Geliştirme ve Tasarım Sistemi İlkeleri
+## 7. Arayüz Geliştirme ve Tasarım Sistemi İlkeleri
 
 - **Merkezi Stil Tanımı (`webview-ui/src/index.css`):**
   Tipografi ölçeği (`--ahi-text-*`), kenar yuvarlaklıkları, kontrol yükseklikleri, yüzey renkleri ve kart stilleri tek dosyada toplanmıştır.
@@ -231,9 +255,9 @@ ve hangi modülün işlendiği tek bakışta izlenir.
 
 ---
 
-## 7. Test Mimarisi ve Kapsam
+## 8. Test Mimarisi ve Kapsam
 
-Test süiti hâlihazırda 638 testten (536 çekirdek + 102 webview) oluşur ve üç katmanda icra edilir:
+Test süiti hâlihazırda 646 testten (542 çekirdek + 104 webview) oluşur ve üç katmanda icra edilir:
 
 1. **Birim Testleri (`test/unit/`):** Node.js yerleşik test runner'ı (`node:test`) ve sahte VS Code köprüsü (`test/support/vscode-stub.ts`) ile harici bağımlılık olmadan milisaniyeler içinde çalışır.
 2. **Webview UI Testleri (`webview-ui/test/`):** JSDOM ortamında React Testing Library benzeri yapıyla tüm ekran ve bileşen etkileşimlerini simüle eder.

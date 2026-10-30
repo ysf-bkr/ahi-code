@@ -557,6 +557,8 @@ export type WebviewToExtensionMessage =
   | { type: 'FETCH_QUOTA' }
   | { type: 'GET_TASK_HISTORY' }
   | { type: 'LOAD_TASK'; payload: { taskId: string } }
+  /** Başka bir sohbeti etkin yapar; çalışan diğer oturumlar durmaz. */
+  | { type: 'SELECT_SESSION'; payload: { sessionId: string } }
   | { type: 'DELETE_TASK'; payload: { taskId: string } }
   | { type: 'EXPORT_SESSION'; payload: { taskId: string; format: 'json' | 'markdown' } }
   | { type: 'IMPORT_SESSION' }
@@ -601,8 +603,8 @@ export interface VsCodeThemeConfig {
  * Eklenti -> Webview mesajları
  */
 export type ExtensionToWebviewMessage =
-  | { type: 'TASK_STATE_UPDATE'; payload: TaskState }
-  | { type: 'STREAM_CHUNK'; payload: { messageId: string; text: string } }
+  | { type: 'TASK_STATE_UPDATE'; payload: TaskState; sessionKey?: string }
+  | { type: 'STREAM_CHUNK'; payload: { messageId: string; text: string }; sessionKey?: string }
   | { type: 'SETTINGS_LOADED'; payload: UserSettings }
   | { type: 'MODELS_LOADED'; payload: { provider: ModelProviderType; models: string[]; error?: string } }
   | {
@@ -616,7 +618,21 @@ export type ExtensionToWebviewMessage =
   | { type: 'GIT_CHANGES_LOADED'; payload: GitChangesPayload }
   | { type: 'VSCODE_THEME_CHANGED'; payload: VsCodeThemeConfig }
   | { type: 'ABOUT_INFO_LOADED'; payload: AboutInfo }
-  | { type: 'NOTIFICATION'; payload: { level: ToastLevel; message: string } };
+  | { type: 'NOTIFICATION'; payload: { level: ToastLevel; message: string }; sessionKey?: string }
+  /** Etkin oturum değişti; arayüz kendi odağını buna göre taşır. */
+  | { type: 'SESSION_ACTIVATED'; payload: { sessionKey: string } }
+  /** Bellekteki oturumların özeti (arka planda çalışanlar dahil). */
+  | { type: 'SESSIONS_CHANGED'; payload: { sessions: SessionInfoLoaded[] } };
+
+/** Arayüze taşınan oturum özeti. */
+export interface SessionInfoLoaded {
+  key: string;
+  id: string;
+  prompt: string;
+  status: TaskStatus;
+  running: boolean;
+  messageCount: number;
+}
 
 export interface AboutInfo {
   extensionVersion: string;

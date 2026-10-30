@@ -71,6 +71,72 @@ const DEFAULT_SANDBOX_IMAGE = 'node:20-bookworm';
 export interface AgentCoreDependencies {
   /** Ayarlardan kurulan sağlayıcıyı geçersiz kılar (testler betikleşmiş model kullanır). */
   provider?: ModelProvider;
+  /**
+   * Geri yüklenecek oturum kimliği. Verilmezse `workspaceState` içindeki son
+   * etkin oturum açılır (tek oturumlu kullanım). `null` verilirse boş bir
+   * oturumla başlanır — yeni sohbet açarken bu kullanılır.
+   */
+  initialSessionId?: string | null;
+  /**
+   * Oturumlar arasında paylaşılan ağır servisler. Birden çok oturum aynı anda
+   * çalıştığında MCP sunucuları, dil sunucusu, çağrı haritası ve bilgi tabanı
+   * ikinci kez kurulmaz.
+   */
+  shared?: SharedServices;
+}
+
+/**
+ * Aynı çalışma alanında yaşayan oturumların ortak servisleri.
+ *
+ * Bilinçli olarak yalnızca "tek örnek olması gereken" şeyler buradadır:
+ * süreç açan (MCP), ağ/indeks tutan (bilgi tabanı, çağrı haritası, LSP) ve
+ * dosya sistemi kaydı tutan (spec, worktree, git) servisler. Oturuma özel
+ * durum (plan, snapshot, doğrulama baseline'ı) her `AgentCore` içinde kalır.
+ */
+export interface SharedServices {
+  historyManager: HistoryManager;
+  mcpHub: McpHub;
+  skillManager: SkillManager;
+  lspClient: LspClient;
+  projectMemory: ProjectMemoryManager;
+  knowledgeStore: KnowledgeStore;
+  specStore: SpecStore;
+  workspaceRules: WorkspaceRuleManager;
+  worktreeManager: WorktreeManager;
+  gitManager: GitManager;
+  callGraphManager: CallGraphManager;
+  /** Ayarlar değiştiğinde paylaşılan servislerin gördüğü güncel değer. */
+  currentSettings: () => UserSettings;
+}
+
+/**
+ * Tek bir eklenti ömrü boyunca paylaşılan servisleri kurar.
+ *
+ * `callGraphManager` ayar okuyucusu canlı bir referans üzerinden çalışır;
+ * böylece ayar değişince ikinci bir harita kurulmaz.
+ */
+export function createSharedServices(
+  context: vscode.ExtensionContext,
+  currentSettings: () => UserSettings
+): SharedServices {
+  const lspClient = new LspClient();
+  return {
+    historyManager: new HistoryManager(context),
+    mcpHub: new McpHub(context.workspaceState),
+    skillManager: new SkillManager(),
+    lspClient,
+    projectMemory: new ProjectMemoryManager(),
+    knowledgeStore: new KnowledgeStore(),
+    specStore: new SpecStore(),
+    workspaceRules: new WorkspaceRuleManager(),
+    worktreeManager: new WorktreeManager(),
+    gitManager: new GitManager(),
+    callGraphManager: new CallGraphManager({
+      enabled: () => currentSettings().callGraph?.enabled !== false,
+      language: (workspaceRoot) => createLspLanguageService(lspClient, workspaceRoot)
+    }),
+    currentSettings
+  };
 }
 
 export class AgentCore implements AgentHost {
@@ -138,6 +204,8 @@ export class AgentCore implements AgentHost {
   public memoryRecordedForTask = false;
 
   private hasCustomProvider = false;
+  /** Paylaşılan servislerin ömrünü bu çekirdek yönetiyor mu (tek oturumlu kullanım)? */
+  private readonly ownsShared: boolean;
 
   constructor(
     public context: vscode.ExtensionContext,
@@ -149,22 +217,33 @@ export class AgentCore implements AgentHost {
   ) {
     this.settings = settings;
     this.hasCustomProvider = Boolean(dependencies.provider);
+    this.ownsShared = !dependencies.shared;
     this.provider = dependencies.provider ?? createModelProvider(settings);
     this.permissionManager = new PermissionManager(settings);
     this.refreshEmbeddingIndex();
-    this.historyManager = new HistoryManager(context);
-    this.mcpHub = new McpHub(context.workspaceState);
-    this.skillManager = new SkillManager();
-    this.lspClient = new LspClient();
+    // Paylaşılan servisler verilmişse ikinci bir MCP/LSP/indeks kurulmaz.
+    const shared = dependencies.shared;
+    this.historyManager = shared?.historyManager ?? new HistoryManager(context);
+    this.mcpHub = shared?.mcpHub ?? new McpHub(context.workspaceState);
+    this.skillManager = shared?.skillManager ?? new SkillManager();
+    this.lspClient = shared?.lspClient ?? new LspClient();
+    this.projectMemory = shared?.projectMemory ?? new ProjectMemoryManager();
+    this.knowledgeStore = shared?.knowledgeStore ?? new KnowledgeStore();
+    this.specStore = shared?.specStore ?? new SpecStore();
+    this.workspaceRules = shared?.workspaceRules ?? new WorkspaceRuleManager();
+    this.worktreeManager = shared?.worktreeManager ?? new WorktreeManager();
+    this.gitManager = shared?.gitManager ?? new GitManager();
     this.hookManager = new HookManager(
       () => vscode.workspace.isTrusted,
       (fingerprint, commands) => this.confirmWorkspaceHooks(fingerprint, commands)
     );
     this.contextManager = new ContextManager();
-    this.callGraphManager = new CallGraphManager({
-      enabled: () => this.settings.callGraph?.enabled !== false,
-      language: (workspaceRoot) => createLspLanguageService(this.lspClient, workspaceRoot)
-    });
+    this.callGraphManager =
+      shared?.callGraphManager ??
+      new CallGraphManager({
+        enabled: () => this.settings.callGraph?.enabled !== false,
+        language: (workspaceRoot) => createLspLanguageService(this.lspClient, workspaceRoot)
+      });
     this.knowledgeCurator = new KnowledgeCurator(this.knowledgeStore, this.provider, this.lspClient);
     this.vectorMemory = new VectorMemory(this.projectMemory, this.knowledgeStore, () => this.embeddingIndex);
     this.verificationManager.setCommandFilter((command) => this.canAutoRunVerificationCommand(command));
@@ -179,12 +258,21 @@ export class AgentCore implements AgentHost {
     this.tools = this.toolPipeline;
     this.verification = this.verificationController;
 
-    // Varsa son etkin oturumu geri yükle
-    const lastSessionId = context.workspaceState.get<string>('ahi_active_session_id');
-    const saved = lastSessionId ? this.historyManager.getTask(lastSessionId) : undefined;
-    this.state = saved ? this.normalizeRestoredState(saved) : this.getInitialState();
+    // Hangi oturumun açılacağı çağıran tarafından belirlenir: çok oturumlu
+    // kullanımda her çekirdek aynı "son oturum"u yüklememeli.
+    this.state = this.restoreInitialState(dependencies.initialSessionId);
     this.planner.hydrate(this.state.plan);
     this.modulePlanner.hydrate(this.state.modules);
+  }
+
+  /** Başlangıç durumu: verilen oturum, son etkin oturum ya da boş oturum. */
+  private restoreInitialState(initialSessionId?: string | null): TaskState {
+    const sessionId =
+      initialSessionId === null
+        ? undefined
+        : (initialSessionId ?? this.context.workspaceState.get<string>('ahi_active_session_id'));
+    const saved = sessionId ? this.historyManager.getTask(sessionId) : undefined;
+    return saved ? this.normalizeRestoredState(saved) : this.getInitialState();
   }
 
   private createSubagentManager(): SubagentManager {
@@ -325,7 +413,15 @@ export class AgentCore implements AgentHost {
     this.pendingResolver = undefined;
     this.pendingQuestionResolver?.('Extension closed.');
     this.pendingQuestionResolver = undefined;
-    this.mcpHub.stopAll();
+    // MCP sunucuları paylaşılıyorsa yalnızca bu oturum kapatıldığında
+    // diğer sohbetlerin bağlantıları kesilmemeli. Son oturum kapanınca
+    // kayıt defteri `stopAll()` çağırır.
+    if (this.ownsSharedServices) this.mcpHub.stopAll();
+  }
+
+  /** Paylaşılan MCP/LSP servislerinin ömrünü bu çekirdek yönetiyor mu? */
+  public get ownsSharedServices(): boolean {
+    return this.ownsShared;
   }
 
   public setMode(mode: AgentMode) {

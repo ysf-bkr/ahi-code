@@ -61,6 +61,7 @@ ahi-code/
 │       │   ├── fileMentions.ts       # @file prompt expansions
 │       │   ├── KnowledgeCurator.ts   # Lazy document and architecture curation
 │       │   ├── modeTools.ts          # Stage-based tool gating (code vs plan)
+│       │   ├── SessionRegistry.ts    # One live AgentCore per chat (background chats)
 │       │   ├── sessionController.ts  # Session hydration and history switches
 │       │   ├── sessionPersistence.ts # Multi-root snapshot/checkpoint state
 │       │   ├── terminalExecution.ts  # Integrated terminal runners
@@ -144,7 +145,29 @@ AgentCore
 
 ---
 
-## 3. Reliability and Security Contracts
+## 3. Sessions and Background Work
+
+A chat is not a view state: it is a live `AgentCore` instance.
+
+- `SessionRegistry` keeps one core per chat. Switching chats (or opening a new
+  one) only changes which core is **active**; the previous core keeps running
+  its turn and its subagents in the background.
+- Heavy, single-instance services are shared through `SharedServices`
+  (`McpHub`, `LspClient`, `CallGraphManager`, `KnowledgeStore`, spec store,
+  worktree and git managers), so a second chat does not spawn another MCP
+  stack or rebuild the index.
+- Per-session state stays inside the core: plan, module map, snapshots,
+  checkpoints, verification baseline and abort controller.
+- State updates are tagged with a `sessionKey`; the webview renders only the
+  active session and shows other running chats in a strip above the chat area.
+- Background chats only surface warnings and errors, so subagent progress does
+  not spam the active conversation.
+- Deleting a chat first closes its core, so a deleted session cannot keep
+  writing its own record back to history.
+
+---
+
+## 4. Reliability and Security Contracts
 
 | Topic | Design choice and behavior |
 | --- | --- |
@@ -159,7 +182,7 @@ AgentCore
 
 ---
 
-## 4. Developer Scripts and Toolchain
+## 5. Developer Scripts and Toolchain
 
 | Command | Description |
 | --- | --- |
@@ -188,7 +211,7 @@ AgentCore
 
 ---
 
-## 5. Industrial Module Flow
+## 6. Industrial Module Flow
 
 Code is never written straight from the plan. The agent first builds a layered
 module map, so "what goes where" and "in which order" are explicit before any
@@ -216,7 +239,7 @@ current module are visible while the task runs.
 
 ---
 
-## 6. UI Development and Design System Principles
+## 7. UI Development and Design System Principles
 
 - **Central style definition (`webview-ui/src/index.css`):**
   The typography scale (`--ahi-text-*`), radii, control heights, surface colors and card styles live in one file.
@@ -231,9 +254,9 @@ current module are visible while the task runs.
 
 ---
 
-## 7. Test Architecture and Coverage
+## 8. Test Architecture and Coverage
 
-The suite currently holds 638 tests (536 core + 102 webview) across three layers:
+The suite currently holds 646 tests (542 core + 104 webview) across three layers:
 
 1. **Unit tests (`test/unit/`):** Run in milliseconds with Node's built-in test runner (`node:test`) and a fake VS Code bridge (`test/support/`), no external dependencies.
 2. **Webview UI tests (`webview-ui/test/`):** Simulate every screen and component interaction in JSDOM with React Testing Library.

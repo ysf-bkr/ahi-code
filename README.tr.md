@@ -18,7 +18,7 @@
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.106-007ACC?logo=visualstudiocode)](https://code.visualstudio.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![CI](https://github.com/ysf-bkr/ahi-code/actions/workflows/ci.yml/badge.svg)](https://github.com/ysf-bkr/ahi-code/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-638%20passing-2ea44f)](./docs/DEVELOPMENT.tr.md)
+[![Tests](https://img.shields.io/badge/tests-646%20passing-2ea44f)](./docs/DEVELOPMENT.tr.md)
 
 **Geliştirici:** Yusuf BEKAR · **E-posta:** [ybekar@msn.com](mailto:ybekar@msn.com)
 
@@ -46,6 +46,7 @@
 | **Proje Hafızası ve Bilgi Tabanı** | `.ahi/memory.md` ve `.ahi/knowledge/` ile projeninizin mimari kararlarını, kurallarını ve sembollerini hatırlar. |
 | **Geri Alma (Undo) ve Kontrol Noktaları** | Her tur başında Git checkpoint'i alınır; istenmeyen değişiklikler tek tıkla eski haline döndürülür. |
 | **EVREN Kotası ve Model Çubuğu** | Sohbet altındaki çubuk, EVREN günlük token kotasını (kullanılan / sınır / kalan) canlı gösterir ve sohbetten ayrılmadan model değiştirmeyi sağlar. |
+| **Arka Planda Çalışan Sohbetler** | Her sohbet kendi ajan çekirdeğinde çalışır: sohbet değiştirmek veya yeni sohbet açmak önceki görevi (ve alt ajanlarını) durdurmaz. Paylaşılan servisler sayesinde ikinci sohbet ucuzdur. |
 | **İki Dilli Belgeler ve Türkçe Arayüz** | İngilizce/Türkçe iki dilli proje belgeleri; arayüzdeki tüm hata mesajları, bildirimler ve plan adımları eksiksiz Türkçe. |
 
 ---

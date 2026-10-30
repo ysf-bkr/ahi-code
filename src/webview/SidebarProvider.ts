@@ -3,14 +3,14 @@ import * as path from 'path';
 import * as fs from 'fs';
 import {
   ExtensionToWebviewMessage,
-  TaskState,
   UserSettings,
   WebviewToExtensionMessage,
   VsCodeThemeConfig,
   WorkspaceCustomizations
 } from '../shared/types';
 import { isChatConfigured } from '../shared/constants';
-import { AgentCore } from '../core/agent/AgentCore';
+import { AgentCore, createSharedServices, SharedServices } from '../core/agent/AgentCore';
+import { SessionRegistry } from '../core/agent/SessionRegistry';
 import { EvrenModelProvider } from '../providers/evren';
 import { getActiveWorkspaceRoot } from '../core/workspace/workspaceRoot';
 import { resolveWorkspacePath } from '../tools/pathSafety';
@@ -42,11 +42,18 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'ahi-code.SidebarProvider';
 
   private _view?: vscode.WebviewView;
-  private _agentCore?: AgentCore;
+  private _registry?: SessionRegistry;
+  /** Oturum kayıt defteri için paylaşılan ağır servisler (tek örnek). */
+  private _shared?: SharedServices;
   private _settings: UserSettings;
   private _configListenerRegistered = false;
   private _pendingNewSession = false;
   private _diffProvider = AhiCodeDiffContentProvider.getInstance();
+
+  /** Etkin oturumun çekirdeği. Oturum yoksa `undefined`. */
+  private get _agentCore(): AgentCore | undefined {
+    return this._registry?.getActiveCore();
+  }
 
   constructor(
     private readonly _extensionUri: vscode.Uri,
@@ -80,20 +87,77 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   }
 
   public dispose(): void {
-    this._agentCore?.dispose();
-    this._agentCore = undefined;
+    this._registry?.disposeAll();
+    this._registry = undefined;
   }
 
+  /**
+   * Yeni bir sohbet açar ve ona geçer.
+   *
+   * Önemli: çalışan diğer oturumlar **durdurulmaz**. Önceki sohbet (ve varsa
+   * alt ajanları) arka planda çalışmaya devam eder; kullanıcı geçmişten geri
+   * döndüğünde aynı çekirdeği bulur.
+   */
   public async newSession(): Promise<void> {
-    if (this._agentCore) {
-      await this._agentCore.createNewSession();
-    } else {
+    if (!this._registry) {
       // Görünüm henüz resolve edilmediyse resolve sırasında uygulanır.
       this._pendingNewSession = true;
+      return;
     }
+    this._registry.openNewSession();
     this.postMessage({
       type: 'NOTIFICATION',
       payload: { level: 'info', message: 'Yeni bir görev başlatabilirsiniz.' }
+    });
+  }
+
+  /** Oturum kayıt defterini ve paylaşılan servisleri kurar. */
+  private createRegistry(): SessionRegistry {
+    this._shared = createSharedServices(this._context, () => this._settings);
+    return new SessionRegistry({
+      context: this._context,
+      settings: () => this._settings,
+      shared: this._shared,
+      onStateUpdate: (sessionKey, state) => {
+        // Arayüz yalnızca etkin oturumun durumunu çizer; arka plan oturumları
+        // için gelen güncellemeler yok sayılır (liste ayrıca gönderilir).
+        if (sessionKey !== this._registry?.active) return;
+        this.postMessage({ type: 'TASK_STATE_UPDATE', payload: state, sessionKey });
+      },
+      onNotify: (sessionKey, notification) => {
+        const active = this._registry?.active;
+        const isBackground = Boolean(active) && sessionKey !== active;
+        // Arka plan oturumunun bilgi bildirimleri (alt ajan durum güncellemeleri
+        // gibi) kullanıcıyı meşgul etmesin; yalnızca uyarı ve hatalar sızar.
+        if (isBackground && notification.level === 'info') return;
+        this.postMessage({
+          type: 'NOTIFICATION',
+          payload: {
+            level: notification.level,
+            message: isBackground ? `Arka plan: ${notification.message}` : notification.message
+          },
+          sessionKey
+        });
+      },
+      onStreamChunk: (sessionKey, messageId, chunk) => {
+        if (sessionKey !== this._registry?.active) return;
+        this.postMessage({ type: 'STREAM_CHUNK', payload: { messageId, text: chunk }, sessionKey });
+      },
+      onSessionsChanged: () => {
+        this.postMessage({
+          type: 'SESSIONS_CHANGED',
+          payload: {
+            sessions: (this._registry?.snapshots() ?? []).map((session) => ({
+              key: session.key,
+              id: session.id,
+              prompt: session.prompt,
+              status: session.status,
+              running: session.running,
+              messageCount: session.messageCount
+            }))
+          }
+        });
+      }
     });
   }
 
@@ -115,31 +179,25 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
 
-    // AgentCore eklentinin ömrü boyunca yaşar. Görünüm yeniden açıldığında
-    // çalışan görevleri, testleri veya akışları iptal etme.
-    if (!this._agentCore) {
-      this._agentCore = new AgentCore(
-        this._context,
-        this._settings,
-        (state: TaskState) => this.postMessage({ type: 'TASK_STATE_UPDATE', payload: state }),
-        (notification) => this.postMessage({ type: 'NOTIFICATION', payload: notification }),
-        (messageId, chunk) => this.postMessage({ type: 'STREAM_CHUNK', payload: { messageId, text: chunk } })
-      );
-
-      // Çağrı haritasını arka planda hazırla ve dosya değişimlerinde güncel tut.
+    // Oturum kayıt defteri eklentinin ömrü boyunca yaşar. Görünüm yeniden
+    // açıldığında çalışan görevler, testler veya akışlar iptal edilmez.
+    if (!this._registry) {
+      this._registry = this.createRegistry();
+      // Son etkin oturum geri yüklenir; yoksa boş bir sohbet açılır.
+      this._registry.bootstrap();
       this.warmUpBackgroundIndexes();
     }
 
     if (this._pendingNewSession) {
       this._pendingNewSession = false;
-      void this._agentCore.createNewSession();
+      void this.newSession();
     }
 
     webviewView.onDidDispose(() => {
       if (this._view === webviewView) {
         this._view = undefined;
       }
-      // Ajan görevi arka planda sürer; yalnızca görünüm referansı temizlenir.
+      // Oturumlar arka planda sürer; yalnızca görünüm referansı temizlenir.
     });
 
     // Webview arayüzünden gelen mesajları işle
@@ -181,8 +239,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     // Webview hazır olur olmaz ilk ayarları ve mevcut oturum durumunu gönder
     this.postMessage({ type: 'SETTINGS_LOADED', payload: this.getSafeSettingsForWebview() });
     this.postMessage({ type: 'VSCODE_THEME_CHANGED', payload: this.getVsCodeThemeConfig() });
-    if (this._agentCore) {
-      this.postMessage({ type: 'TASK_STATE_UPDATE', payload: this._agentCore.getState() });
+    const activeCore = this._agentCore;
+    const activeKey = this._registry?.active;
+    if (activeCore && activeKey) {
+      this.postMessage({ type: 'TASK_STATE_UPDATE', payload: activeCore.getState(), sessionKey: activeKey });
+      this.postMessage({ type: 'SESSION_ACTIVATED', payload: { sessionKey: activeKey } });
     }
   }
 
@@ -291,9 +352,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       },
 
       NEW_SESSION: async () => {
-        if (this._agentCore) {
-          await this._agentCore.createNewSession();
-        }
+        // Yeni sohbet, çalışan diğer oturumları durdurmaz.
+        await this.newSession();
       },
 
       CANCEL_TASK: async () => {
@@ -363,9 +423,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       REQUEST_SETTINGS: async () => {
         this.postMessage({ type: 'SETTINGS_LOADED', payload: this.getSafeSettingsForWebview() });
         this.postMessage({ type: 'VSCODE_THEME_CHANGED', payload: this.getVsCodeThemeConfig() });
-        if (this._agentCore) {
+        const active = this._agentCore;
+        const sessionKey = this._registry?.active;
+        if (active && sessionKey) {
           // İlk TASK_STATE_UPDATE, webview geç yüklenirse kaybolabilir.
-          this.postMessage({ type: 'TASK_STATE_UPDATE', payload: this._agentCore.getState() });
+          this.postMessage({
+            type: 'TASK_STATE_UPDATE',
+            payload: active.getState(),
+            sessionKey
+          });
+          this.postMessage({ type: 'SESSION_ACTIVATED', payload: { sessionKey } });
         }
       },
 
@@ -457,21 +524,33 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       },
 
       LOAD_TASK: async (message) => {
-        if (this._agentCore) {
-          await this._agentCore.loadSession(message.payload.taskId);
-        }
+        await this.selectSession(message.payload.taskId);
+      },
+
+      SELECT_SESSION: async (message) => {
+        await this.selectSession(message.payload.sessionId);
       },
 
       DELETE_TASK: async (message) => {
-        if (this._agentCore) {
-          const deletingActive = this._agentCore.getState().id === message.payload.taskId;
-          await this._agentCore.getHistoryManager().deleteTask(message.payload.taskId);
-          if (deletingActive) {
-            await this._agentCore.createNewSession();
-          }
-          const history = this._agentCore.getHistoryManager().getSummaries();
-          this.postMessage({ type: 'TASK_HISTORY_LOADED', payload: { history } });
+        const registry = this._registry;
+        const history = this._agentCore?.getHistoryManager();
+        if (!registry || !history) return;
+
+        const active = this._agentCore;
+        const deletingActive = active?.getState().id === message.payload.taskId;
+
+        // Bellekte açık bir çekirdek varsa önce kapat: silinen oturumun
+        // arka planda yazmaya devam etmesi kaydı geri getirirdi.
+        for (const snapshot of registry.snapshots()) {
+          if (snapshot.id !== message.payload.taskId) continue;
+          await registry.close(snapshot.key);
         }
+
+        await history.deleteTask(message.payload.taskId);
+        if (deletingActive) {
+          registry.openNewSession();
+        }
+        this.postMessage({ type: 'TASK_HISTORY_LOADED', payload: { history: history.getSummaries() } });
       },
 
       EXPORT_SESSION: async (message) => {
@@ -1228,10 +1307,37 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
   private async updateSettings(newSettings: Partial<UserSettings>) {
     this._settings = await persistSettings(this._context, this._settings, newSettings);
-    if (this._agentCore) {
-      this._agentCore.updateSettings(this._settings);
-    }
+    // Ayar tüm açık oturumlara uygulanır; arka planda çalışan bir tur yeni
+    // ayarı bir sonraki isteğinde görür.
+    this._registry?.updateSettings(this._settings);
     this.postMessage({ type: 'SETTINGS_LOADED', payload: this.getSafeSettingsForWebview() });
+  }
+
+  /**
+   * Başka bir sohbeti etkin yapar.
+   *
+   * Oturum bellekte çalışıyorsa aynı çekirdek kullanılır; arka plandaki tur ve
+   * alt ajanlar kesintisiz sürer. Aksi halde geçmişten yüklenir.
+   */
+  private async selectSession(sessionId: string): Promise<void> {
+    const registry = this._registry;
+    if (!registry) return;
+
+    const core = registry.activate(sessionId);
+    if (!core) {
+      this.postMessage({
+        type: 'NOTIFICATION',
+        payload: { level: 'error', message: 'Önceki oturum bulunamadı veya silinmiş.' }
+      });
+      return;
+    }
+
+    const key = registry.active;
+    if (!key) return;
+    // Sıra önemli: arayüz önce hangi oturumun etkin olduğunu öğrenmeli,
+    // ardından o oturumun durumunu almalı.
+    this.postMessage({ type: 'SESSION_ACTIVATED', payload: { sessionKey: key } });
+    this.postMessage({ type: 'TASK_STATE_UPDATE', payload: core.getState(), sessionKey: key });
   }
 
   private getSafeSettingsForWebview(): UserSettings {
