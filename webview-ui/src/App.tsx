@@ -328,6 +328,15 @@ export const App: React.FC = () => {
               onOpenSettings={() => openView('settings')}
             />
             <div className="shrink-0 w-full border-t ahi-border-base ahi-bg-base">
+              {/* Bildirim akış içinde durur: bestecinin üstünde uçan mutlak
+                  konum eskiden canlı plan/görev çubuğunu (ComposerDock)
+                  kapatıyordu. Şimdi plan barının hemen üstünde yer kaplar,
+                  hiçbir şeyi örtmez. */}
+              {toast && (
+                <div className="px-3 pt-2">
+                  <ToastView toast={toast} onDismiss={() => setToast(null)} />
+                </div>
+              )}
               <ComposerDock state={taskState} />
               {isChatConfigured(settings) && (
                 <ChatMetaBar
@@ -341,11 +350,6 @@ export const App: React.FC = () => {
                 />
               )}
               <div className="relative w-full">
-                {toast && (
-                  <div className="absolute bottom-full left-3 right-3 z-50 mb-1">
-                    <ToastView toast={toast} onDismiss={() => setToast(null)} />
-                  </div>
-                )}
                 <ChatInput
                   key={draftNonce}
                   state={taskState}

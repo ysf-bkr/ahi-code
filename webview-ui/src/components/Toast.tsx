@@ -26,8 +26,9 @@ const LEVEL_STYLES: Record<ToastLevel, { box: string; icon: string }> = {
 };
 
 /**
- * Geçici bildirim. Çağıran tarafından konumlandırılır; böylece üstbilgiyi
- * kapatmak yerine doğrudan bestecinin üzerinde durabilir.
+ * Geçici bildirim. Çağıran normal akışta plan çubuğunun hemen üstüne yer
+ * verir; bildirim hiçbir arayüz katmanının üstüne uçmaz. Uzun metin kendi
+ * içinde kaydırılır, sohbet alanını ezmez.
  */
 export const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
   const style = LEVEL_STYLES[toast.level];
@@ -42,7 +43,12 @@ export const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
       <span className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ${style.icon}`}>
         <Icon className="ahi-icon-sm" />
       </span>
-      <span className="flex-1 break-words pt-0.5 leading-relaxed">{toast.message}</span>
+      <span
+        className="max-h-24 flex-1 overflow-y-auto break-words pt-0.5 leading-relaxed"
+        title={toast.message}
+      >
+        {toast.message}
+      </span>
       <IconButton label="Bildirimi kapat" small className="shrink-0" onClick={onDismiss}>
         <X className="ahi-icon-sm" />
       </IconButton>
