@@ -78,7 +78,16 @@ function formatMessages(messages: ProviderMessage[]): OpenAIRequestMessage[] {
       };
     }
 
-    return { role: message.role, content: message.content };
+    return {
+      // Ağ koruması: system rolü yalnızca ilk mesajda geçerlidir; ikinci bir
+      // system mesajı tüm isteği 400 ile düşürür. Kaynak ne olursa olsun,
+      // baştaki system dışındaki her system içeriği kullanıcı notuna dönüşür.
+      role: message.role === 'system' && message !== messages[0] ? 'user' : message.role,
+      content:
+        message.role === 'system' && message !== messages[0]
+          ? `<system_context>\n${message.content}\n</system_context>`
+          : message.content
+    };
   });
 }
 

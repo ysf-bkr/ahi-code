@@ -12,6 +12,8 @@ import { PermissionManager } from '../permission/PermissionManager';
  * Oturum geçmişinden modele gönderilecek mesaj dizisini kurar.
  *
  * - Sistem istemi her zaman başta gelir.
+ * - Oturum içi sistem notları konumu korunarak kullanıcı rolünde taşınır
+ *   (uç noktlar system rolünü yalnızca ilk mesajda kabul eder).
  * - Yalnızca sonucu kesinleşmiş araç çağrıları gönderilir: eşleşen araç
  * mesajı olmayan bekleyen/iptal edilmiş çağrılar API hatası verir.
  * - Boş asistan mesajları atlanır (bazı API'ler boş içeriği reddeder).
@@ -24,7 +26,12 @@ export function buildProviderMessages(systemPrompt: string, messages: ChatMessag
       providerMessages.push({ role: 'user', content: m.content });
     } else if (m.role === 'system') {
       // Model turlar arasında bağlamı korusun diye sistem mesajlarını dahil et.
-      providerMessages.push({ role: 'system', content: m.content });
+      // Role'ü system olarak göndermek yasak: OpenAI uyumlu uç noktlar system
+      // rolünü YALNIZCA ilk mesajda kabul eder; ortada gelirse istek 400
+      // "System message must be at the beginning" ile düşer. Konumu korunarak
+      // kullanıcı rolünde ve işaretli blokla taşınır; model bunun kullanıcı
+      // sözü değil sistem notu olduğunu etiketten anlar.
+      providerMessages.push({ role: 'user', content: `<system_context>\n${m.content}\n</system_context>` });
     } else if (m.role === 'assistant') {
       const resolvedToolCalls = (m.toolCalls || []).filter(
         (tc) => tc.status === 'completed' || tc.status === 'error' || tc.status === 'rejected'

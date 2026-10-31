@@ -104,7 +104,17 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       this._pendingNewSession = true;
       return;
     }
-    this._registry.openNewSession();
+    const core = this._registry.openNewSession();
+    const key = this._registry.active;
+    if (key) {
+      // Sıra önemli (selectSession ile aynı sözleşme): arayüz önce etkin
+      // oturumu öğrenmeli, ardından durumunu almalı. Aksi halde yeni oturumun
+      // boş durumu "arka plan güncellemesi" sayılır ve pencere eski sohbette
+      // kalır — yeni sohbet düğmesi ve geçmişten silme aynı kök nedenden
+      // etkileniyordu.
+      this.postMessage({ type: 'SESSION_ACTIVATED', payload: { sessionKey: key } });
+      this.postMessage({ type: 'TASK_STATE_UPDATE', payload: core.getState(), sessionKey: key });
+    }
     this.postMessage({
       type: 'NOTIFICATION',
       payload: { level: 'info', message: 'Yeni bir görev başlatabilirsiniz.' }
@@ -540,7 +550,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
         await history.deleteTask(message.payload.taskId);
         if (deletingActive) {
-          registry.openNewSession();
+          // Silinen oturum görünüyordu: yeni boş sohbete geç. newSession()
+          // SESSION_ACTIVATED + TASK_STATE_UPDATE sırasını korur; çıplak
+          // openNewSession() pencereyi eski sohbette bırakırdı.
+          await this.newSession();
         }
         this.postMessage({ type: 'TASK_HISTORY_LOADED', payload: { history: history.getSummaries() } });
       },

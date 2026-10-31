@@ -40,14 +40,21 @@ describe('turnAssembly: provider message scaffolding', () => {
     });
   });
 
-  it('preserves in-session system messages in order', () => {
+  it('oturum içi sistem notlarını konumunu koruyarak kullanıcı rolünde taşır', () => {
     const messages: ChatMessage[] = [
       { id: 'm1', role: 'user', content: 'soru', timestamp: 1 },
       { id: 'm2', role: 'system', content: 'bağlam özeti', timestamp: 2 }
     ];
     const providerMessages = buildProviderMessages('SİSTEM', messages);
     assert.strictEqual(providerMessages.length, 3);
-    assert.deepStrictEqual(providerMessages[2], { role: 'system', content: 'bağlam özeti' });
+    // Uç noktlar system rolünü yalnızca ilk mesajda kabul eder; ortadaki
+    // system notu kullanıcı rolünde işaretli blok olarak taşınır.
+    assert.deepStrictEqual(providerMessages[2], {
+      role: 'user',
+      content: '<system_context>\nbağlam özeti\n</system_context>'
+    });
+    // Değişmezlik: system rolü yalnızca dizinin başında olabilir.
+    providerMessages.slice(1).forEach((m) => assert.notStrictEqual(m.role, 'system'));
   });
 
   it('sends only settled tool calls', () => {

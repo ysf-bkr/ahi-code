@@ -76,4 +76,27 @@ describe('App: arka plan oturumları', () => {
     assert.ok(screen.getByText(/Arka planda çalışan 1 sohbet/), 'çalışan sohbet sayılmalı');
     assert.ok(screen.getByRole('button', { name: /Uzun analiz/ }), 'sohbete geçiş düğmesi olmalı');
   });
+
+  it('silinen oturumdan sonra yeni oturum etkinleşince pencere boşanır', () => {
+    render(<App />);
+
+    send({ type: 'SESSION_ACTIVATED', payload: { sessionKey: 'session:a' } });
+    send({
+      type: 'TASK_STATE_UPDATE',
+      payload: state({ id: 'a', messages: [{ id: 'm1', role: 'user', content: 'A sohbeti', timestamp: 1 }] }),
+      sessionKey: 'session:a'
+    });
+    assert.ok(screen.getByText('A sohbeti'));
+
+    // Ana tarafın silme/yeni sohbet sözleşmesi: önce SESSION_ACTIVATED, sonra
+    // yeni boş durum. Bu sırada pencere eski sohbette kalmamalı.
+    send({ type: 'SESSION_ACTIVATED', payload: { sessionKey: 'draft:new' } });
+    send({
+      type: 'TASK_STATE_UPDATE',
+      payload: state({ id: '', messages: [] }),
+      sessionKey: 'draft:new'
+    });
+
+    assert.equal(screen.queryByText('A sohbeti'), null, 'eski sohbet temizlenmiş olmalı');
+  });
 });

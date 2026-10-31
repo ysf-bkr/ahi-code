@@ -255,7 +255,8 @@
   },
   "//overridesComment": "@vscode/vsce bağımlılığı olan @azure/identity'nin güvenlik açıklı msal-node 6.x sürümünü düzeltmek içindir.",
   "overrides": {
-    "@azure/msal-node": "^7.1.1"
+    "@azure/msal-node": "^7.1.1",
+    "minimatch": "^11.0.1"
   },
   "homepage": "https://github.com/ysf-bkr/ahi-code#readme",
   "bugs": {

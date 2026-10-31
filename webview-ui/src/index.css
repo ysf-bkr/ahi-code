@@ -355,11 +355,52 @@ select:focus-visible {
 }
 
 .ahi-bubble--user {
+  /* Balon geniş ekranda (yardımcı panel) tüm genişliğe yayılmasın: okuma
+   * sütunu kadar kalır ve sağa yaslanır. */
+  margin-left: auto;
+  max-width: min(94%, 42rem);
   border-top-left-radius: var(--ahi-radius-lg);
   border-top-right-radius: var(--ahi-radius-sm);
   /* Kullanıcı balonu temanın vurgu rengini tonlar; sabit marka mavisi kullanmaz. */
-  background-color: color-mix(in srgb, var(--ahi-accent-bg) 14%, transparent);
-  border-color: color-mix(in srgb, var(--ahi-accent-bg) 32%, transparent);
+  background-color: color-mix(in srgb, var(--ahi-accent-bg) 16%, transparent);
+  border-color: color-mix(in srgb, var(--ahi-accent-bg) 34%, transparent);
+  box-shadow: var(--ahi-shadow-sm);
+}
+
+/*
+ * Asistan içeriği tur kartının AKINDA akar: kart zaten çerçeve ve zemin
+ * verdiğinden iç balon tekrar kutulanmaz; çift çerçeveli, sıkışık görünüm
+ * böylece ortadan kalkar.
+ */
+.ahi-bubble--flush {
+  max-width: 100%;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+/* Yanıt turu kartı: solundaki ince marka şeridi "bu yanıt AhiCode'dan" der. */
+.ahi-turn-card {
+  overflow: hidden;
+  border-left: 2px solid color-mix(in srgb, var(--ahi-brand-400) 60%, transparent);
+  box-shadow: var(--ahi-shadow-sm);
+}
+
+.ahi-turn-card__header {
+  transition: background-color 0.12s ease;
+}
+
+.ahi-turn-card__header:hover {
+  background-color: var(--ahi-hover-bg);
+}
+
+/* Aynı turdaki art arda asistan mesajlarının sınırı ince kesikli çizgiyle
+ * seçilir; kutulamadan ayrışır. */
+.ahi-turn-msg + .ahi-turn-msg {
+  border-top: 1px dashed var(--ahi-surface-border);
+  padding-top: var(--ahi-space-2);
 }
 
 /* Asistan/logo yuvarlağı; eskiden tanımsız kaldığı için çerçevesiz görünüyordu. */

@@ -49,3 +49,19 @@ This file defines the core principles that the AhiCode agent must follow when wr
   dumps or temporary worktrees in the tree.
 - Deleting is irreversible for untracked files, so confirm with the user before
   removing something that is not obviously scratch material.
+
+## 5. Review Scope
+- Third-party code is never review material. When auditing, reviewing,
+  investigating or scanning the project, never read, analyze or report on
+  installed dependencies or build output, in any language or ecosystem:
+  `node_modules/`, `vendor/`, `site-packages/`, `.venv/`, `venv/`, `target/`
+  (non-Rust-project), `build/`, `dist/`, `out/`, `.gradle/`, `Pods/`,
+  `.terraform/`, `.cargo/` caches and any other package-manager or compiler
+  directory.
+- Reviews cover only source the project authors: `src/**`, `webview-ui/src/**`,
+  `test/**`, `docs/**`, scripts and configuration files.
+- Build tooling (esbuild, vite, tsc) and test config must keep excluding these
+  directories; never widen a glob, tsconfig `include`, or lint scope to reach
+  into installed packages.
+- If a dependency's behavior matters to a finding, cite its public API,
+  changelog or advisory instead of reading its installed files.

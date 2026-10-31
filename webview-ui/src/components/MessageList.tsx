@@ -251,7 +251,7 @@ const UserMessage: React.FC<UserMessageProps> = ({ message, checkpoints, onEdit 
   };
 
   return (
-    <div className="flex flex-col items-end">
+    <div className="group/message flex flex-col items-end">
       <div className="ahi-bubble ahi-bubble--user">
         <div className="ahi-overline mb-1 justify-end">
           <span>Sen</span>
@@ -259,8 +259,9 @@ const UserMessage: React.FC<UserMessageProps> = ({ message, checkpoints, onEdit 
         <div className="whitespace-pre-wrap break-words ahi-text-fg">{visibleContent}</div>
       </div>
 
-      {/* Zaman ve mesaj başına eylemler balonun altında sabit ve sakin durur */}
-      <div className="text-2xs mt-1 flex items-center gap-1 pr-0.5 ahi-text-muted">
+      {/* Zaman ve mesaj başına eylemler balonun altında; görünene kadar
+          soluk durur, böylece sohbetin gürültüsünü artırmez. */}
+      <div className="text-2xs mt-1 flex items-center gap-1 pr-0.5 opacity-60 ahi-text-muted transition-opacity group-hover/message:opacity-100 focus-within:opacity-100">
         <span className="font-mono opacity-70">{formatTime(message.timestamp)}</span>
         <Button
           variant="ghost"
@@ -434,8 +435,8 @@ const TurnBlock: React.FC<TurnBlockProps> = ({ turn, active, pendingToolCall }) 
   if (turn.assistant.length === 0) return null;
 
   return (
-    <div className="rounded-lg border ahi-border-surface ahi-bg-surface">
-      <div className="flex items-center gap-2 px-2.5 py-1.5">
+    <div className="ahi-turn-card rounded-lg border ahi-border-surface ahi-bg-surface">
+      <div className="ahi-turn-card__header flex items-center gap-2 px-2.5 py-1.5">
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
@@ -472,9 +473,9 @@ const TurnBlock: React.FC<TurnBlockProps> = ({ turn, active, pendingToolCall }) 
         className="space-y-2 border-t ahi-border-surface px-2.5 py-2"
       >
         {turn.assistant.map((message) => (
-          <div key={message.id} className="space-y-1.5">
+          <div key={message.id} className="ahi-turn-msg space-y-1.5">
             {(message.content || message.isStreaming) && (
-              <div className="ahi-bubble">
+              <div className="ahi-bubble ahi-bubble--flush">
                 <Markdown content={message.content} isStreaming={message.isStreaming} />
               </div>
             )}

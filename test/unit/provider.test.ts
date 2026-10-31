@@ -187,6 +187,34 @@ describe('OpenAICompatibleProvider: prompt caching', () => {
     return { get: () => captured };
   }
 
+  it('baştaki system dışındaki system rollerini kullanıcıya çevirir', async () => {
+    // OpenAI uyumlu uç noktlar ortadaki system mesajını 400 ile reddeder
+    // ("System message must be at the beginning"). Ağ koruması bunu isteğe
+    // ulaşmadan kullanıcı notuna dönüştürmeli.
+    const capture = captureBody();
+    const provider = new OpenAICompatibleProvider({
+      id: 'test',
+      name: 'Test',
+      apiKey: 'k',
+      baseURL: 'http://localhost:1/v1',
+      model: 'm'
+    });
+
+    await provider.sendMessage(
+      [
+        { role: 'system', content: 'sistem' },
+        { role: 'user', content: 'merhaba' },
+        { role: 'system', content: 'ortada sistem notu' }
+      ],
+      []
+    );
+
+    const messages = capture.get().messages as Array<Record<string, unknown>>;
+    assert.strictEqual(messages[0]?.role, 'system');
+    assert.strictEqual(messages[2]?.role, 'user');
+    assert.match(String(messages[2]?.content), /<system_context>[\s\S]*ortada sistem notu/);
+  });
+
   it('marks the system message with cache_control on Anthropic-style endpoints', async () => {
     const capture = captureBody();
     const provider = new OpenAICompatibleProvider({
