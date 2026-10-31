@@ -17,6 +17,7 @@ import {
 } from '../workflow/TaskWorkflow';
 import { errorMessage } from '../../shared/errors';
 import { logWarning } from '../../shared/logging';
+import { rolesForChangedFiles } from '../../shared/agents/routing';
 import { skipsApprovalGates } from './autonomy';
 import { getActiveWorkspaceRoot } from '../workspace/workspaceRoot';
 import type { TaskSpec } from '../spec/SpecStore';
@@ -227,6 +228,10 @@ export class WorkflowController {
     const workspaceRoot = getActiveWorkspaceRoot();
     if (!workspaceRoot) return;
 
+    // Bağımsız inceleme çağrısı: kodu yazan ajan kendi değişikliğini
+    // onaylamaz; diff'i @quality, güvenlik hassasiyeti varsa @security görür.
+    this.pushIndependentReviewInstruction();
+
     try {
       await this.collectStaleCallers(workspaceRoot);
     } catch (err) {
@@ -241,6 +246,32 @@ export class WorkflowController {
       await this.host.saveCurrentState();
       this.host.emitState();
     }
+  }
+
+  /**
+   * İnceleme aşamasına bağımsız inceleme talimatını ekler.
+   *
+   * Değişen dosyalara göre incelemeye katılması gereken roller deterministik
+   * biçimde belirlenir (routing.rolesForChangedFiles); yazan ajanın kendi
+   * işini onaylaması sistem talimatıyla engellenir.
+   */
+  private pushIndependentReviewInstruction(): void {
+    const changedFiles = this.host.state.stats.filesModified;
+    if (changedFiles.length === 0) return;
+    const roles = rolesForChangedFiles(changedFiles);
+    const roleList = roles.map((role) => `@${role}`).join(', ');
+    const securityNote = roles.includes('security')
+      ? ' Değişen dosyalar güvenlik açısından hassas görünüyor; @security ayrıca kimlik doğrulama, yetki ve veri sızmaları açısından denetlemeli.'
+      : '';
+    this.host.state.messages.push({
+      id: this.host.nextMessageId(),
+      role: 'system',
+      content:
+        `Bağımsız inceleme: bu değişiklikleri yazan ajan kendi işini onaylayamaz. ` +
+        `Diff ve test sonuçları ${roleList} tarafından ayrıca incelenmeli.${securityNote} ` +
+        `Testler geçmeden görevi tamamlanmış gösterme.`,
+      timestamp: Date.now()
+    });
   }
 
   /** Değişen sembollerin güncellenmemiş çağıranlarını toplar. */

@@ -171,19 +171,27 @@ export const updateModulePlanTool: ToolDefinition = {
 export const runParallelTasksTool: ToolDefinition = {
   name: 'run_parallel_tasks',
   description:
-    'Runs multiple subagent tasks in isolated Git worktrees in parallel; returns results and diff reports.',
+    'Runs multiple subagent tasks in isolated Git worktrees in parallel; returns results and diff reports. ' +
+    'A task starts only when every task listed in its dependsOn has completed successfully; ' +
+    'tasks with no dependencies between them run concurrently. Give each task a stable id and list dependsOn ids.',
   parameters: {
     type: 'object',
     properties: {
       tasks: {
         type: 'array',
-        description: 'Tasks: { role, task, context? }',
+        description: 'Tasks: { id?, role, task, context?, dependsOn? }',
         items: {
           type: 'object',
           properties: {
+            id: { type: 'string', description: 'Stable task id (for example "t1"); used by dependsOn.' },
             role: { type: 'string', description: 'Subagent role.' },
             task: { type: 'string', description: 'Task description.' },
-            context: { type: 'string', description: 'Additional context.' }
+            context: { type: 'string', description: 'Additional context.' },
+            dependsOn: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Ids of tasks that must complete successfully before this task starts.'
+            }
           },
           required: ['role', 'task']
         }

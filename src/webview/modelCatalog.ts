@@ -9,6 +9,7 @@
 import { DEFAULT_PROVIDER_URLS, HTTP_TIMEOUT_MS } from '../shared/constants';
 import { normalizeBaseUrl } from '../providers/openai';
 import { isRecord } from '../shared/errors';
+import { classifyModelCapability } from '../shared/modelCapability';
 
 export interface ModelCatalogRequest {
   provider: string;
@@ -56,9 +57,16 @@ async function fetchEvrenModels(baseUrl: string, apiKey: string): Promise<string
     },
     signal: AbortSignal.timeout(HTTP_TIMEOUT_MS.modelList)
   });
+  // Sohbet/model seçici yalnızca konuşabilen modelleri listeler: embedding,
+  // rerank, OCR, ses ve görüntü üretim modelleri kendi özelliklerinde
+  // kullanılır; kod yazma modeli olarak seçilmez (görüş modelleri kalır).
   return isRecordArray(data, 'data')
     .filter((item) => typeof item.id === 'string')
-    .map((item) => item.id as string);
+    .map((item) => item.id as string)
+    .filter((id) => {
+      const capability = classifyModelCapability(id);
+      return capability === 'chat' || capability === 'vision';
+    });
 }
 
 async function fetchOpenRouterModels(apiKey: string): Promise<string[]> {

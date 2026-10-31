@@ -45,7 +45,6 @@ ahi-code/
 │   │   └── pathSafety.ts             # Workspace path jail (traversal/symlink)
 │   ├── webview/                      # Webview management
 │   │   ├── SidebarProvider.ts        # Webview lifecycle & message routing
-│   │   ├── diffContentProvider.ts    # Side-by-side diff content provider
 │   │   ├── settingsStore.ts          # Settings persistence & OS SecretStorage
 │   │   ├── modelCatalog.ts           # Provider model cataloging
 │   │   ├── gitChanges.ts             # Git queries for the Changes view
@@ -82,11 +81,11 @@ ahi-code/
 │       ├── context/                  # Context window protection and pruning
 │       ├── plan/                     # TaskPlanner + ModulePlanner (layered module map)
 │       ├── verification/             # Command runner and repair policies
-│       ├── routing/                  # ModelRouter for dynamic tier delegation
+│       ├── routing/                  # ModelRouter + per-role agent model policy
 │       ├── worktree/                 # WorktreeManager for isolated branches
 │       ├── git/                      # Git operations and command checkpoints
 │       ├── lsp/                      # Language Server Client integration
-│       ├── multiagent/               # SubagentManager (hierarchical delegation)
+│       ├── multiagent/               # SubagentManager + DAG parallel scheduler
 │       ├── hooks/                    # Pre/Post/Stop hook manager
 │       ├── prompts/                  # System prompt construction
 │       ├── workflow/                 # Guided workflow state machine

@@ -7,7 +7,6 @@ const theme: VsCodeThemeConfig = {
   editorFontFamily: 'JetBrains Mono',
   editorFontSize: 14,
   editorFontWeight: '500',
-  editorLineHeight: 1.5,
   terminalFontFamily: 'Menlo',
   terminalFontSize: 12
 };

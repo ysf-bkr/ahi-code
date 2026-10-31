@@ -205,6 +205,7 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state, onSelectM
         subtitle="AGENTS.md, .agents/skills ve alt ajanlar"
         onBack={onBack}
         onSelectMenu={onSelectMenu}
+        activeDestination="agents"
         changedFileCount={changedFileCount}
         actions={
           <IconButton label="Yeniden tara" onClick={refresh}>

@@ -5,7 +5,9 @@ import {
   normalizeRole,
   roleForPath,
   roleForStep,
-  roleForText
+  roleForText,
+  rolesForStep,
+  rolesForChangedFiles
 } from '../../src/shared/agents/routing';
 import { PlanStep } from '../../src/shared/types';
 
@@ -118,5 +120,65 @@ describe('Agent routing: step assignment', () => {
   it('is deterministic for equal inputs', () => {
     const steps: PlanStep[] = [{ id: 's1', title: 'API', status: 'pending', dependsOn: [] }];
     assert.deepStrictEqual(assignPlanRoles(steps), assignPlanRoles(steps));
+  });
+});
+
+describe('Agent routing: collaborators (independent review)', () => {
+  it('adds quality as an independent reviewer of any writer role', () => {
+    const { primary, collaborators } = rolesForStep({
+      title: 'Servis katmanını düzenle',
+      files: ['src/services/user.ts']
+    });
+    assert.strictEqual(primary, 'backend');
+    assert.ok(collaborators.includes('quality'), 'yazan rolün işi @quality tarafından incelenmeli');
+  });
+
+  it('adds security when a .ts file carries security semantics', () => {
+    const { primary, collaborators } = rolesForStep({
+      title: 'Token doğrulamasını güçlendir',
+      files: ['src/services/tokenService.ts']
+    });
+    assert.strictEqual(primary, 'backend');
+    assert.ok(collaborators.includes('security'), 'güvenlik mantığında @security katılmalı');
+    assert.ok(collaborators.includes('quality'));
+  });
+
+  it('adds quality as reviewer when security role writes code', () => {
+    const { primary, collaborators } = rolesForStep({
+      title: 'Güvenlik açığını kapat',
+      files: ['src/security/session.ts']
+    });
+    assert.strictEqual(primary, 'security');
+    assert.ok(collaborators.includes('quality'));
+  });
+
+  it('adds architect when a step spans three or more domains', () => {
+    const { collaborators } = rolesForStep({
+      title: 'Uçtan uca özellik',
+      files: ['src/services/a.ts', 'webview-ui/src/App.tsx', 'db/migrations/001.sql']
+    });
+    assert.ok(collaborators.includes('architect'));
+  });
+
+  it('never keeps the primary role or manager as a collaborator', () => {
+    const { primary, collaborators } = rolesForStep({ ownerRole: 'backend', title: 'x', files: [] });
+    assert.strictEqual(primary, 'backend');
+    assert.ok(!collaborators.includes(primary));
+    assert.ok(!collaborators.includes('manager'));
+  });
+
+  it('detects security-sensitive changed files for the review stage', () => {
+    assert.ok(rolesForChangedFiles(['src/payment/charge.ts']).includes('security'));
+    assert.ok(rolesForChangedFiles(['src/utils/text.ts']).includes('quality'));
+    assert.ok(!rolesForChangedFiles(['src/utils/text.ts']).includes('security'));
+  });
+
+  it('assignPlanRoles reports collaborators for each step', () => {
+    const steps: PlanStep[] = [
+      { id: 's1', title: 'Ödeme', status: 'pending', dependsOn: [], files: ['src/billing/checkout.ts'] }
+    ];
+    const [assignment] = assignPlanRoles(steps);
+    assert.strictEqual(assignment?.role, 'backend');
+    assert.ok(assignment?.collaborators.includes('security'));
   });
 });

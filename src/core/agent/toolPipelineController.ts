@@ -21,6 +21,7 @@ import { parseModulePlanInput, parsePlanUpdateInput, parseSubagentTaskParams } f
 import { logWarning } from '../../shared/logging';
 import type { AgentHost } from './agentHost';
 import type { SubagentTaskParams } from '../multiagent/SubagentManager';
+import { runTaskGraph, formatTaskGraphResults, type TaskNode } from '../multiagent/parallelScheduler';
 import type { CommandCheckpoint } from '../git/GitManager';
 import { ROLE_ALIASES, getAgentDefinition } from '../../shared/agents';
 import { skipsApprovalGates } from './autonomy';
@@ -372,27 +373,49 @@ export class ToolPipelineController {
         const readOnly =
           this.host.state.mode === 'plan' ||
           describeWorkflow(this.host.workflow.getWorkflow(), this.host.state.mode).readOnly;
-        const tasks: SubagentTaskParams[] = rawTasks
+        const nodes: Array<TaskNode<SubagentTaskParams>> = rawTasks
           .filter((item): item is Record<string, unknown> => isRecord(item))
-          .map((item) => ({
-            role: typeof item.role === 'string' ? item.role : 'coder',
-            task: typeof item.task === 'string' ? item.task : '',
-            context: typeof item.context === 'string' ? item.context : undefined,
-            isolate: true,
-            readOnly
+          .map((item, index) => ({
+            id: typeof item.id === 'string' && item.id.trim() ? item.id.trim() : `task-${index + 1}`,
+            role: typeof item.role === 'string' ? item.role : 'backend',
+            payload: {
+              role: typeof item.role === 'string' ? item.role : 'backend',
+              task: typeof item.task === 'string' ? item.task : '',
+              context: typeof item.context === 'string' ? item.context : undefined,
+              // Paralel yazan ajanlar ana çalışma alanını bozmaması için
+              // varsayılan olarak kendi yalıtılmış worktree'sinde çalışır.
+              isolate: true,
+              readOnly
+            },
+            dependsOn: Array.isArray(item.dependsOn)
+              ? item.dependsOn.filter((dep): dep is string => typeof dep === 'string')
+              : []
           }))
-          .filter((item) => item.task.trim().length > 0);
-        if (tasks.length === 0) throw new Error('No valid task definitions found.');
+          .filter((node) => node.payload.task.trim().length > 0);
+        if (nodes.length === 0) throw new Error('No valid task definitions found.');
 
-        const results = await Promise.all(
-          tasks.map((task, index) =>
-            this.host.subagentManager
-              .runSubagent(task, workspaceRoot, 0, this.host.activeAbortController?.signal)
-              .then((result) => `## Parallel task ${index + 1} (${task.role})\n${result}`)
-          )
+        // Bağımlılık çizgesi: bir görev, bağımlıları bitmeden başlamaz;
+        // bağımlısı başarısız olan görev çalıştırılmaz. Bağımsız görevler
+        // eşzamanlı koşar (en fazla 4).
+        const results = await runTaskGraph(
+          nodes,
+          (node) =>
+            this.host.subagentManager.runSubagent(
+              node.payload,
+              workspaceRoot,
+              0,
+              this.host.activeAbortController?.signal
+            ),
+          { maxConcurrency: 4 }
         );
         tc.status = 'completed';
-        tc.result = results.join('\n\n');
+        tc.result = formatTaskGraphResults(results);
+        // Her görev yalıtılmış worktree'de koştu: ana çalışma alanı değişmedi.
+        // Ana ağacı "değişti" sayıp doğrulama tetiklemek, hiç test edilmemiş
+        // worktree değişikliklerini "doğrulandı" gösterirdi. Doğrulamanın
+        // dürüst tetikleyicisi merge_worktree'dur (uygulanan diff orada test
+        // edilir); rapor metni worktree yollarını ve diff'i zaten içeriyor.
+        return { paused: false, filesChanged: false };
       } catch (err) {
         tc.status = 'error';
         tc.error = errorMessage(err, 'Could not run parallel tasks.');
@@ -414,7 +437,10 @@ export class ToolPipelineController {
         }
         const message = await this.host.worktreeManager.mergeDiffIntoMain(resolvedWorktree, workspaceRoot);
         tc.status = 'completed';
-        tc.result = message;
+        tc.result = message.message;
+        // Birleşen değişiklikler testleri tetiklemeli: eskiden merge sonrası
+        // doğrulama hiç çalışmıyordu.
+        return { paused: false, filesChanged: message.applied };
       } catch (err) {
         tc.status = 'error';
         tc.error = errorMessage(err, 'Could not merge worktree.');

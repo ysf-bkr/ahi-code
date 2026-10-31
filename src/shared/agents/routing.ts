@@ -94,6 +94,24 @@ export function roleForText(text: string): OrchestratorRole | undefined {
   return TEXT_RULES.find((rule) => rule.pattern.test(value))?.role;
 }
 
+/**
+ * Güvenlik açısından hassas dosya adı kalıbı. Yol kuralı yalnızca `security/`
+ * dizinine bakardı; isim kalıbı eklenir ki `src/auth/session.ts` gibi bir
+ * dosyada çalışan backend adımında security ajanı da incelemeye katılsın.
+ */
+const SECURITY_FILE_PATTERN =
+  /(auth|login|logout|token|password|passwd|credential|secret|crypt|oauth|jwt|session|permission|privilege|cors|csrf|xss|pay|billing|invoice)/i;
+
+/** Kod yazan roller: kendi değişikliklerini kendileri onaylayamaz. */
+const WRITER_ROLES: ReadonlySet<OrchestratorRole> = new Set([
+  'backend',
+  'frontend',
+  'mobile',
+  'native',
+  'database',
+  'devops'
+]);
+
 /** Adımın dosyalarındaki en sık rol. */
 function roleFromFiles(files: readonly string[]): OrchestratorRole | undefined {
   const counts = new Map<OrchestratorRole, number>();
@@ -122,23 +140,90 @@ export interface StepRoutingInput {
   ownerRole?: string;
 }
 
+export interface StepRoles {
+  primary: OrchestratorRole;
+  /** Birincil rolün işini bağımsız denetleyecek/destekleyecek roller. */
+  collaborators: OrchestratorRole[];
+  reason: string;
+}
+
+/**
+ * Bir plan adımı için birincil rol ve işbirlikçileri belirler.
+ *
+ * Birincil rol eski davranışla aynıdır (dosyalar → metin → varsayılan).
+ * İşbirlikçiler niyet ve etki analiziyle eklenir:
+ * - Kod yazan her rolün değişikliği @quality tarafından bağımsız incelenir.
+ * - Güvenlik sinyali (dosya adı veya görev metni) varsa @security katılır.
+ * - Üçten farklı uzmanlık alanı tek adımda değişiyorsa @architect katılır.
+ */
+export function rolesForStep(input: StepRoutingInput): StepRoles {
+  const files = input.files ?? [];
+  const text = `${input.title ?? ''} ${input.description ?? ''}`;
+  const declared = normalizeRole(input.ownerRole);
+
+  let primary: OrchestratorRole;
+  let reason: string;
+  if (declared) {
+    primary = declared;
+    reason = 'model tarafından atandı';
+  } else {
+    const fromFiles = roleFromFiles(files);
+    const fromText = roleForText(text);
+    if (fromFiles) {
+      primary = fromFiles;
+      reason = 'dosya yollarına göre';
+    } else if (fromText) {
+      primary = fromText;
+      reason = 'görev metnine göre';
+    } else {
+      primary = DEFAULT_ROLE;
+      reason = 'varsayılan rol';
+    }
+  }
+
+  const collaborators = new Set<OrchestratorRole>();
+  // Bağımsız inceleme kuralı: yazan rol kendi çıktısını onaylamaz.
+  if (WRITER_ROLES.has(primary) || primary === 'security') collaborators.add('quality');
+  const securitySignal =
+    files.some((file) => SECURITY_FILE_PATTERN.test(file)) ||
+    /(güvenlik|security|yetkilendirme|authentication|authorization|şifrele|encrypt|token sız|zafiyet|vulnerab)/i.test(
+      text
+    );
+  if (securitySignal && primary !== 'security') collaborators.add('security');
+  // Geniş etki alanı: birden çok uzmanlık alanına dokunan adımda mimar izlesin.
+  const distinctRoles = new Set(
+    files.map((file) => roleForPath(file)).filter((role): role is OrchestratorRole => Boolean(role))
+  );
+  if (distinctRoles.size >= 3 && primary !== 'architect') collaborators.add('architect');
+  collaborators.delete(primary);
+  collaborators.delete('manager');
+
+  return { primary, collaborators: [...collaborators], reason };
+}
+
 /**
  * Bir plan adımı için rol seçer.
  *
  * Model açıkça geçerli bir rol verdiyse korunur; aksi hâlde dosyalar, sonra
- * metin, en son varsayılan rol kullanılır.
+ * metin, en son varsayılan rol kullanılır. İşbirlikçiler de gerekiyorsa
+ * `rolesForStep` kullanın.
  */
 export function roleForStep(input: StepRoutingInput): OrchestratorRole {
-  const declared = normalizeRole(input.ownerRole);
-  if (declared) return declared;
+  return rolesForStep(input).primary;
+}
 
-  const fromFiles = roleFromFiles(input.files ?? []);
-  if (fromFiles) return fromFiles;
-
-  const fromText = roleForText(`${input.title ?? ''} ${input.description ?? ''}`);
-  if (fromText) return fromText;
-
-  return DEFAULT_ROLE;
+/** Değişen dosya listesi için incelemeye katılması gereken roller. */
+export function rolesForChangedFiles(files: readonly string[]): OrchestratorRole[] {
+  const roles = new Set<OrchestratorRole>();
+  // Yazılan her kod bağımsız kalite incelemesi görür.
+  roles.add('quality');
+  for (const file of files) {
+    const normalized = String(file || '').replace(/\\/g, '/');
+    if (SECURITY_FILE_PATTERN.test(normalized) || roleForPath(normalized) === 'security') {
+      roles.add('security');
+    }
+  }
+  return [...roles];
 }
 
 /** Bilinen bir rol adıysa döndürür; alias'lar da çözülür. */
@@ -183,6 +268,8 @@ export interface StepAssignment {
   title: string;
   role: OrchestratorRole;
   reason: string;
+  /** Bağımsız incelemeye/desteğe katılacak roller (birincil rolü onaylamaz). */
+  collaborators: OrchestratorRole[];
 }
 
 /**
@@ -191,15 +278,7 @@ export interface StepAssignment {
  */
 export function assignPlanRoles(steps: readonly PlanStep[]): StepAssignment[] {
   return steps.map((step) => {
-    const declared = normalizeRole(step.ownerRole);
-    const role = declared ?? roleForStep(step);
-    const reason = declared
-      ? 'model tarafından atandı'
-      : roleFromFiles(step.files ?? [])
-        ? 'dosya yollarına göre'
-        : roleForText(`${step.title} ${step.description ?? ''}`)
-          ? 'görev metnine göre'
-          : 'varsayılan rol';
-    return { stepId: step.id, title: step.title, role, reason };
+    const { primary, collaborators, reason } = rolesForStep(step);
+    return { stepId: step.id, title: step.title, role: primary, reason, collaborators };
   });
 }

@@ -209,7 +209,6 @@ export async function run(): Promise<void> {
         editorFontFamily: '',
         editorFontSize: 13,
         editorFontWeight: 'normal',
-        editorLineHeight: 1.4,
         terminalFontFamily: '',
         terminalFontSize: 13
       }

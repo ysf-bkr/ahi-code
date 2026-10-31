@@ -229,6 +229,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         subtitle="Model, API ve güvenlik tercihleri"
         onBack={handleBack}
         onSelectMenu={onSelectMenu}
+        activeDestination="settings"
         changedFileCount={changedFileCount}
         actions={
           <div className="flex items-center gap-1.5">
@@ -269,7 +270,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         />
 
         <Section>
-          <SectionTitle icon={<Zap className="ahi-icon-xs" />} title="Ajan davranışı ve bütçe" />
+          <SectionTitle icon={<Zap className="ahi-icon-xs" />} title="Ajan davranışı" />
 
           <div>
             <div className="ahi-label mb-1">Otonomi seviyesi</div>
@@ -327,65 +328,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             icon={<Gauge className="ahi-icon-xs ahi-text-info" />}
           />
 
-          <div className="grid grid-cols-2 gap-1.5">
-            <TextField
-              label="Onarım denemesi"
-              type="number"
-              min={0}
-              max={10}
-              value={formData.maxRepairAttempts ?? 2}
-              onChange={(e) =>
-                updateForm((prev) => ({ ...prev, maxRepairAttempts: Number(e.target.value) || 0 }), false)
-              }
-            />
-            <TextField
-              label="Adım sınırı"
-              type="number"
-              min={1}
-              max={200}
-              value={formData.maxStepsPerTask ?? 25}
-              onChange={(e) =>
-                updateForm((prev) => ({ ...prev, maxStepsPerTask: Number(e.target.value) || 1 }), false)
-              }
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-1.5">
-            <TextField
-              label="Token bütçesi"
-              type="number"
-              min={0}
-              value={formData.maxTokensPerTask ?? 0}
-              onChange={(e) =>
-                updateForm(
-                  (prev) => ({
-                    ...prev,
-                    maxTokensPerTask: Math.max(0, Number(e.target.value) || 0)
-                  }),
-                  false
-                )
-              }
-              hint="Görev başına toplam token sınırı (0 = sınırsız). Sınıra ulaşılınca görev duraklatılır."
-            />
-            <TextField
-              label="Otomatik devam sınırı"
-              type="number"
-              min={1}
-              max={100}
-              value={formData.maxContinuations ?? 12}
-              onChange={(e) =>
-                updateForm(
-                  (prev) => ({
-                    ...prev,
-                    maxContinuations: Math.max(1, Number(e.target.value) || 1)
-                  }),
-                  false
-                )
-              }
-              hint="Otonom modda art arda izin verilen otomatik devam turu sayısı."
-            />
-          </div>
-
           <Toggle
             checked={modelRouting.enabled === true}
             onChange={(value) =>
@@ -398,7 +340,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               )
             }
             title="Model yönlendirme"
-            description="Basit görevlerde hızlı, karmaşık görevlerde güçlü bir model kullanır."
+            description="Basit görevlerde hızlı, karmaşık görevlerde güçlü bir model kullanır. Alt ajan modelleri rol bazlı otomatik seçilir; EVREN'de yönetici ve mimar GLM-5.3 ile çalışır (yedek: MiMo-V2.6-Pro)."
             icon={<Zap className="ahi-icon-xs ahi-text-brand" />}
           />
 

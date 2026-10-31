@@ -13,6 +13,8 @@ interface ScreenHeaderProps {
   actions?: React.ReactNode;
   onSelectMenu?: (destination: NavigationDestination) => void;
   changedFileCount?: number;
+  /** Menüde aktif gösterilecek ekran; açılmayan menü yanlış "Sohbet"i işaret etmesin. */
+  activeDestination?: NavigationDestination;
 }
 
 /**
@@ -29,7 +31,8 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
   icon,
   actions,
   onSelectMenu,
-  changedFileCount = 0
+  changedFileCount = 0,
+  activeDestination
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -82,6 +85,7 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
               <Drawer onClose={() => setShowMenu(false)} drawerRef={menuRef}>
                 <MenuView
                   changedFileCount={changedFileCount}
+                  activeDestination={activeDestination}
                   onSelect={(destination) => {
                     setShowMenu(false);
                     onSelectMenu(destination);

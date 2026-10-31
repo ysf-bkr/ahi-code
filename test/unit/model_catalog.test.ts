@@ -77,4 +77,29 @@ describe('modelCatalog: provider model listing', () => {
   it('returns no models for an unknown provider', async () => {
     assert.deepStrictEqual(await fetchModelIds({ provider: 'nope', storedKeys: {} }), []);
   });
+
+  it('EVREN listesinde embedding/rerank/OCR/ses modellerini sohbete açmaz', async () => {
+    routes['/models'] = {
+      data: [
+        { id: 'GLM-5.3' },
+        { id: 'MiMo-V2.6-Pro' },
+        { id: 'qwen3-vl-30b' },
+        { id: 'qwen3-embedding-8b' },
+        { id: 'qwen3-reranker-8b' },
+        { id: 'deepseek-ocr-2' },
+        { id: 'qwen3-asr-1.7b' },
+        { id: 'voxcpm2' }
+      ]
+    };
+    const models = await fetchModelIds({ provider: 'evren', baseUrl, apiKey: 'key', storedKeys: {} });
+    assert.ok(models.includes('auto'));
+    assert.ok(models.includes('GLM-5.3'));
+    assert.ok(models.includes('MiMo-V2.6-Pro'));
+    assert.ok(models.includes('qwen3-vl-30b'), 'görüş modeli açık kalır');
+    assert.ok(!models.includes('qwen3-embedding-8b'));
+    assert.ok(!models.includes('qwen3-reranker-8b'));
+    assert.ok(!models.includes('deepseek-ocr-2'));
+    assert.ok(!models.includes('qwen3-asr-1.7b'));
+    assert.ok(!models.includes('voxcpm2'));
+  });
 });

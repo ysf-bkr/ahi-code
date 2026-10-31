@@ -112,7 +112,9 @@ export const ComposerDock: React.FC<ComposerDockProps> = ({ state }) => {
               className="h-full bg-gradient-to-r from-[var(--ahi-accent-bg)] to-[var(--status-success-fg)] transition-all duration-300"
               style={{ width: `${percent}%` }}
               role="progressbar"
+              aria-label="Plan ilerlemesi"
               aria-valuenow={percent}
+              aria-valuetext={`Planın %${percent}'i tamamlandı`}
               aria-valuemin={0}
               aria-valuemax={100}
             />

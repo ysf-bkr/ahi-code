@@ -238,3 +238,95 @@ describe('SubagentManager: role and depth limits', () => {
     assert.ok(result.includes('Analiz tamamlandı.'));
   });
 });
+
+describe('SubagentManager: agent bazlı model ve otomatik fallback', () => {
+  /** 13 mevcut konumdan sonraki iki yeni parametreye kadar undefined taşır. */
+  function managerWith(
+    provider: ModelProvider,
+    router: (
+      role: string,
+      task: string
+    ) => { model?: string; fallbackModel?: string; reason: string; routed: boolean },
+    factory: (model: string) => ModelProvider | undefined,
+    onStatus?: (role: string, status: string) => void
+  ): SubagentManager {
+    return new SubagentManager(
+      provider,
+      onStatus as never,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      router,
+      factory
+    );
+  }
+
+  it('alt ajanı rolüne göre çözümlenen modelin sağlayıcısıyla çalıştırır', async () => {
+    const used: string[] = [];
+    const base: ModelProvider = {
+      id: 'base',
+      name: 'base',
+      sendMessage: async () => {
+        used.push('base');
+        return { text: 'base rapor' };
+      }
+    };
+    const routed: ModelProvider = {
+      id: 'glm',
+      name: 'glm',
+      sendMessage: async () => {
+        used.push('glm');
+        return { text: 'GLM raporu' };
+      }
+    };
+    const manager = managerWith(
+      base,
+      () => ({ model: 'GLM-5.3', reason: '', routed: true }),
+      (model) => (model === 'GLM-5.3' ? routed : undefined)
+    );
+    const result = await manager.runSubagent({ role: 'backend', task: 'api yaz' }, undefined, 1);
+    assert.ok(result.includes('GLM raporu'));
+    assert.deepStrictEqual(used, ['glm'], 'yalnızca yönlendirilen model çağrılmalı');
+  });
+
+  it('ana model hata verince bağlamı koruyarak yedek modele geçer', async () => {
+    const base: ModelProvider = {
+      id: 'base',
+      name: 'base',
+      sendMessage: async () => {
+        throw new Error('HTTP 503 model unavailable');
+      }
+    };
+    let fallbackSawSystemPrompt = '';
+    const fallback: ModelProvider = {
+      id: 'mimo',
+      name: 'mimo',
+      sendMessage: async (messages) => {
+        fallbackSawSystemPrompt = messages[0]?.content || '';
+        return { text: 'Yedek model raporu' };
+      }
+    };
+    const statuses: string[] = [];
+    const manager = managerWith(
+      base,
+      () => ({ model: 'GLM-5.3', fallbackModel: 'MiMo-V2.6-Pro', reason: '', routed: true }),
+      (model) => (model === 'MiMo-V2.6-Pro' ? fallback : undefined),
+      (_role, status) => statuses.push(status)
+    );
+    const result = await manager.runSubagent({ role: 'backend', task: 'api yaz' }, undefined, 1);
+    assert.ok(result.includes('Yedek model raporu'), `fallback bekleniyordu: ${result}`);
+    assert.ok(fallbackSawSystemPrompt.includes('TASK: api yaz'), 'görev bağlamı yedeğe taşınmalı');
+    assert.ok(
+      statuses.some((s) => s.includes('yedek model')),
+      `fallback bildirimi bekleniyordu: ${statuses.join('|')}`
+    );
+  });
+});

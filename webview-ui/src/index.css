@@ -388,11 +388,6 @@ select:focus-visible {
   height: var(--ahi-avatar-sm);
 }
 
-.ahi-avatar--md {
-  width: var(--ahi-avatar-md);
-  height: var(--ahi-avatar-md);
-}
-
 .ahi-avatar--lg {
   width: var(--ahi-avatar-lg);
   height: var(--ahi-avatar-lg);
@@ -428,7 +423,6 @@ select:focus-visible {
   .ahi-icon-sm,
   .ahi-icon-md,
   .ahi-icon-lg,
-  .ahi-icon-xl,
   .ahi-icon-2xl {
     flex-shrink: 0;
   }
@@ -451,11 +445,6 @@ select:focus-visible {
   .ahi-icon-lg {
     width: var(--ahi-icon-lg);
     height: var(--ahi-icon-lg);
-  }
-
-  .ahi-icon-xl {
-    width: var(--ahi-icon-xl);
-    height: var(--ahi-icon-xl);
   }
 
   .ahi-icon-2xl {
@@ -552,10 +541,6 @@ select:focus-visible {
     box-shadow: var(--ahi-shadow-sm);
   }
 
-  .ahi-shadow-md {
-    box-shadow: var(--ahi-shadow-md);
-  }
-
   .ahi-shadow-lg {
     box-shadow: var(--ahi-shadow-lg);
   }
@@ -570,10 +555,6 @@ select:focus-visible {
 
   .ahi-border-brand {
     border-color: var(--ahi-brand-400);
-  }
-
-  .ahi-border-focus {
-    border-color: var(--ahi-focus);
   }
 
   .ahi-bg-info {
@@ -799,19 +780,6 @@ select:focus-visible {
     gap: var(--ahi-space-3);
   }
 
-  /* Kartlar geniş alanda sütunlara bölünür, dar alanda tek sütun olur */
-  .ahi-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
-    gap: var(--ahi-space-3);
-  }
-
-  .ahi-stack {
-    display: flex;
-    flex-direction: column;
-    gap: var(--ahi-space-3);
-  }
-
   .ahi-row {
     display: flex;
     align-items: center;
@@ -903,8 +871,7 @@ select:focus-visible {
       transform var(--ahi-fast) ease;
   }
 
-  button.ahi-list-item:hover,
-  .ahi-list-item--hover:hover {
+  button.ahi-list-item:hover {
     border-color: var(--ahi-focus);
     background-color: var(--ahi-hover-bg);
   }
@@ -940,28 +907,6 @@ select:focus-visible {
     text-align: center;
     border: 1px dashed var(--ahi-surface-border);
     border-radius: var(--ahi-radius-lg);
-  }
-
-  /* Ek bilgi satırları: anahtar solda, değer sağda */
-  .ahi-kv {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--ahi-space-4);
-    font-size: var(--ahi-text-xs);
-  }
-
-  .ahi-kv__key {
-    color: var(--ahi-muted-fg);
-  }
-
-  .ahi-kv__value {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-align: right;
-    color: var(--ahi-fg);
   }
 
   /* ---- Açılır bölüm (details/summary) ---- */
@@ -1760,6 +1705,7 @@ select:focus-visible {
     animation: ahi-fade-in 0.16s ease-out;
   }
 
+  /* Başlığın altında açılan küçük panel (görev başlığı menüsü). */
   .ahi-popover {
     position: absolute;
     right: var(--ahi-gutter);

@@ -21,6 +21,14 @@ export interface WorktreeCreateOptions {
   baseRef?: string;
 }
 
+export interface MergeResult {
+  /** Yama ana çalışma alanına uygulandı mı? */
+  applied: boolean;
+  message: string;
+  /** `--3way` birleştirmesinin çözemediği dosyalar. */
+  conflictedFiles: string[];
+}
+
 /**
  * Alt ajanların ana çalışma alanını bozmadan paralel çalışmasını sağlayan
  * Git worktree yönetimi. Worktree'ler `.ahi/worktrees/` altında tutulur ve
@@ -157,7 +165,16 @@ export class WorktreeManager {
     }
   }
 
-  public async mergeDiffIntoMain(worktreePath: string, workspaceRoot: string): Promise<string> {
+  /**
+   * Worktree değişikliklerini ana çalışma alanına uygular.
+   *
+   * Birleştirmeden önce çatışma kontrolü yapılır: `git apply --check` temiz
+   * geçerse yama doğrudan uygulanır; geçmezse `--3way` denenir ve kalan
+   * çatışma dosyaları `git ls-files -u` ile listelenir. Çatışmalı birleştime
+   * "başarılı" sayılmaz; kullanıcıya hangi dosyaların elle çözülmesi
+   * gerektiği açıkça bildirilir.
+   */
+  public async mergeDiffIntoMain(worktreePath: string, workspaceRoot: string): Promise<MergeResult> {
     try {
       // Yeni (izlenmeyen) dosyalar farka girsin diye intent-to-add kullan.
       await execFileAsync('git', ['add', '-N', '.'], {
@@ -168,22 +185,79 @@ export class WorktreeManager {
         cwd: worktreePath,
         maxBuffer: 16 * 1024 * 1024
       });
-      if (!diff.trim()) return 'No changes to merge.';
+      if (!diff.trim()) return { applied: false, message: 'No changes to merge.', conflictedFiles: [] };
 
       const patchPath = path.join(worktreePath, '..', `${path.basename(worktreePath)}.patch`);
       await fs.writeFile(patchPath, diff, 'utf-8');
       try {
-        await execFileAsync('git', ['apply', '--3way', patchPath], {
+        // Ön kontrol: temiz uygulanabiliyorsa doğrudan uygula (çatışmasız yol).
+        let appliesCleanly = true;
+        try {
+          await execFileAsync('git', ['apply', '--check', patchPath], {
+            cwd: workspaceRoot,
+            maxBuffer: 8 * 1024 * 1024
+          });
+        } catch {
+          appliesCleanly = false;
+        }
+
+        if (appliesCleanly) {
+          await execFileAsync('git', ['apply', patchPath], {
+            cwd: workspaceRoot,
+            maxBuffer: 8 * 1024 * 1024
+          });
+          return {
+            applied: true,
+            message: 'Worktree changes applied to the main workspace.',
+            conflictedFiles: []
+          };
+        }
+
+        // Kirli uygulama: 3-yollu birleştirme dene ve kalan çatışmaları raporla.
+        try {
+          await execFileAsync('git', ['apply', '--3way', patchPath], {
+            cwd: workspaceRoot,
+            maxBuffer: 8 * 1024 * 1024
+          });
+        } catch {
+          // Çatışma beklentisi: aşağıdaki ls-files kontrolü karar verir.
+        }
+        const { stdout: unmerged } = await execFileAsync('git', ['ls-files', '-u'], {
           cwd: workspaceRoot,
-          maxBuffer: 8 * 1024 * 1024
+          maxBuffer: 4 * 1024 * 1024
         });
+        const conflictedFiles = [
+          ...new Set(
+            unmerged
+              .split('\n')
+              .filter((line) => line.trim())
+              .map((line) => line.split('\t').pop() || line.trim())
+          )
+        ];
+        if (conflictedFiles.length > 0) {
+          return {
+            applied: false,
+            conflictedFiles,
+            message:
+              `Could not merge: ${conflictedFiles.length} file(s) conflict with the main workspace ` +
+              `(${conflictedFiles.slice(0, 8).join(', ')}). Resolve them manually or discard the worktree.`
+          };
+        }
+        return {
+          applied: true,
+          message: 'Worktree changes applied to the main workspace (3-way merge).',
+          conflictedFiles: []
+        };
       } finally {
         await fs.rm(patchPath, { force: true }).catch(() => {});
       }
-      return 'Worktree changes applied to the main workspace.';
     } catch (err) {
       const stderr = isRecord(err) && typeof err.stderr === 'string' ? err.stderr.trim() : '';
-      return `Could not merge changes (there may be a conflict): ${stderr || errorMessage(err)}`;
+      return {
+        applied: false,
+        conflictedFiles: [],
+        message: `Could not merge changes (there may be a conflict): ${stderr || errorMessage(err)}`
+      };
     }
   }
 

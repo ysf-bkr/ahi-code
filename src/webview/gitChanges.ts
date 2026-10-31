@@ -1,8 +1,10 @@
 /**
  * Değişiklikler ekranının Git sorguları.
  *
- * Hepsi salt-okunur: çalışma ağacı durumu, son commit'ler ve tek dosya farkı.
- * Webview işleyicisinden ayrıldığı için VS Code host'u olmadan test edilebilir.
+ * Hepsi salt-okunur: çalışma ağacı durumu ve son commit'ler. Webview
+ * işleyicisinden ayrıldığı için VS Code host'u olmadan test edilebilir.
+ * Tek dosyanın side-by-side farkı SidebarProvider.showGitFileDiff içinde
+ * HEAD içeriği üzerinden üretilir; burada ayrı bir diff yolu yoktur.
  */
 import { GitChangesPayload } from '../shared/types';
 import { GitManager } from '../core/git/GitManager';
@@ -51,27 +53,4 @@ export async function collectGitChanges(
   } catch (err) {
     return emptyGitPayload(errorMessage(err, 'Git durumu alınamadı.'));
   }
-}
-
-/**
- * Tek dosyanın commit edilmemiş farkını döndürür.
- * Değişiklik yoksa anlaşılır bir hata fırlatır; boş belge açmaz.
- */
-export async function readGitFileDiff(
-  workspaceRoot: string | undefined,
-  git: GitManager | undefined,
-  filePath: string
-): Promise<string> {
-  if (!workspaceRoot || !git) {
-    throw new Error('Açık bir çalışma alanı yok.');
-  }
-  if (!(await git.isRepository(workspaceRoot))) {
-    throw new Error('Bu çalışma alanı bir Git deposu değil.');
-  }
-
-  const diff = await git.diffFile(workspaceRoot, filePath);
-  if (!diff.trim()) {
-    throw new Error('Bu dosya için fark bulunamadı (izlenmeyen ya da değişmemiş olabilir).');
-  }
-  return diff;
 }

@@ -8,6 +8,7 @@
 import * as vscode from 'vscode';
 import { UserSettings, VsCodeThemeConfig } from '../shared/types';
 import { API_KEY_PROVIDERS, DEFAULT_USER_SETTINGS, VALID_PROVIDERS } from '../shared/constants';
+import { normalizeRole } from '../shared/agents/routing';
 import { maskApiKeys, mergeApiKeys } from './apiKeys';
 
 const SETTINGS_KEY = 'ahi_settings';
@@ -15,6 +16,20 @@ const SETTINGS_KEY = 'ahi_settings';
 /** VS Code ayarından gelen serbest metni geçerli otonomi seviyesine indirger. */
 function readAutonomy(value: string | undefined): UserSettings['autonomy'] {
   return value === 'guided' || value === 'auto' ? value : 'manual';
+}
+
+/** `agentModels` ayarını okur; yalnızca bilinen roller ve dolu model adları geçerlidir. */
+function readAgentModels(config: vscode.WorkspaceConfiguration): UserSettings['agentModels'] {
+  const raw = config.get<Record<string, unknown>>('agentModels');
+  if (!raw || typeof raw !== 'object') return undefined;
+  const result: Record<string, string> = {};
+  for (const [role, model] of Object.entries(raw)) {
+    const normalized = normalizeRole(role);
+    if (normalized && typeof model === 'string' && model.trim()) {
+      result[normalized] = model.trim();
+    }
+  }
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 /** Yeni kurulum için gereken ayarlar: yerel öncelikli, hesap gerekmez. */
@@ -34,23 +49,21 @@ export function loadDefaultSettings(): UserSettings {
     autoVerify: config.get<boolean>('autoVerify') ?? true,
     autonomy: readAutonomy(config.get<string>('autonomy')),
     captureBaseline: config.get<boolean>('captureBaseline') ?? false,
-    maxRepairAttempts: config.get<number>('maxRepairAttempts') ?? 2,
-    maxStepsPerTask: config.get<number>('maxStepsPerTask') ?? 25,
-    maxTokensPerTask: config.get<number>('maxTokensPerTask') ?? 0,
-    maxContinuations: config.get<number>('maxContinuations') ?? 12,
     modelRouting: {
       enabled: config.get<boolean>('modelRoutingEnabled') ?? false,
       fastModel: config.get<string>('fastModel') || undefined,
       deepModel: config.get<string>('deepModel') || undefined,
       reviewModel: config.get<string>('reviewModel') || undefined
     },
+    agentModels: readAgentModels(config),
     autoAcceptTerms: config.get<boolean>('autoAcceptTerms') ?? false,
     promptCaching: config.get<boolean>('promptCaching') ?? true,
     useIntegratedTerminal: config.get<boolean>('useIntegratedTerminal') ?? true,
     showDiffBeforeWrite: config.get<boolean>('showDiffBeforeWrite') ?? true,
     knowledgeEmbeddings: {
       enabled: config.get<boolean>('knowledgeEmbeddings') ?? false,
-      model: config.get<string>('embeddingModel') || 'nomic-embed-text'
+      model: config.get<string>('embeddingModel') || 'nomic-embed-text',
+      baseUrl: config.get<string>('embeddingBaseUrl') || undefined
     },
     callGraph: {
       enabled: config.get<boolean>('callGraphEnabled') ?? true
@@ -99,23 +112,21 @@ export function mergeExplicitConfiguration(
     autoVerify: pick('autoVerify', current.autoVerify ?? true),
     autonomy: readAutonomy(pick('autonomy', current.autonomy ?? 'manual')),
     captureBaseline: pick('captureBaseline', current.captureBaseline ?? false),
-    maxRepairAttempts: pick('maxRepairAttempts', current.maxRepairAttempts ?? 2),
-    maxStepsPerTask: pick('maxStepsPerTask', current.maxStepsPerTask ?? 25),
-    maxTokensPerTask: pick('maxTokensPerTask', current.maxTokensPerTask ?? 0),
-    maxContinuations: pick('maxContinuations', current.maxContinuations ?? 12),
     modelRouting: {
       enabled: pick('modelRoutingEnabled', current.modelRouting?.enabled ?? false),
       fastModel: pick('fastModel', '') || current.modelRouting?.fastModel,
       deepModel: pick('deepModel', '') || current.modelRouting?.deepModel,
       reviewModel: pick('reviewModel', '') || current.modelRouting?.reviewModel
     },
+    agentModels: readAgentModels(config) ?? current.agentModels,
     autoAcceptTerms: pick('autoAcceptTerms', current.autoAcceptTerms ?? false),
     promptCaching: pick('promptCaching', current.promptCaching ?? true),
     useIntegratedTerminal: pick('useIntegratedTerminal', current.useIntegratedTerminal ?? true),
     showDiffBeforeWrite: pick('showDiffBeforeWrite', current.showDiffBeforeWrite ?? true),
     knowledgeEmbeddings: {
       enabled: pick('knowledgeEmbeddings', current.knowledgeEmbeddings?.enabled ?? false),
-      model: pick('embeddingModel', '') || current.knowledgeEmbeddings?.model || 'nomic-embed-text'
+      model: pick('embeddingModel', '') || current.knowledgeEmbeddings?.model || 'nomic-embed-text',
+      baseUrl: pick('embeddingBaseUrl', '') || current.knowledgeEmbeddings?.baseUrl
     },
     callGraph: {
       enabled: pick('callGraphEnabled', current.callGraph?.enabled ?? true)
@@ -137,10 +148,6 @@ export function settingsDiffer(a: UserSettings, b: UserSettings): boolean {
     a.autoVerify !== b.autoVerify ||
     a.autonomy !== b.autonomy ||
     a.captureBaseline !== b.captureBaseline ||
-    a.maxRepairAttempts !== b.maxRepairAttempts ||
-    a.maxStepsPerTask !== b.maxStepsPerTask ||
-    a.maxTokensPerTask !== b.maxTokensPerTask ||
-    a.maxContinuations !== b.maxContinuations ||
     a.autoAcceptTerms !== b.autoAcceptTerms ||
     a.promptCaching !== b.promptCaching ||
     a.useIntegratedTerminal !== b.useIntegratedTerminal ||
@@ -152,6 +159,8 @@ export function settingsDiffer(a: UserSettings, b: UserSettings): boolean {
     a.modelRouting?.fastModel !== b.modelRouting?.fastModel ||
     a.modelRouting?.deepModel !== b.modelRouting?.deepModel ||
     a.modelRouting?.reviewModel !== b.modelRouting?.reviewModel ||
+    JSON.stringify(a.agentModels ?? {}) !== JSON.stringify(b.agentModels ?? {}) ||
+    a.knowledgeEmbeddings?.baseUrl !== b.knowledgeEmbeddings?.baseUrl ||
     a.sandbox?.mode !== b.sandbox?.mode ||
     a.sandbox?.image !== b.sandbox?.image ||
     a.sandbox?.network !== b.sandbox?.network
@@ -172,15 +181,29 @@ export async function restoreSettings(
   const savedConfig = context.globalState.get<Partial<UserSettings>>(SETTINGS_KEY);
 
   if (savedConfig) {
+    // Kaldırılan bütçe/sınır ayarlarını eski kayıtlardan temiz süzeriz; iç
+    // varsayılanlar DEFAULT_USER_SETTINGS'ten gelir, kullanıcı override'ı yok.
+    const hadLegacyBudget =
+      savedConfig.maxTokensPerTask !== undefined ||
+      (savedConfig as Record<string, unknown>).maxCostPerTaskUsd !== undefined ||
+      savedConfig.maxRepairAttempts !== undefined ||
+      savedConfig.maxStepsPerTask !== undefined ||
+      savedConfig.maxContinuations !== undefined;
     const {
       apiKeys: legacyApiKeys,
       apiKeyStatus: _legacyStatus,
-      maxTokensPerTask: legacyTokenBudget,
-      maxCostPerTaskUsd: legacyCostBudget,
+      maxTokensPerTask: _legacyTokenBudget,
+      maxCostPerTaskUsd: _legacyCostBudget,
+      maxRepairAttempts: _legacyRepair,
+      maxStepsPerTask: _legacySteps,
+      maxContinuations: _legacyContinuations,
       ...safeConfig
     } = savedConfig as Partial<UserSettings> & {
       maxTokensPerTask?: number;
       maxCostPerTaskUsd?: number;
+      maxRepairAttempts?: number;
+      maxStepsPerTask?: number;
+      maxContinuations?: number;
     };
 
     Object.assign(next, safeConfig);
@@ -189,7 +212,7 @@ export async function restoreSettings(
     } else {
       next.isConfigured = true;
     }
-    if (legacyApiKeys || legacyTokenBudget !== undefined || legacyCostBudget !== undefined) {
+    if (legacyApiKeys || hadLegacyBudget) {
       await context.globalState.update(SETTINGS_KEY, safeConfig);
     }
   }
@@ -236,11 +259,10 @@ export async function persistSettings(
     autoVerify: next.autoVerify,
     autonomy: next.autonomy ?? 'manual',
     captureBaseline: next.captureBaseline,
-    maxRepairAttempts: next.maxRepairAttempts,
-    maxStepsPerTask: next.maxStepsPerTask,
-    maxTokensPerTask: next.maxTokensPerTask,
-    maxContinuations: next.maxContinuations,
+    autoAcceptTerms: next.autoAcceptTerms ?? false,
+    requestTimeoutSeconds: next.requestTimeoutSeconds ?? 180,
     modelRouting: next.modelRouting,
+    agentModels: next.agentModels,
     sandbox: next.sandbox,
     promptCaching: next.promptCaching,
     useIntegratedTerminal: next.useIntegratedTerminal,
@@ -265,10 +287,7 @@ export async function persistSettings(
     await Promise.all([
       config.update('selectedProvider', next.selectedProvider, vscode.ConfigurationTarget.Global),
       config.update('selectedModel', next.selectedModel, vscode.ConfigurationTarget.Global),
-      config.update('autonomy', next.autonomy ?? 'manual', vscode.ConfigurationTarget.Global),
-      config.update('maxStepsPerTask', next.maxStepsPerTask ?? 25, vscode.ConfigurationTarget.Global),
-      config.update('maxTokensPerTask', next.maxTokensPerTask ?? 0, vscode.ConfigurationTarget.Global),
-      config.update('maxContinuations', next.maxContinuations ?? 12, vscode.ConfigurationTarget.Global)
+      config.update('autonomy', next.autonomy ?? 'manual', vscode.ConfigurationTarget.Global)
     ]);
   } catch {
     // Ayar kaydetme başarısız olsa bile oturum ayarları geçerli kalır.
@@ -298,7 +317,6 @@ export function readThemeConfig(): VsCodeThemeConfig {
     editorFontFamily: editorConfig.get<string>('fontFamily') || '',
     editorFontSize: editorConfig.get<number>('fontSize') || 13,
     editorFontWeight: editorConfig.get<string>('fontWeight') || 'normal',
-    editorLineHeight: editorConfig.get<number>('lineHeight') || 0,
     terminalFontFamily: terminalConfig.get<string>('fontFamily') || '',
     terminalFontSize: terminalConfig.get<number>('fontSize') || editorConfig.get<number>('fontSize') || 13
   };

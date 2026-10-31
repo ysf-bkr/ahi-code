@@ -5,7 +5,7 @@ import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { collectGitChanges, readGitFileDiff } from '../../src/webview/gitChanges';
+import { collectGitChanges } from '../../src/webview/gitChanges';
 import { GitManager } from '../../src/core/git/GitManager';
 
 const execFileAsync = promisify(execFile);
@@ -47,22 +47,17 @@ describe('gitChanges: Değişiklikler ekranı verisi', () => {
     assert.strictEqual(payload.error, undefined);
   });
 
-  it('tek dosya farkını döndürür, değişiklik yoksa hata verir', async () => {
+  it('HEAD içeriği side-by-side fark kaynağı olarak okunur', async () => {
     const root = await initRepository();
     roots.push(root);
     await fs.writeFile(path.join(root, 'a.txt'), 'değişti\n', 'utf-8');
 
-    const diff = await readGitFileDiff(root, new GitManager(), 'a.txt');
-    assert.ok(diff.includes('-ilk'));
-    assert.ok(diff.includes('+değişti'));
+    const gm = new GitManager();
+    const head = await gm.getFileHeadContent(root, 'a.txt');
+    assert.strictEqual(head.trim(), 'ilk', 'disk değişse de HEAD sürümü dönmeli');
 
-    await execFileAsync('git', ['checkout', '--', 'a.txt'], { cwd: root });
-    await assert.rejects(() => readGitFileDiff(root, new GitManager(), 'a.txt'), /fark bulunamadı/);
-  });
-
-  it('Git deposu olmayan dizinde anlaşılır hata verir', async () => {
-    const plain = await fs.mkdtemp(path.join(os.tmpdir(), 'ahi-plain-view-'));
-    roots.push(plain);
-    await assert.rejects(() => readGitFileDiff(plain, new GitManager(), 'x.txt'), /Git deposu değil/);
+    // İzlenmeyen dosyada boş içerik: arayüz "yeni dosya" olarak gösterir.
+    await fs.writeFile(path.join(root, 'yeni.txt'), 'yeni\n', 'utf-8');
+    assert.strictEqual(await gm.getFileHeadContent(root, 'yeni.txt'), '');
   });
 });

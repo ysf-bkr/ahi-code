@@ -44,7 +44,6 @@ ahi-code/
 │   │   └── pathSafety.ts             # Yol hapsi (symlink/traversal koruması)
 │   ├── webview/
 │   │   ├── SidebarProvider.ts        # Webview yaşam döngüsü ve mesaj dağıtımı
-│   │   ├── diffContentProvider.ts    # Yan yana diff içerik sağlayıcısı
 │   │   ├── settingsStore.ts          # Ayar kalıcılığı ve SecretStorage
 │   │   ├── modelCatalog.ts           # Sağlayıcı model listesi
 │   │   ├── gitChanges.ts             # Değişiklikler ekranı Git sorguları
@@ -77,13 +76,13 @@ ahi-code/
 │       ├── checkpoint/               # Tur checkpoint'leri
 │       ├── snapshot/                 # Dosya geri alma
 │       ├── mcp/                      # MCP hub + stdio/HTTP client
-│       ├── multiagent/               # Alt ajan orkestrasyonu
+│       ├── multiagent/               # Alt ajan orkestrasyonu + çizgeli paralel çizelgeleyici
 │       ├── skills/                   # Yetenek keşfi ve yükleme
 │       ├── rules/                    # Workspace kuralları (AGENTS.md/.ahirules)
 │       ├── lsp/                      # VS Code LSP köprüsü
 │       ├── hooks/                    # Pre/Post/Stop hook'ları
 │       ├── prompts/                  # Sistem prompt'u
-│       ├── routing/                  # Göreve göre model seçimi
+│       ├── routing/                  # ModelRouter + rol bazlı ajan modeli politikası
 │       ├── knowledge/                # Bilgi tabanı + embedding indeksi
 │       ├── callgraph/                # Fonksiyon çağrı haritası (LSP tabanlı)
 │       ├── spec/                     # Spec deposu (.ahi/specs)

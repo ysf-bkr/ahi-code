@@ -543,7 +543,13 @@ export const MessageList: React.FC<MessageListProps> = ({
       : undefined;
 
   return (
-    <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+    <div
+      ref={scrollRef}
+      className="min-h-0 flex-1 overflow-y-auto px-3 py-3"
+      role="log"
+      aria-live="polite"
+      aria-label="Sohbet akışı"
+    >
       <div className="space-y-3">
         {turns.map((turn) => (
           <div key={turn.id} className="ahi-message space-y-1.5">

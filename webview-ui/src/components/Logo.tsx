@@ -4,7 +4,6 @@ export interface LogoProps {
   className?: string;
   /** Marka mavisi gradyanı; kapalıyken temanın ön plan rengini kullanır. */
   colored?: boolean;
-  strokeWidth?: number;
 }
 
 /**

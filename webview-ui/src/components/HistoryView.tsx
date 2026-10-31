@@ -173,6 +173,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
         }
         onBack={onBack}
         onSelectMenu={onSelectMenu}
+        activeDestination="history"
         changedFileCount={changedFileCount}
         actions={
           <div className="flex items-center gap-1">
@@ -237,6 +238,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({
           <Chip
             className="ml-auto"
             title="Sıralamayı değiştir"
+            aria-label={`Sıralama: ${SORT_LABELS[sort]}. Değiştirmek için etkinleştir`}
             onClick={() =>
               setSort((current) =>
                 current === 'recent' ? 'oldest' : current === 'oldest' ? 'largest' : 'recent'

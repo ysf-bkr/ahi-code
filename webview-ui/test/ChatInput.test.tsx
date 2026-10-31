@@ -168,6 +168,29 @@ describe('ChatInput', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Ayarları Yapılandır' }));
     assert.equal(settingsOpened, true, 'ayarları yapılandır düğmesi çalışmalı');
   });
+
+  it('otonomi seçicisini gösterir ve değişimi geri bildirir', () => {
+    const changes: string[] = [];
+    render(
+      <ChatInput
+        state={createTaskState()}
+        onSend={() => {}}
+        onModeChange={() => {}}
+        autonomy="manual"
+        onAutonomyChange={(level) => changes.push(level)}
+      />
+    );
+
+    const group = screen.getByRole('group', { name: 'Otonomi seviyesi' });
+    assert.ok(group, 'sohbette otonomi grubu olmalı');
+    assert.equal(
+      (screen.getByRole('button', { name: /Elle/ }) as HTMLButtonElement).getAttribute('aria-pressed'),
+      'true'
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Otonom/ }));
+    assert.deepEqual(changes, ['auto'], 'seviye değişimi bildirilmeli');
+  });
 });
 
 describe('TaskHeader menu', () => {

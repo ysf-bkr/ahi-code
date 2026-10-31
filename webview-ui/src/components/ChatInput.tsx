@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Send, Square, CornerDownLeft, Compass, Code2 } from 'lucide-react';
-import { AgentMode, TaskState } from '@shared/types';
+import { Send, Square, CornerDownLeft, Compass, Code2, Hand, Gauge, Zap } from 'lucide-react';
+import { AgentMode, AutonomyLevel, TaskState } from '@shared/types';
 import { vscode } from '../utils/vscode';
 import { Button, Segmented, Textarea } from './ui';
 
@@ -14,11 +14,35 @@ interface ChatInputProps {
   /** Gönderilmiş bir mesaj düzenleniyor: gönderim yeni mesaj eklemek yerine turu yeniler. */
   editing?: boolean;
   onCancelEdit?: () => void;
+  /** Sohbette değiştirilebilen otonomi seviyesi; ayar olarak kalıcılaştırılır. */
+  autonomy?: AutonomyLevel;
+  onAutonomyChange?: (level: AutonomyLevel) => void;
 }
 
 const MODES: Array<{ id: AgentMode; label: string; icon: React.ReactNode }> = [
   { id: 'code', label: 'Kodlama', icon: <Code2 className="ahi-icon-xs" /> },
   { id: 'plan', label: 'Planlama', icon: <Compass className="ahi-icon-xs" /> }
+];
+
+const AUTONOMY_LEVELS: Array<{ id: AutonomyLevel; label: string; icon: React.ReactNode; title: string }> = [
+  {
+    id: 'manual',
+    label: 'Elle',
+    icon: <Hand className="ahi-icon-xs" />,
+    title: 'Elle: her spec ve plan onayı sizden sorulur; turlar sizinle ilerler.'
+  },
+  {
+    id: 'guided',
+    label: 'Yönlendir',
+    icon: <Gauge className="ahi-icon-xs" />,
+    title: 'Yönlendirilmiş: spec ve plan otomatik onaylanır; yazma ve komut izinleri yine sorulur.'
+  },
+  {
+    id: 'auto',
+    label: 'Otonom',
+    icon: <Zap className="ahi-icon-xs" />,
+    title: 'Otonom: görev bitene kadar turlar kendiliğinden sürer; yazma ve komut izinleri yine sorulur.'
+  }
 ];
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -29,7 +53,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   isConfigured = true,
   onOpenSettings,
   editing = false,
-  onCancelEdit
+  onCancelEdit,
+  autonomy = 'manual',
+  onAutonomyChange
 }) => {
   const [input, setInput] = useState(initialValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -158,7 +184,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 title: isRunning ? 'Görev çalışırken mod değiştirilemez' : `${mode.label} modu`
               }))}
             />
-            <span className="ahi-composer__hint">
+            {onAutonomyChange && (
+              <Segmented<AutonomyLevel>
+                aria-label="Otonomi seviyesi"
+                value={autonomy}
+                onChange={onAutonomyChange}
+                disabled={!isConfigured}
+                items={AUTONOMY_LEVELS.map((level) => ({
+                  id: level.id,
+                  label: level.label,
+                  icon: level.icon,
+                  title: level.title
+                }))}
+              />
+            )}
+            <span className="ahi-composer__hint hidden min-[560px]:inline">
               <CornerDownLeft className="ahi-icon-xs" />
               Göndermek için Enter · Yeni satır için Shift+Enter
             </span>

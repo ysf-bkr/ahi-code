@@ -1,5 +1,5 @@
 import { PlanStep, PlanStepStatus, TaskPlan } from '../../shared/types';
-import { assignPlanRoles } from '../../shared/agents/routing';
+import { assignPlanRoles, rolesForStep } from '../../shared/agents/routing';
 
 const VALID_STATUSES: ReadonlySet<PlanStepStatus> = new Set<PlanStepStatus>([
   'pending',
@@ -241,7 +241,13 @@ export class TaskPlanner {
       .map((step) => {
         const role = step.ownerRole ?? 'atanmadı';
         const reason = step.ownerRoleSource === 'routing' ? 'yönlendirme' : 'model';
-        return `- ${step.id}: @${role} (${reason})`;
+        // Bağımsız inceleme rolleri de yöneticiye görünsün: yazan rol kendi
+        // işini onaylamaz, denetim @quality/@security'dedir.
+        const { collaborators } = rolesForStep(step);
+        const audit = collaborators.length
+          ? ` · denetim: ${collaborators.map((c) => `@${c}`).join(', ')}`
+          : '';
+        return `- ${step.id}: @${role} (${reason})${audit}`;
       })
       .join('\n');
   }

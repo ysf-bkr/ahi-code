@@ -113,9 +113,9 @@ Aşağıdaki ayarları VS Code Ayarlarından (`settings.json`) veya AhiCode aray
 | --- | --- | --- |
 | `ahiCode.selectedProvider` | `ollama` | Model sağlayıcısı (`ollama`, `evren`, `openrouter`, `openai-compatible`) |
 | `ahiCode.selectedModel` | `llama3.1` | Kullanılacak model adı |
-| `ahiCode.autonomy` | `manual` | Otonomi seviyesi (`manual`, `guided`, `auto`) |
-| `ahiCode.maxTokensPerTask` | `0` | Görev başına maksimum token bütçesi (`0` = sınırsız) |
-| `ahiCode.maxContinuations` | `12` | Otonom modda art arda yapılabilecek en fazla otomatik devam turu |
+| `ahiCode.autonomy` | `manual` | Otonomi seviyesi (`manual`, `guided`, `auto`); sohbet giriş alanından da değiştirilebilir |
+| `ahiCode.agentModels` | `{}` | Rol bazlı alt ajan modelleri (rol → model kimliği). Boş roller sağlayıcının hazır ayarını (EVREN: manager/architect → GLM-5.3, explorer → MiMo-V2.6-Pro) ya da seçili modeli kullanır |
+| `ahiCode.embeddingBaseUrl` | `""` | OpenAI uyumlu embedding uç noktası (örn. EVREN `/v1`). Boşsa Ollama `/api/embed` kullanılır |
 
 ---
 
@@ -131,7 +131,7 @@ AhiCode'un iç yapısı, modül katmanları, test çalıştırma ve katkı sağl
 
 ## Bilinen Sınırlamalar
 
-- **Komut yan etkileri geri alınamaz:** snapshot ve checkpoint'ler yalnızca `write_file` / `edit_file` ile değiştirilen dosyaları kapsar. `execute_command` tarafından oluşturulan veya değiştirilen dosyalar geri alma özelliğiyle kurtarılamaz; bu dosyalar için Git kullanın.
+- **Komut geri alma temiz Git ağacı ister:** `execute_command` bir Git checkpoint'i alır ve geri alınabilir; ancak bu yalnızca depoda bir `HEAD` varsa ve komut öncesi çalışma ağacı temizse çalışır. Git deposu olmayan alanlarda komut yan etkileri geri alınamaz; bu durumlar için Git'i kendiniz kullanın.
 - **Plan modu sandbox değil, araç kilididir:** plan modu yazma ve komut araçlarını şemadan çıkarır, ancak işletim sistemi düzeyinde yalıtım sağlamaz. Güvenilmeyen depolar için Dev Container kullanın.
 - **Henüz Marketplace'te değil:** kurulum şimdilik yerel olarak üretilen VSIX paketi gerektirir.
 

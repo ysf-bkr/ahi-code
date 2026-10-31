@@ -3,13 +3,15 @@
  *
  * Eski tek parça tools/index.ts'ten ayrıldı; davranış değişmedi.
  */
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { ToolDefinition } from './base';
 import { argString, argBoolean, toPositiveInt } from './args';
 import { formatAiDiff } from '../shared/aiDiff';
 
-const execAsync = promisify(exec);
+// execFile: argümanlar diziyle geçer, kabuk çalışmaz; model güdümündeki
+// yol adları kabuk enjeksiyonuna dönüşemez.
+const execFileAsync = promisify(execFile);
 
 export const gitStatusTool: ToolDefinition = {
   name: 'git_status',
@@ -23,7 +25,7 @@ export const gitStatusTool: ToolDefinition = {
     if (!context.workspaceRoot) {
       throw new Error('Workspace not found.');
     }
-    const { stdout } = await execAsync('git status -s', { cwd: context.workspaceRoot });
+    const { stdout } = await execFileAsync('git', ['status', '-s'], { cwd: context.workspaceRoot });
     return stdout || 'Working tree is clean (no changes).';
   }
 };
@@ -84,7 +86,7 @@ export const gitDiffTool: ToolDefinition = {
     if (staged) gitArgs.push('--cached');
     gitArgs.push(`-U${contextLines ?? (compact ? 1 : 3)}`);
     if (pathArg) gitArgs.push('--', pathArg);
-    const { stdout } = await execAsync(`git ${gitArgs.join(' ')}`, { cwd: ctx.workspaceRoot });
+    const { stdout } = await execFileAsync('git', gitArgs, { cwd: ctx.workspaceRoot });
     if (!stdout.trim()) return '(No changes)';
     if (!compact) return stdout;
     return formatAiDiff(stdout, { targetPath: pathArg });

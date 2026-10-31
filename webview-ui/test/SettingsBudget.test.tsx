@@ -1,7 +1,7 @@
 import './setupDom';
 import { afterEach, describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { SettingsView } from '../src/components/SettingsView';
 import type { UserSettings } from '@shared/types';
 
@@ -17,38 +17,29 @@ const settings = (overrides: Partial<UserSettings> = {}): UserSettings => ({
   ...overrides
 });
 
-describe('SettingsView: bütçe ayarları', () => {
-  it('token bütçesi ve otomatik devam sınırı alanlarını gösterir', () => {
+describe('SettingsView: sadeleştirilmiş davranış ayarları', () => {
+  it('kaldırılan bütçe/sınır alanlarını artık göstermez', () => {
     render(
       <SettingsView settings={settings({ maxTokensPerTask: 5000, maxContinuations: 7 })} onBack={() => {}} />
     );
 
-    const token = screen.getByLabelText('Token bütçesi') as HTMLInputElement;
-    const continuations = screen.getByLabelText('Otomatik devam sınırı') as HTMLInputElement;
-    assert.equal(token.value, '5000');
-    assert.equal(continuations.value, '7');
+    assert.equal(screen.queryByLabelText('Token bütçesi'), null);
+    assert.equal(screen.queryByLabelText('Otomatik devam sınırı'), null);
+    assert.equal(screen.queryByLabelText('Onarım denemesi'), null);
+    assert.equal(screen.queryByLabelText('Adım sınırı'), null);
   });
 
-  it('varsayılan değerleri gösterir (0 = sınırsız, 12 devam)', () => {
+  it('model yönlendirme ve EVREN ajan hazır ayarı açıklamasını gösterir', () => {
     render(<SettingsView settings={settings()} onBack={() => {}} />);
 
-    assert.equal((screen.getByLabelText('Token bütçesi') as HTMLInputElement).value, '0');
-    assert.equal((screen.getByLabelText('Otomatik devam sınırı') as HTMLInputElement).value, '12');
+    assert.ok(screen.getByText('Model yönlendirme'));
+    assert.match(screen.getByText(/GLM-5.3/).textContent ?? '', /MiMo-V2.6-Pro/);
   });
 
-  it('değer değişince form güncellenir', () => {
+  it('otomatik doğrulama ve istem önbellekleme anahtarlarını gösterir', () => {
     render(<SettingsView settings={settings()} onBack={() => {}} />);
 
-    fireEvent.change(screen.getByLabelText('Token bütçesi'), { target: { value: '8000' } });
-    fireEvent.change(screen.getByLabelText('Otomatik devam sınırı'), { target: { value: '20' } });
-
-    assert.equal((screen.getByLabelText('Token bütçesi') as HTMLInputElement).value, '8000');
-    assert.equal((screen.getByLabelText('Otomatik devam sınırı') as HTMLInputElement).value, '20');
-  });
-
-  it('token bütçesi için sınırsız ipucunu gösterir', () => {
-    render(<SettingsView settings={settings()} onBack={() => {}} />);
-
-    assert.match(screen.getByText(/Görev başına toplam token sınırı/).textContent ?? '', /0 = sınırsız/);
+    assert.ok(screen.getByText('Otomatik doğrulama'));
+    assert.match(screen.getByText(/İstem önbellekleme/).textContent ?? '', /Prompt caching/);
   });
 });

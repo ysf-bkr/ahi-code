@@ -86,6 +86,7 @@ export const McpView: React.FC<McpViewProps> = ({ onBack, onSelectMenu, changedF
         subtitle="Model Context Protocol araçları"
         onBack={onBack}
         onSelectMenu={onSelectMenu}
+        activeDestination="mcp"
         changedFileCount={changedFileCount}
         actions={
           <IconButton label="Sunucuları yeniden tara" onClick={handleRestart}>

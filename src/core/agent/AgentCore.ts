@@ -319,7 +319,18 @@ export class AgentCore implements AgentHost {
           ? (command, root, signal) => this.runInIntegratedTerminal(command, root, signal)
           : undefined,
       this.callGraphManager,
-      this.gitManager
+      this.gitManager,
+      // Ajan bazlı model yönlendirme: her alt ajan rolüne göre modelini
+      // çözer; sağlayıcı hata verirse yedek model denenir.
+      (role, task) => this.modelRouter.routeForAgent(role, task, this.settings),
+      (model) => {
+        try {
+          return createModelProvider({ ...this.settings, selectedModel: model });
+        } catch (err) {
+          logWarning(`Could not create provider for agent model ${model}`, err);
+          return undefined;
+        }
+      }
     );
   }
 
@@ -383,20 +394,38 @@ export class AgentCore implements AgentHost {
   }
 
   /**
-   * Ayarlara göre yerel anlamsal arama indeksini kurar ya da düşürür.
-   * Embedding'ler kullanıcının Ollama sunucusunda çalışır; devre dışıyken
-   * hiç ağ erişimi olmaz.
+   * Ayarlara göre yerel/anlamsal arama indeksini kurar ya da düşürür.
+   *
+   * `baseUrl` boşsa Ollama `/api/embed` kullanılır (her şey kullanıcının
+   * makinesinde kalır). OpenAI uyumlu bir uç nokta verilirse (örn. EVREN
+   * `/v1` + qwen3-embedding-8b) `/embeddings` uç noktası kullanılır; API
+   * anahtarı ayarlardan değil, gizli depodan gelen sağlayıcı anahtarından
+   * alınır.
    */
   private refreshEmbeddingIndex(): void {
     const config = this.settings.knowledgeEmbeddings;
-    if (config?.enabled) {
-      this.embeddingIndex = new EmbeddingIndex({
-        baseUrl: this.settings.ollamaBaseUrl || DEFAULT_PROVIDER_URLS.ollama,
-        model: config.model || 'nomic-embed-text'
-      });
-    } else {
+    if (!config?.enabled) {
       this.embeddingIndex = undefined;
+      return;
     }
+    const customBase = (config.baseUrl || '').trim();
+    if (customBase) {
+      const apiKey =
+        this.settings.selectedProvider === 'evren'
+          ? this.settings.apiKeys.evren
+          : this.settings.apiKeys.openaiCompatible;
+      this.embeddingIndex = new EmbeddingIndex({
+        baseUrl: customBase,
+        model: config.model || 'qwen3-embedding-8b',
+        style: 'openai',
+        apiKey
+      });
+      return;
+    }
+    this.embeddingIndex = new EmbeddingIndex({
+      baseUrl: this.settings.ollamaBaseUrl || DEFAULT_PROVIDER_URLS.ollama,
+      model: config.model || 'nomic-embed-text'
+    });
   }
 
   /**

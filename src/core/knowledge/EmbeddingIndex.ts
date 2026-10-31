@@ -64,8 +64,12 @@ export class EmbeddingIndex {
     private readonly options: {
       baseUrl: string;
       model: string;
-      /** Testler için enjekte edilebilir; varsayılan Ollama /api/embed uç noktası. */
+      /** Testler için enjekte edilebilir; varsayılan sağlayıcının uç noktası. */
       embedFn?: EmbedFn;
+      /** `ollama` → `/api/embed`; `openai` → `/embeddings` (EVREN gibi). */
+      style?: 'ollama' | 'openai';
+      /** OpenAI uyumlu uç noktalar için Bearer anahtarı (gizli depodan gelir). */
+      apiKey?: string;
     }
   ) {}
 
@@ -75,19 +79,41 @@ export class EmbeddingIndex {
       (async (texts: string[], signal?: AbortSignal) => {
         const timeout = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
         const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
-        const res = await fetch(`${this.options.baseUrl.replace(/\/+$/, '')}/api/embed`, {
+        const style = this.options.style ?? 'ollama';
+        const root = this.options.baseUrl.replace(/\/+$/, '');
+        const url = style === 'openai' ? `${root}/embeddings` : `${root}/api/embed`;
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (style === 'openai' && this.options.apiKey) {
+          headers.Authorization = `Bearer ${this.options.apiKey}`;
+        }
+        // Ollama `input: string[]`, OpenAI uyumlu uç noktalar da dizi kabul eder.
+        const res = await fetch(url, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ model: this.options.model, input: texts }),
           signal: combined
         });
         if (!res.ok) return undefined;
         const data: unknown = await res.json();
-        const embeddings = (data as { embeddings?: unknown }).embeddings;
-        if (!Array.isArray(embeddings)) return undefined;
-        return embeddings.filter((item): item is number[] => Array.isArray(item));
+        const parsed = this.parseEmbeddings(data, style);
+        return parsed;
       })
     );
+  }
+
+  /** İki uç noktanın farklı yanıt şeklini tek biçime indirger. */
+  private parseEmbeddings(data: unknown, style: 'ollama' | 'openai'): number[][] | undefined {
+    if (style === 'ollama') {
+      const embeddings = (data as { embeddings?: unknown }).embeddings;
+      if (!Array.isArray(embeddings)) return undefined;
+      return embeddings.filter((item): item is number[] => Array.isArray(item));
+    }
+    // OpenAI: { data: [{ embedding: number[], index }] }
+    const list = (data as { data?: unknown }).data;
+    if (!Array.isArray(list)) return undefined;
+    return list
+      .map((item) => (item as { embedding?: unknown }).embedding)
+      .filter((item): item is number[] => Array.isArray(item));
   }
 
   private async load(dir: string): Promise<void> {

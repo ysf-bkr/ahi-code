@@ -17,6 +17,7 @@ import { Toast as ToastView } from './components/Toast';
 import { Button } from './components/ui';
 import {
   AgentMode,
+  AutonomyLevel,
   ExtensionToWebviewMessage,
   EvrenQuota,
   NavigationDestination,
@@ -267,6 +268,12 @@ export const App: React.FC = () => {
     vscode.postMessage({ type: 'SET_MODE', payload: { mode } });
   };
 
+  /** Sohbetteki otonomi seçici: anında yansıtılır, ayar olarak kalıcılaşır. */
+  const handleAutonomyChange = (level: AutonomyLevel) => {
+    setSettings((prev) => ({ ...prev, autonomy: level }));
+    vscode.postMessage({ type: 'SAVE_SETTINGS', payload: { autonomy: level } });
+  };
+
   const handleSuggestionClick = (prompt: string) => {
     setEditingMessageId(null);
     setDraftPrompt(prompt);
@@ -340,6 +347,8 @@ export const App: React.FC = () => {
                     editingMessageId && taskState.messages.some((message) => message.id === editingMessageId)
                   )}
                   onCancelEdit={handleCancelEdit}
+                  autonomy={settings.autonomy ?? 'manual'}
+                  onAutonomyChange={handleAutonomyChange}
                 />
                 <ChatStatusBar
                   state={taskState}

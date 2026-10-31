@@ -169,15 +169,6 @@ export class GitManager {
     return git(['show', '--stat', '--patch', hash], workspaceRoot);
   }
 
-  /** İzlenen tek dosyanın commit edilmemiş farkı (çalışma ağacı + indeks vs HEAD). */
-  public async diffFile(workspaceRoot: string, filePath: string): Promise<string> {
-    const rel = filePath.replace(/\\/g, '/').trim();
-    if (!rel || rel.includes('..') || rel.startsWith('/')) {
-      throw new Error('Geçersiz dosya yolu.');
-    }
-    return git(['diff', 'HEAD', '--', rel], workspaceRoot);
-  }
-
   /** Dosyanın Git HEAD sürümünün içeriğini okur; dosya yeni veya izlenmiyorsa boş döner. */
   public async getFileHeadContent(workspaceRoot: string, filePath: string): Promise<string> {
     const rel = filePath.replace(/\\/g, '/').trim();

@@ -74,6 +74,12 @@ export interface UserSettings {
   maxContinuations?: number;
   /** Göreve göre hızlı ya da derin akıl yürütme modeli seç. */
   modelRouting?: ModelRoutingSettings;
+  /**
+   * Rol bazlı model override'ları (alt ajan başına model). Anahtarlar rol
+   * adlarıdır (manager, backend, ...); boş bırakılan rol sağlayıcı hazır
+   * ayarını ya da seçili modeli kullanır.
+   */
+  agentModels?: Partial<Record<string, string>>;
   /** Komut yürütme yalıtımı. Varsayılan: ana makine (none). */
   sandbox?: SandboxSettings;
   /** Sağlayıcı destekliyorsa kararlı istem önekini önbelleklenebilir işaretle. */
@@ -91,8 +97,13 @@ export interface UserSettings {
    */
   knowledgeEmbeddings?: {
     enabled: boolean;
-    /** Ollama embedding modeli (varsayılan: nomic-embed-text). */
+    /** Embedding modeli (Ollama örn. nomic-embed-text; EVREN örn. qwen3-embedding-8b). */
     model?: string;
+    /**
+     * Boşsa Ollama `/api/embed` kullanılır. OpenAI uyumlu bir uç nokta
+     * (örn. EVREN `/v1`) verilirse `/embeddings` uç noktası kullanılır.
+     */
+    baseUrl?: string;
   };
   /**
    * Çağrı haritası: dil sunucusundan fonksiyon çağrı ilişkilerini çıkarır.
@@ -100,8 +111,6 @@ export interface UserSettings {
    */
   callGraph?: {
     enabled: boolean;
-    /** Aynı anda taranacak dosya sayısı. */
-    concurrency?: number;
   };
 }
 
@@ -550,7 +559,6 @@ export type WebviewToExtensionMessage =
   | { type: 'APPROVE_SPEC' }
   | { type: 'APPROVE_PLAN' }
   | { type: 'REJECT_APPROVAL'; payload?: { reason?: string } }
-  | { type: 'SET_WORKFLOW_STAGE'; payload: { stage: WorkflowStage } }
   | { type: 'SAVE_SETTINGS'; payload: Partial<UserSettings> }
   | { type: 'REQUEST_SETTINGS' }
   | { type: 'FETCH_MODELS'; payload: { provider: ModelProviderType; apiKey?: string; baseUrl?: string } }
@@ -594,7 +602,6 @@ export interface VsCodeThemeConfig {
   editorFontFamily: string;
   editorFontSize: number;
   editorFontWeight: string;
-  editorLineHeight: number;
   terminalFontFamily: string;
   terminalFontSize: number;
 }

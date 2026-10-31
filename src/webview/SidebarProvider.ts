@@ -29,7 +29,7 @@ import {
 import { fetchModelIds } from './modelCatalog';
 import { collectGitChanges } from './gitChanges';
 import { ROLE_ALIASES, getAgentDefinition } from '../shared/agents';
-import { AhiCodeDiffContentProvider } from './diffContentProvider';
+import { AhiCodeDiffContentProvider } from '../shared/diffContentProvider';
 import { getLanguageIdForFile } from '../shared/languageMap';
 
 type WebviewMessageHandlerMap = {
@@ -341,6 +341,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
       EDIT_MESSAGE: async (message) => {
         if (this._agentCore) {
+          // Düzenleme sırasında mod değiştiyse önce uygulanır; aksi halde
+          // webview'ın gönderdiği mod sessizce düşerdi.
+          if (message.payload.mode) {
+            this._agentCore.setMode(message.payload.mode);
+          }
           await this._agentCore.editMessage(message.payload.messageId, message.payload.text);
         }
       },
@@ -395,18 +400,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       REJECT_APPROVAL: async (message) => {
         if (this._agentCore) {
           await this._agentCore.rejectApproval(message.payload?.reason);
-        }
-      },
-
-      SET_WORKFLOW_STAGE: async (message) => {
-        if (this._agentCore) {
-          const result = await this._agentCore.setWorkflowStage(message.payload.stage);
-          if (!result.ok) {
-            this.postMessage({
-              type: 'NOTIFICATION',
-              payload: { level: 'warning', message: result.reason || 'Aşama değiştirilemedi.' }
-            });
-          }
         }
       },
 
@@ -481,10 +474,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       },
 
       GET_MCP_STATUS: async () => {
-        if (this._agentCore) {
-          const servers = this._agentCore.getMcpHub().getServerStatuses();
-          this.postMessage({ type: 'MCP_STATUS_LOADED', payload: { servers } });
-        }
+        // Çekirdek henüz yoksa boş listeyle yanıtla: görünüm sonsuza dek
+        // "yükleniyor" ekranında kalmasın.
+        const servers = this._agentCore ? this._agentCore.getMcpHub().getServerStatuses() : [];
+        this.postMessage({ type: 'MCP_STATUS_LOADED', payload: { servers } });
       },
 
       OPEN_MCP_CONFIG: async () => {
@@ -517,10 +510,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
       },
 
       GET_TASK_HISTORY: async () => {
-        if (this._agentCore) {
-          const history = this._agentCore.getHistoryManager().getSummaries();
-          this.postMessage({ type: 'TASK_HISTORY_LOADED', payload: { history } });
-        }
+        // Çekirdek yoksa boş geçmişle yanıtla; HistoryView yüklemede takılmasın.
+        const history = this._agentCore?.getHistoryManager().getSummaries() ?? [];
+        this.postMessage({ type: 'TASK_HISTORY_LOADED', payload: { history } });
       },
 
       LOAD_TASK: async (message) => {

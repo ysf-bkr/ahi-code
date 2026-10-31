@@ -113,9 +113,9 @@ Configure the following settings in VS Code Settings (`settings.json`) or inside
 | --- | --- | --- |
 | `ahiCode.selectedProvider` | `ollama` | Model provider (`ollama`, `evren`, `openrouter`, `openai-compatible`) |
 | `ahiCode.selectedModel` | `llama3.1` | Model identifier to use |
-| `ahiCode.autonomy` | `manual` | Autonomy level (`manual`, `guided`, `auto`) |
-| `ahiCode.maxTokensPerTask` | `0` | Maximum token budget per task (`0` = unlimited) |
-| `ahiCode.maxContinuations` | `12` | Maximum consecutive autonomous continuations in auto mode |
+| `ahiCode.autonomy` | `manual` | Autonomy level (`manual`, `guided`, `auto`); also switchable from the chat composer |
+| `ahiCode.agentModels` | `{}` | Per-role subagent models (role → model id). Empty roles fall back to the provider preset (EVREN: manager/architect → GLM-5.3, explorer → MiMo-V2.6-Pro) or the selected model |
+| `ahiCode.embeddingBaseUrl` | `""` | OpenAI-compatible embedding endpoint (e.g. EVREN `/v1`). Empty uses Ollama `/api/embed` |
 
 ---
 
@@ -131,7 +131,7 @@ Internal architecture, module boundaries, testing instructions, and contribution
 
 ## Known Limitations
 
-- **Command side effects are not undoable:** snapshots and checkpoints only cover files changed through `write_file` / `edit_file`. Files created or modified by `execute_command` cannot be restored by the undo feature; use Git for those.
+- **Command undo needs a clean Git tree:** `execute_command` takes a Git checkpoint and can be reverted, but only when the repository has a `HEAD` and the working tree was clean before the command. Outside a Git repository, command side effects are not undoable; use Git yourself for those.
 - **Plan mode is a tool lock, not a sandbox:** plan mode removes write and command tools from the schema, but it does not replace OS-level isolation. Use a Dev Container for untrusted repositories.
 - **Not yet on the Marketplace:** installation currently requires a locally built VSIX.
 

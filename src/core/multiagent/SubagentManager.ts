@@ -1,9 +1,14 @@
-import { ModelProvider, ProviderMessage } from '../../providers/base';
+import { ModelProvider, ModelCompletionResponse, ProviderMessage } from '../../providers/base';
 import { ALL_TOOLS } from '../../tools';
 import { ToolDefinition, coerceToolArguments, validateToolArguments, TerminalRunner } from '../../tools/base';
 import { ToolCall, ToolName } from '../../shared/types';
 import { errorMessage, isRecord } from '../../shared/errors';
+import { logWarning } from '../../shared/logging';
 import { parseSubagentTaskParams, SubagentTaskParams } from '../../shared/agents/params';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { formatTaskGraphResults, runTaskGraph, type TaskNode } from './parallelScheduler';
+import type { AgentModelChoice } from '../routing/agentModelPolicy';
 
 import { SkillManager } from '../skills/SkillManager';
 import type { LspClient } from '../lsp/LspClient';
@@ -103,11 +108,86 @@ export class SubagentManager {
     private sandboxProvider?: () => SandboxConfig | undefined,
     private terminalProvider?: () => TerminalRunner | undefined,
     private callGraphManager?: CallGraphManager,
-    private gitManager?: GitManager
+    private gitManager?: GitManager,
+    /** Rol + görev için model kararı; yoksa tüm alt ajanlar ana modeli kullanır. */
+    private agentModelRouter?: (role: string, task: string) => AgentModelChoice,
+    /** Verilen model kimliğiyle sağlayıcı üretir; başarısız olursa undefined. */
+    private providerForModel?: (model: string) => ModelProvider | undefined
   ) {}
+
+  /**
+   * Alt ajanlar arası salt-okunur dosya önbelleği: aynı dosyayı ikinci bir
+   * alt ajan yeniden okuduğunda içerik sağlayıcıya değil önbelleğe döner.
+   * Anahtar, yol + mtime; yazma işlemi ya da içerik değişimi anahtarı düşürür.
+   * Amaç aynı bilgiyi tekrar tekrar token olarak taşımamak.
+   */
+  private sharedFileReadCache = new Map<string, { mtimeMs: number; content: string }>();
+
+  private static readCacheKey(root: string | undefined, targetPath: string): string {
+    return `${root ?? ''}::${targetPath}`;
+  }
 
   public setSkillManager(skillManager: SkillManager) {
     this.skillManager = skillManager;
+  }
+
+  /**
+   * Rol için çözümlenmiş sağlayıcıyı döndürür; model kullanılamaz ya da
+   * üretilemezse ana sağlayıcıya düşer. Router yalnızca seçili modelden
+   * farklı bir model çözüldüğünde `model` alanını doldurur; böylece her alt
+   * ajan kendi modelini bağımsız kullanır.
+   */
+  private providerForRole(
+    role: string,
+    task: string
+  ): {
+    provider: ModelProvider;
+    choice?: AgentModelChoice;
+  } {
+    if (!this.agentModelRouter || !this.providerForModel) {
+      return { provider: this.provider };
+    }
+    const choice = this.agentModelRouter(role, task);
+    if (choice.model) {
+      try {
+        const provider = this.providerForModel(choice.model);
+        if (provider) return { provider, choice };
+      } catch (err) {
+        logWarning(`Could not create provider for agent model ${choice.model}`, err);
+      }
+    }
+    return { provider: this.provider, choice };
+  }
+
+  /**
+   * Model çağrısı: seçimdeki yedek model yalnızca ana model gerçekten hata
+   * verdiğinde denenir. Mesaj geçmişi korunduğu için bağlam kaybolmaz.
+   */
+  private async callModel(
+    provider: ModelProvider,
+    messages: ProviderMessage[],
+    tools: ToolDefinition[],
+    signal: AbortSignal | undefined,
+    choice: AgentModelChoice | undefined,
+    onFallback?: (from: string, to: string, reason: string) => void
+  ): Promise<ModelCompletionResponse> {
+    try {
+      return await provider.sendMessage(messages, tools, undefined, signal);
+    } catch (err) {
+      if (signal?.aborted) throw err;
+      const fallback = choice?.fallbackModel;
+      if (!fallback || !this.providerForModel) throw err;
+      let fallbackProvider: ModelProvider | undefined;
+      try {
+        fallbackProvider = this.providerForModel(fallback);
+      } catch (fallbackErr) {
+        logWarning(`Could not create fallback provider ${fallback}`, fallbackErr);
+      }
+      if (!fallbackProvider) throw err;
+      onFallback?.(choice?.model || 'primary', fallback, errorMessage(err, 'model request failed'));
+      // Yedek modelle bağlam korunur: mesaj geçmişi aynı dizi, yalnızca sağlayıcı değişir.
+      return fallbackProvider.sendMessage(messages, tools, undefined, signal);
+    }
   }
 
   public async runSubagent(
@@ -233,6 +313,10 @@ Note: Changes were not automatically applied to the main workspace. Review and a
 
     const allowedToolNames = new Set(tools.map((t) => t.name));
 
+    // Ajan bazlı model kararı: her alt ajan rolüne göre kendi modelini kullanır.
+    const { provider: agentProvider, choice: modelChoice } = this.providerForRole(resolvedRole, params.task);
+    let activeProvider = agentProvider;
+
     const customizationContext = this.skillManager?.getPromptContext() || '';
     const systemPrompt = `${basePrompt}
 Workspace: ${workspaceRoot || '.'}
@@ -253,6 +337,13 @@ Complete your task and provide a clear report of the results to the main agent w
       isolate: isolated,
       worktreePath: isolated ? workspaceRoot : undefined
     });
+    if (modelChoice?.model && modelChoice.routed) {
+      this.onSubagentStatus?.(
+        params.role,
+        `Model: ${modelChoice.model}${modelChoice.fallbackModel ? ` (yedek: ${modelChoice.fallbackModel})` : ''}`,
+        { state: 'starting' }
+      );
+    }
 
     while (maxSteps > 0) {
       if (signal?.aborted) {
@@ -265,7 +356,22 @@ Complete your task and provide a clear report of the results to the main agent w
       }
 
       maxSteps--;
-      const response = await this.provider.sendMessage(messages, tools, undefined, signal);
+      const response = await this.callModel(
+        activeProvider,
+        messages,
+        tools,
+        signal,
+        modelChoice,
+        (from, to, reason) => {
+          // Fallback kalıcıdır: sonraki turlar da yedek modelle sürer, bağlam korunur.
+          const provider = this.providerForModel?.(to);
+          if (provider) activeProvider = provider;
+          logWarning(`Subagent ${params.role}: model ${from} failed, falling back to ${to}`, reason);
+          this.onSubagentStatus?.(params.role, `Model ${from} başarısız; yedek model ${to} kullanılıyor.`, {
+            state: 'running'
+          });
+        }
+      );
 
       if (!response.toolCalls || response.toolCalls.length === 0) {
         this.onSubagentStatus?.(params.role, 'Completed', {
@@ -395,6 +501,32 @@ Complete your task and provide a clear report of the results to the main agent w
             // Alt ajanın dosya değişiklikleri de geri alınabilir olmalı.
             // Yalıtılmış worktree'deki yollar farklı kök kullanır, bu yüzden ana checkpoint'e bağlanmaz.
             const subagentPath = tc.arguments?.path;
+
+            // Salt-okunur paylaşımlı önbellek: aynı dosyayı ikinci alt ajan
+            // yeniden okumaz; mtime değişmediyse içerik doğrudan döner.
+            if (tc.name === 'read_file' && typeof subagentPath === 'string' && subagentPath) {
+              const cacheKey = SubagentManager.readCacheKey(workspaceRoot, subagentPath);
+              try {
+                const stat = await fs.stat(
+                  path.isAbsolute(subagentPath)
+                    ? subagentPath
+                    : path.resolve(workspaceRoot || process.cwd(), subagentPath)
+                );
+                const cached = this.sharedFileReadCache.get(cacheKey);
+                if (cached && cached.mtimeMs === stat.mtimeMs) {
+                  this.onAudit?.(auditTc, 'subagent_cached_read', workspaceRoot);
+                  messages.push({
+                    role: 'tool',
+                    toolCallId: tc.id,
+                    content: `${cached.content}\n\n[cached: this file was already read in this session and has not changed; no need to read it again]`
+                  });
+                  continue;
+                }
+              } catch {
+                // stat alınamıyorsa normal okuma yolu dener ve gerçek hatayı verir.
+              }
+            }
+
             if (
               !isolated &&
               (tc.name === 'write_file' || tc.name === 'edit_file') &&
@@ -432,6 +564,29 @@ Complete your task and provide a clear report of the results to the main agent w
               toolCallId: tc.id,
               content: trimSmart(result, 6000, `${tc.name} output`)
             });
+
+            // Okuma önbelleği: dosya içeride değişmeden tekrar sorulmasın.
+            if (tc.name === 'read_file' && typeof subagentPath === 'string' && subagentPath) {
+              try {
+                const stat = await fs.stat(
+                  path.isAbsolute(subagentPath)
+                    ? subagentPath
+                    : path.resolve(workspaceRoot || process.cwd(), subagentPath)
+                );
+                // Trim'li hâli sakla: önbellek isabetiyle normal okuma aynı
+                // boyut ve biçimde dönsün.
+                this.sharedFileReadCache.set(SubagentManager.readCacheKey(workspaceRoot, subagentPath), {
+                  mtimeMs: stat.mtimeMs,
+                  content: trimSmart(result, 6000, `${tc.name} output`)
+                });
+              } catch {
+                // Okunamayan dosya zaten hata döndürmüştür; önbelleğe yazılmaz.
+              }
+            }
+            // Yazma: ilgili anahtarı düşür; bayat içerik bir daha dönmesin.
+            if ((tc.name === 'write_file' || tc.name === 'edit_file') && typeof subagentPath === 'string') {
+              this.sharedFileReadCache.delete(SubagentManager.readCacheKey(workspaceRoot, subagentPath));
+            }
           } catch (err) {
             this.onAudit?.(auditTc, 'subagent_error', workspaceRoot);
             messages.push({
@@ -497,17 +652,24 @@ Complete your task and provide a clear report of the results to the main agent w
 
     const raw = args.tasks;
     const list = Array.isArray(raw) ? raw : [];
-    const tasks: SubagentTaskParams[] = list
+    const tasks: Array<TaskNode<SubagentTaskParams>> = list
       .filter((item): item is Record<string, unknown> => isRecord(item))
-      .map((item) => ({
+      .map((item, index) => ({
+        id: typeof item.id === 'string' && item.id.trim() ? item.id.trim() : `task-${index + 1}`,
         role: typeof item.role === 'string' ? item.role : 'backend',
-        task: typeof item.task === 'string' ? item.task : '',
-        context: typeof item.context === 'string' ? item.context : undefined,
-        isolate: item.isolate === true,
-        // Okuma modu paralel görevlere de geçer.
-        readOnly: readOnly || item.readOnly === true
+        payload: {
+          role: typeof item.role === 'string' ? item.role : 'backend',
+          task: typeof item.task === 'string' ? item.task : '',
+          context: typeof item.context === 'string' ? item.context : undefined,
+          isolate: item.isolate === true,
+          // Okuma modu paralel görevlere de geçer.
+          readOnly: readOnly || item.readOnly === true
+        },
+        dependsOn: Array.isArray(item.dependsOn)
+          ? item.dependsOn.filter((dep): dep is string => typeof dep === 'string')
+          : []
       }))
-      .filter((item) => item.task.trim().length > 0);
+      .filter((node) => node.payload.task.trim().length > 0);
 
     if (tasks.length === 0) {
       return { error: '[Argument Error]: At least one parallel task is required.' };
@@ -521,9 +683,15 @@ Complete your task and provide a clear report of the results to the main agent w
       };
     }
 
-    const results = await Promise.all(
-      tasks.map((task) => this.runSubagent(task, workspaceRoot, depth + 1, signal, isolated))
-    );
-    return { output: results.join('\n\n') };
+    try {
+      const results = await runTaskGraph(
+        tasks,
+        (node) => this.runSubagent(node.payload, workspaceRoot, depth + 1, signal, isolated),
+        { maxConcurrency: MAX_PARALLEL_TASKS }
+      );
+      return { output: formatTaskGraphResults(results) };
+    } catch (err) {
+      return { error: `[Argument Error]: ${errorMessage(err)}` };
+    }
   }
 }

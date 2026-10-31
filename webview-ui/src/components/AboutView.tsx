@@ -125,6 +125,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack, onSelectMenu, chan
         subtitle="AhiCode bilgileri ve tanılama"
         onBack={onBack}
         onSelectMenu={onSelectMenu}
+        activeDestination="about"
         changedFileCount={changedFileCount}
         actions={
           <IconButton label="Bilgileri yenile" onClick={refreshInfo} small>
@@ -136,7 +137,7 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack, onSelectMenu, chan
       <div className="ahi-screen-body">
         <div className="ahi-soft-card flex flex-col items-center rounded-lg border ahi-border-surface p-4 text-center">
           <div className="ahi-avatar ahi-avatar-soft ahi-avatar--xl">
-            <Logo className="ahi-icon-2xl" colored strokeWidth={1.3} />
+            <Logo className="ahi-icon-2xl" colored />
           </div>
           <div className="mt-2 text-sm font-semibold tracking-tight ahi-text-fg">AhiCode</div>
           <div className="mt-0.5 flex items-center gap-1.5">

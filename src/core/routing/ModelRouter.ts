@@ -1,6 +1,8 @@
 import { AgentMode, UserSettings } from '../../shared/types';
+import { resolveAgentModel, type AgentModelChoice } from './agentModelPolicy';
 
 export type TaskComplexity = 'simple' | 'standard' | 'complex' | 'review';
+export type { AgentModelChoice };
 
 export interface RoutingDecision {
   model: string;
@@ -92,5 +94,18 @@ export class ModelRouter {
       reason: reasonByComplexity[complexity],
       routed: model !== selected
     };
+  }
+
+  /**
+   * Bir alt ajan görevi için model seçer.
+   *
+   * Karar rol bazlıdır: kullanıcının rol override'ı, sağlayıcı hazır ayarı
+   * (EVREN: manager/architect → GLM-5.3, explorer → MiMo-V2.6-Pro) ve rol
+   * sınıfı varsayılanları sırayla denenir. Dönen `fallbackModel`, sağlayıcı
+   * gerçekten hata verdiğinde denenir; mesaj geçmişi korunduğu için model
+   * değişimi görev bağlamını kaybettirmez.
+   */
+  public routeForAgent(role: string, task: string, settings: UserSettings): AgentModelChoice {
+    return resolveAgentModel(role, task, settings);
   }
 }

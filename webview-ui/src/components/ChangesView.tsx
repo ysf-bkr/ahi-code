@@ -171,6 +171,7 @@ export const ChangesView: React.FC<ChangesViewProps> = ({
         subtitle="Görev dosyaları ve Git durumu"
         onBack={onBack}
         onSelectMenu={onSelectMenu}
+        activeDestination="changes"
         changedFileCount={changedFileCount ?? state.stats.filesModified.length}
         actions={
           <IconButton

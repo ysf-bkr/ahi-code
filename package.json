@@ -116,26 +116,6 @@
           "default": false,
           "description": "Yeni hataları önceden var olanlardan ayırmak için görev başındaki test durumunu kaydet."
         },
-        "ahiCode.maxRepairAttempts": {
-          "type": "number",
-          "default": 2,
-          "description": "Otomatik doğrulama başarısız olduğunda modele verilecek en fazla onarım denemesi."
-        },
-        "ahiCode.maxStepsPerTask": {
-          "type": "number",
-          "default": 25,
-          "description": "Bir görev bölümünde çalıştırılabilecek en fazla ajan adımı (varsayılan: 25). Sınıra ulaşıldığında görev onay veya yeni bölüm gerektirir; kontrolsüz döngüleri ve harcamaları sınırlar."
-        },
-        "ahiCode.maxTokensPerTask": {
-          "type": "number",
-          "default": 0,
-          "description": "Bir görevde harcanabilecek en fazla toplam token sınırı (0: sınırsız). Sınıra ulaşıldığında ajan bir sonraki model çağrısından önce duraklatılır ve kullanıcıya bildirilir; sürdürmek için sınırı yükseltin. Not: Yalnızca sağlayıcı kullanım (usage) bilgisi döndürüyorsa uygulanır."
-        },
-        "ahiCode.maxContinuations": {
-          "type": "number",
-          "default": 12,
-          "description": "Otonom modda ('auto') peş peşe izin verilen en fazla otomatik devam turu (varsayılan: 12)."
-        },
         "ahiCode.modelRoutingEnabled": {
           "type": "boolean",
           "default": false,
@@ -155,6 +135,11 @@
           "type": "string",
           "default": "",
           "description": "Kod inceleme görevleri için bağımsız model kimliği."
+        },
+        "ahiCode.agentModels": {
+          "type": "object",
+          "default": {},
+          "markdownDescription": "Alt ajan başına model kimlikleri (rol → model). Anahtarlar: `manager`, `analyst`, `architect`, `backend`, `frontend`, `mobile`, `native`, `database`, `devops`, `explorer`, `git`, `quality`, `security`. Boş bırakılan roller sağlayıcının hazır ayarını (EVREN: manager/architect → GLM-5.3, explorer → MiMo-V2.6-Pro) ya da seçili modeli kullanır."
         },
         "ahiCode.autoAcceptTerms": {
           "type": "boolean",
@@ -208,7 +193,12 @@
         "ahiCode.embeddingModel": {
           "type": "string",
           "default": "nomic-embed-text",
-          "description": "Bilgi tabanı anlamsal araması için kullanılacak Ollama embedding modeli."
+          "description": "Bilgi tabanı anlamsal araması için embedding modeli. Ollama için örn. nomic-embed-text; OpenAI uyumlu uç noktada (örn. EVREN) qwen3-embedding-8b."
+        },
+        "ahiCode.embeddingBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Anlamsal arama için OpenAI uyumlu uç nokta kökü (örn. https://evren-llmapi.ssyz.org.tr/v1). Boş bırakılırsa Ollama /api/embed kullanılır; API anahtarı gizli depodaki sağlayıcı anahtarından alınır."
         }
       }
     }

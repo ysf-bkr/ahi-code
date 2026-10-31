@@ -183,50 +183,48 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
           : 'ahi-border-surface hover:border-[var(--ahi-focus)]'
       }`}
     >
-      <button
-        type="button"
-        onClick={() => setExpanded((value) => !value)}
-        className="flex w-full items-center gap-2 px-2 py-1.5 text-left transition hover:bg-[var(--ahi-hover-bg)]"
-      >
-        <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full ahi-bg-raised font-mono text-2xs font-semibold ahi-text-muted">
-          {stepNumber}
-        </span>
-        <span className="shrink-0">{meta.icon}</span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-xs font-medium ahi-text-fg">{meta.title}</span>
-          {meta.detail && (
-            <span className="block truncate font-mono text-2xs ahi-text-muted">{meta.detail}</span>
-          )}
-        </span>
-        <span className="shrink-0">{statusChip}</span>
+      {/* Başlık düğmesi ve Diff kısayolu yan yana: düğme içinde düğme geçersiz HTML. */}
+      <div className="flex w-full items-center">
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          aria-expanded={expanded}
+          className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left transition hover:bg-[var(--ahi-hover-bg)]"
+        >
+          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full ahi-bg-raised font-mono text-2xs font-semibold ahi-text-muted">
+            {stepNumber}
+          </span>
+          <span className="shrink-0">{meta.icon}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-xs font-medium ahi-text-fg">{meta.title}</span>
+            {meta.detail && (
+              <span className="block truncate font-mono text-2xs ahi-text-muted">{meta.detail}</span>
+            )}
+          </span>
+          <span className="shrink-0">{statusChip}</span>
+        </button>
         {toolCall.status === 'completed' &&
           (toolCall.name === 'write_file' || toolCall.name === 'edit_file') && (
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={(e) => {
-                e.stopPropagation();
-                vscode.postMessage({ type: 'SHOW_TOOL_DIFF', payload: { toolCallId: toolCall.id } });
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.stopPropagation();
-                  vscode.postMessage({ type: 'SHOW_TOOL_DIFF', payload: { toolCallId: toolCall.id } });
-                }
-              }}
-              className="flex shrink-0 items-center gap-1 rounded border ahi-border-brand ahi-bg-brand-soft px-1.5 py-0.5 font-mono text-2xs font-medium ahi-text-brand transition hover:bg-[var(--ahi-brand-soft)] hover:text-[var(--ahi-fg)]"
+            <button
+              type="button"
+              onClick={() =>
+                vscode.postMessage({ type: 'SHOW_TOOL_DIFF', payload: { toolCallId: toolCall.id } })
+              }
+              className="mr-2 flex shrink-0 items-center gap-1 rounded border ahi-border-brand ahi-bg-brand-soft px-1.5 py-0.5 font-mono text-2xs font-medium ahi-text-brand transition hover:bg-[var(--ahi-brand-soft)] hover:text-[var(--ahi-fg)]"
               title="Değişiklikleri fark (diff) görünümünde incele ve düzenle"
             >
               <FileDiff className="ahi-icon-xs" />
               Diff
-            </span>
+            </button>
           )}
-        {expanded ? (
-          <ChevronDown className="ahi-icon-xs shrink-0 opacity-60" />
-        ) : (
-          <ChevronRight className="ahi-icon-xs shrink-0 opacity-60" />
-        )}
-      </button>
+        <span className="shrink-0 pr-2">
+          {expanded ? (
+            <ChevronDown className="ahi-icon-xs shrink-0 opacity-60" />
+          ) : (
+            <ChevronRight className="ahi-icon-xs shrink-0 opacity-60" />
+          )}
+        </span>
+      </div>
 
       {toolCall.explanation && !expanded && (
         <div className="border-t ahi-border-surface px-2 py-1 text-2xs ahi-text-muted">
