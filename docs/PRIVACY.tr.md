@@ -74,12 +74,38 @@ Görev geçmişini eklentinin geçmiş ekranından silebilirsiniz. Proje içinde
 `.ahi/` kayıtlarını silmek veya saklamak kullanıcının ve proje bakım
 sorumlusunun kontrolündedir.
 
-## 5. Telemetri
+## 5. Telemetri ve otomatik hata bildirimleri
 
 Kod tabanında AhiCode tarafından işletilen analitik/telemetri gönderimi
-bulunmamaktadır. VS Code, model sağlayıcıları, web arama hizmetleri, MCP
-sunucuları veya yapılandırdığınız başka hizmetlerin kendi veri uygulamaları bu
-bildirimin kapsamı dışındadır.
+bulunmamaktadır: kullanım sayacı, oturum kaydı veya profilleme verisi
+toplanmaz ve gönderilmez.
+
+Tek istisna dar kapsamlı bir dışa gönderimdir ve analitik değildir: **otomatik
+hata bildirimleri**. Eklenti, kullanıcıya gösterdiği bir hatayla karşılaştığında,
+bakım sorumlusunun düzeltebilmesi için AhiCode'ün herkese açık GitHub
+deposunda (`ysf-bkr/ahi-code`) bir sorun (issue) açabilir.
+
+- Denetim: `ahiCode.reportErrors` (varsayılan açık). Kapatınca bu özelliğin
+  tüm dış çağrıları durur.
+- Taşıma: bildirimler kendi makinenizde kendi `gh` (GitHub CLI) oturumunuzla
+  oluşturulur. `gh` kurulu veya giriş yapmış değilse hiçbir şey gönderilmez;
+  eklenti bu özellik için kendi üstünde hiçbir GitHub kimliği tutmaz.
+- İçerik: yalnızca hata mesajının kendisi ve kaba ortam bilgisi (eklenti
+  sürümü, uygulama adı, platform, zaman). Gönderimden önce dosya yolları,
+  API anahtarı benzeri diziler, UUID'ler, uzun hex kimlikleri ve büyük
+  sayılar maskelenir; metin kısaltılır. Sohbet dökümü, dosya içeriği ve kod
+  asla eklenmez.
+- Mükerrer koruması: her hata, yerelde saklanan ve issue gövdesine gömülen
+  bir içerik parmak izi alır; aynı hata ikinci bir sorun açmaz.
+- Bütçe: eklenti oturumu başına en fazla beş yeni sorun, aralarında bekleme
+  süresiyle açılır.
+
+Maskelenmiş bir hata metnini bile hassas sayıyorsanız
+`ahiCode.reportErrors` ayarını `false` yapın.
+
+VS Code, model sağlayıcıları, web arama hizmetleri, MCP sunucuları veya
+yapılandırdığınız başka hizmetlerin kendi veri uygulamaları bu bildirimin
+kapsamı dışındadır.
 
 ## 6. Güvenlik ve çocukların gizliliği
 

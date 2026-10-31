@@ -13,6 +13,10 @@
  * üreticisi enjekte edilir ve testler sahte taşıyıcıyla koşar.
  */
 import * as crypto from 'crypto';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 
 /** Bildirimin gideceği depo. */
 export const ERROR_REPORT_REPO = 'ysf-bkr/ahi-code';
@@ -57,6 +61,19 @@ export interface ErrorReporterDependencies {
   now?: () => number;
 }
 
+/**
+ * Varsayılan taşıyıcı: `gh` CLI'ı kabuk üzerinden geçirmeden çalıştırır.
+ * Kurulu değilse ENOENT fırlatır; ErrorReporter bunu kalıcı devre dışı
+ * bırakma sebebi sayar.
+ */
+export const githubCliRunner: GitHubRunner = async (args) => {
+  const { stdout } = await execFileAsync('gh', args, {
+    timeout: 20_000,
+    maxBuffer: 512 * 1024
+  });
+  return stdout;
+};
+
 const FINGERPRINT_STORE_KEY = 'ahi_error_fingerprint';
 
 /**
@@ -65,15 +82,19 @@ const FINGERPRINT_STORE_KEY = 'ahi_error_fingerprint';
  * iki görünümü aynı parmak izine düşsün.
  */
 export function normalizeErrorMessage(message: string): string {
-  return String(message || '')
-    .replace(/sk-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{8,}|xox[bap]-[A-Za-z0-9-]+/g, '<anahtar>')
-    .replace(/(?:\/[\w.@ -]+){2,}|(?:[A-Za-z]:\\[\w.@ \\-]+)+/g, '<yol>')
-    .replace(/\b[0-9a-f]{8}-[0-9a-f-]{27,}\b/gi, '<uuid>')
-    .replace(/\b[0-9a-f]{16,}\b/gi, '<hex>')
-    .replace(/\b\d{7,}\b/g, '<sayi>')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
+  return (
+    String(message || '')
+      // Aynı hata arka plan bildiriminde önekle gelir; imza ayrışmasın.
+      .replace(/^arka plan:\s*/i, '')
+      .replace(/sk-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{8,}|xox[bap]-[A-Za-z0-9-]+/g, '<anahtar>')
+      .replace(/(?:\/[\w.@ -]+){2,}|(?:[A-Za-z]:\\[\w.@ \\-]+)+/g, '<yol>')
+      .replace(/\b[0-9a-f]{8}-[0-9a-f-]{27,}\b/gi, '<uuid>')
+      .replace(/\b[0-9a-f]{16,}\b/gi, '<hex>')
+      .replace(/\b\d{7,}\b/g, '<sayi>')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase()
+  );
 }
 
 /** Normalize edilmiş mesajdan kısa, arama dostu parmak izi üretir. */

@@ -146,6 +146,11 @@
           "default": false,
           "description": "EVREN LLM kullanım koşullarını kullanıcı adına otomatik kabul et. Varsayılan olarak devre dışıdır."
         },
+        "ahiCode.reportErrors": {
+          "type": "boolean",
+          "default": true,
+          "description": "Eklenti kendi hatalarını GitHub deposunda (ysf-bkr/ahi-code) otomatik sorun olarak bildirir. Aynı hatanın mükerrer kaydı açılmaz; dosya yolları, anahtarlar ve kimlikler maskelenerek temizlenir. Gönderim için GitHub CLI (gh) kurulu ve oturumu açık olmalıdır; değilse bildirim sessizce atlanır."
+        },
         "ahiCode.sandboxMode": {
           "type": "string",
           "enum": [

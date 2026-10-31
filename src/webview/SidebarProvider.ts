@@ -16,6 +16,7 @@ import { getActiveWorkspaceRoot } from '../core/workspace/workspaceRoot';
 import { resolveWorkspacePath } from '../tools/pathSafety';
 import { errorMessage } from '../shared/errors';
 import { logWarning } from '../shared/logging';
+import { ErrorReporter, githubCliRunner } from '../feedback/errorReporter';
 import { buildWebviewHtml } from './webviewHtml';
 import {
   loadDefaultSettings,
@@ -49,6 +50,35 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   private _configListenerRegistered = false;
   private _pendingNewSession = false;
   private _diffProvider = AhiCodeDiffContentProvider.getInstance();
+  private _errorReporter?: ErrorReporter;
+
+  /**
+   * Otomatik hata bildirimi tek örneği. Ayar her bildirimde yeniden
+   * okunduğundan kullanıcı kapatınca bekleyen bir gönderim bile durur.
+   */
+  private get errorReporter(): ErrorReporter {
+    if (!this._errorReporter) {
+      this._errorReporter = new ErrorReporter({
+        runGitHub: githubCliRunner,
+        store: this._context.globalState,
+        context: {
+          extensionVersion: String(this._context.extension?.packageJSON?.version ?? '0.0.0'),
+          appHost: vscode.env.appName,
+          platform: process.platform
+        },
+        isEnabled: () => vscode.workspace.getConfiguration('ahiCode').get<boolean>('reportErrors') !== false,
+        onReported: (issueUrl) => {
+          if (!issueUrl) return;
+          this.postMessage({
+            type: 'NOTIFICATION',
+            payload: { level: 'info', message: `Bu hata GitHub'a bildirildi: ${issueUrl}` }
+          });
+        },
+        onSilentFailure: (reason) => logWarning('Error reporting skipped', reason)
+      });
+    }
+    return this._errorReporter;
+  }
 
   /** Etkin oturumun çekirdeği. Oturum yoksa `undefined`. */
   private get _agentCore(): AgentCore | undefined {
@@ -304,6 +334,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   }
 
   public postMessage(message: ExtensionToWebviewMessage) {
+    // Hata bildirim tek geçiş noktası: kullanıcıya ulaşan her hata mesajı
+    // buradan geçer. Ayar açıksa ve `gh` hazırsa mükerrer olmayan bir GitHub
+    // sorunu açılır; başarısızlık sohbet akışını asla etkilemez.
+    if (message.type === 'NOTIFICATION' && message.payload.level === 'error') {
+      void this.errorReporter.report(message.payload.message);
+    }
     if (this._view) {
       // postMessage görünüm kapandıktan sonra reddedilebilir; yakalanmamış promise olmasın.
       Promise.resolve(this._view.webview.postMessage(message)).catch(() => {});
