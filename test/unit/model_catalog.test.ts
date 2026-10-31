@@ -102,4 +102,26 @@ describe('modelCatalog: provider model listing', () => {
     assert.ok(!models.includes('qwen3-asr-1.7b'));
     assert.ok(!models.includes('voxcpm2'));
   });
+
+  it('EVREN görev etiketini (task) kimlik tahminine tercih eder', async () => {
+    routes['/models'] = {
+      data: [
+        // Kimlikten sınıf çıkarılamayan karar/sohbet modelleri etiketle açılır.
+        { id: 'clef', task: 'Karar' },
+        { id: 'laya', task: 'Karar' },
+        { id: 'yeni-sohbet', task: 'Sohbet' },
+        // Kimlik müstear olsa bile görev etiketi media modellerini dışarıda tutar.
+        { id: 'gizli-gomme', task: 'Gömme' },
+        { id: 'gizli-ses', task: 'Metinden sese' },
+        { id: 'qwen3-guard-4b', task: 'Güvenlik' }
+      ]
+    };
+    const models = await fetchModelIds({ provider: 'evren', baseUrl, apiKey: 'key', storedKeys: {} });
+    assert.ok(models.includes('clef'), 'Karar modeli sohbet ucuyla konuşulabilir');
+    assert.ok(models.includes('laya'));
+    assert.ok(models.includes('yeni-sohbet'));
+    assert.ok(!models.includes('gizli-gomme'));
+    assert.ok(!models.includes('gizli-ses'));
+    assert.ok(!models.includes('qwen3-guard-4b'), 'güvenlik sınıflandırıcısı kod hattına verilmez');
+  });
 });

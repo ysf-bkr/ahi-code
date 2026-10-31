@@ -12,34 +12,34 @@ const evrenBase: UserSettings = {
 };
 
 describe('agent model policy: EVREN presets', () => {
-  it('routes the manager and architect to GLM-5.3 with a MiMo fallback', () => {
+  it('routes the manager and architect to glm-5.3 with a mimo fallback', () => {
     const manager = resolveAgentModel('manager', 'görevleri yönet', evrenBase);
-    assert.strictEqual(manager.model, 'GLM-5.3');
-    assert.strictEqual(manager.fallbackModel, 'MiMo-V2.6-Pro');
+    assert.strictEqual(manager.model, 'glm-5.3');
+    assert.strictEqual(manager.fallbackModel, 'mimo-v2.6-pro');
     assert.strictEqual(manager.routed, true);
 
     const architect = resolveAgentModel('architect', 'mimariyi tasarla', evrenBase);
-    assert.strictEqual(architect.model, 'GLM-5.3');
+    assert.strictEqual(architect.model, 'glm-5.3');
   });
 
-  it('routes the explorer to the lighter MiMo model without a heavier fallback', () => {
+  it('routes the explorer to the lighter mimo model with a cheap fallback', () => {
     const explorer = resolveAgentModel('explorer', 'projeyi tara', evrenBase);
-    assert.strictEqual(explorer.model, 'MiMo-V2.6-Pro');
-    assert.strictEqual(explorer.fallbackModel, undefined);
+    assert.strictEqual(explorer.model, 'mimo-v2.6-pro');
+    assert.strictEqual(explorer.fallbackModel, 'deepseek-v4.1-flash');
   });
 
   it('routes review roles (quality, security) to the strong review model', () => {
-    assert.strictEqual(resolveAgentModel('quality', 'diffi incele', evrenBase).model, 'GLM-5.3');
-    assert.strictEqual(resolveAgentModel('security', 'denetle', evrenBase).model, 'GLM-5.3');
+    assert.strictEqual(resolveAgentModel('quality', 'diffi incele', evrenBase).model, 'glm-5.3');
+    assert.strictEqual(resolveAgentModel('security', 'denetle', evrenBase).model, 'glm-5.3');
   });
 
   it('does not force a preset when the selected model already matches', () => {
-    const settings: UserSettings = { ...evrenBase, selectedModel: 'GLM-5.3' };
+    const settings: UserSettings = { ...evrenBase, selectedModel: 'glm-5.3' };
     const choice = resolveAgentModel('manager', 'yönet', settings);
     assert.strictEqual(choice.model, undefined);
     assert.strictEqual(choice.routed, false);
-    // Fallback yine de tanımlı kalmalı: GLM-5.3 hata verirse MiMo denenebilir.
-    assert.strictEqual(choice.fallbackModel, 'MiMo-V2.6-Pro');
+    // Fallback yine de tanımlı kalmalı: glm-5.3 hata verirse mimo denenebilir.
+    assert.strictEqual(choice.fallbackModel, 'mimo-v2.6-pro');
   });
 
   it('lets a user override win over the provider preset', () => {

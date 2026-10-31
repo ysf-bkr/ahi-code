@@ -6,10 +6,12 @@ Bu dosya kullanıcıları etkileyen önemli değişiklikleri kaydeder.
 
 ### Eklendi
 
+- **EVREN model kataloğu rollerle buluştu:** Rol hazır ayarları kataloğun sunucudaki canonical kimliklerine çekildi (orkestrasyon/akıl yürütme/inceleme → `glm-5.3`, yedek `mimo-v2.6-pro`; keşif → `mimo-v2.6-pro`, yedek `deepseek-v4.1-flash`) — eski yazımların ilk çağrıda ödediği 404-iyileştirme gidiş-dönüşü kalktı. Model listesi artık sağlayıcının görev etiketini (`task`: Sohbet, Karar, Gömme…) kimlik tahminine tercih ediyor: Karar modelleri (clef, laya) seçim listesinde açılıyor; görev etiketi taşıyan gizli kimlikli gömme/ses modelleri bile sohbet listesine sızmıyor. `qwen3-guard-4b` güvenlik sınıfı olarak tanındı ve kod hattına asla verilmiyor; gömme (`qwen3-embedding-8b`) ve yeniden sıralama gibi medya modelleri kendi özellik uç noktalarında kalıyor.
 - **Monorepo: çekirdek ayrıldı, terminal ajanı geldi:** Proje tek depolu bir npm workspaces monorepo'suna dönüştürüldü. `@ahicode/core` paketi sağlayıcıları, araçları, izin/bağlam/bilgi/callgraph/multiagent motorunu taşır ve `vscode` modülünü **hiç** import etmez; motor, dil sunucusuna `LspClientPort` arayüzü üzerinden ulaşır (gerçek `LspClient` eklenti konağında kalır ve bu arayüzü yapısal olarak karşılar). `@ahicode/cli` paketi yalnızca çekirdek üzerine kurulu `ahi` terminal ajanıdır. `src/` artık yalnızca `vscode` API'sine değen konak katmanıdır (aktivasyon, webview, AgentCore çalışma zamanı). Bu sözleşme `test/unit/architecture.test.ts` ile kilitli: core ne `vscode` ne eklenti `src/`'ini; CLI eklenti `src/`'ini import edemez.
 
 ### Düzeltilen
 
+- **Bestecideki otonomi ve mod seçicileri artık gerçekten seçilebiliyor:** Seçenek menüsü, bestecinin taşmayı kesen kutusunun içinde yukarı açıldığı için tamamen kırpılıyor ve tıklamalara rağmen hiçbir seçenek görünmüyordu. Menü tümüyle kaldırıldı; seçenekler tek satırda satır içi olarak duruyor — seçili seçenek ikon + etiket, seçili olmayanlar yalnızca ikon olarak çiziliyor ve tıklayınca seçim doğrudan uygulanıyor.
 - **Sohbette ara anlatım balonları arasındaki boşluklar giderildi:** Modelin araç adımları arasında ürettiği kısa ara metinler, turların uzunluğuna bakılmaksızın her biri tam bir balon boşluğu kaplayarak sohbeti seyrekleştiriyordu. Artık yalnızca turun son yanıtı balon olarak çiziliyor; ondan önceki ara metinler tek satırlık, soluk bir izleme çizgisine indirgeniyor.
 
 ## [0.0.2] - 2026-10-30

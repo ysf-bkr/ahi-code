@@ -1,6 +1,10 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { classifyModelCapability, isConversationModel } from '@ahicode/core/shared/modelCapability';
+import {
+  capabilityFromTask,
+  classifyModelCapability,
+  isConversationModel
+} from '@ahicode/core/shared/modelCapability';
 
 describe('modelCapability: model kimliğinden yetenek sınıflandırma', () => {
   it('boş ve tanımsız girdiyi sohbet modeli sayar', () => {
@@ -43,5 +47,37 @@ describe('modelCapability: model kimliğinden yetenek sınıflandırma', () => {
       false,
       'vision sohbet/araç çağrısı modeli değildir'
     );
+  });
+
+  it('güvenlik (guard) modeli sohbet hattına verilmez', () => {
+    assert.strictEqual(classifyModelCapability('qwen3-guard-4b'), 'safety');
+    assert.strictEqual(isConversationModel('qwen3-guard-4b'), false);
+  });
+});
+
+describe('modelCapability: görev etiketinden (EVREN task) sınıflandırma', () => {
+  it('Türkçe görev etiketlerini tanır', () => {
+    assert.strictEqual(capabilityFromTask('Sohbet'), 'chat');
+    assert.strictEqual(capabilityFromTask('Karar'), 'chat');
+    assert.strictEqual(capabilityFromTask('Görsel sohbet'), 'vision');
+    assert.strictEqual(capabilityFromTask('Gömme'), 'embedding');
+    assert.strictEqual(capabilityFromTask('Yeniden sıralama'), 'rerank');
+    assert.strictEqual(capabilityFromTask('Ses yazıya'), 'asr');
+    assert.strictEqual(capabilityFromTask('Metinden sese'), 'tts');
+    assert.strictEqual(capabilityFromTask('OCR'), 'ocr');
+    assert.strictEqual(capabilityFromTask('Güvenlik'), 'safety');
+  });
+
+  it('bilinmeyen veya boş etiket undefined döner (kimlik sınıflandırıcısına düşülür)', () => {
+    assert.strictEqual(capabilityFromTask(undefined), undefined);
+    assert.strictEqual(capabilityFromTask(''), undefined);
+    assert.strictEqual(capabilityFromTask('uzay-çağı-model'), undefined);
+  });
+
+  it('karar modelleri (clef, laya) sohbet ucuyla konuşulabilir sayılır', () => {
+    assert.strictEqual(capabilityFromTask('Karar'), 'chat');
+    // Kimlik tahmini clef/laya'yı tanıyamaz; görev etiketi asıldır.
+    assert.strictEqual(classifyModelCapability('clef'), 'chat');
+    assert.strictEqual(classifyModelCapability('laya'), 'chat');
   });
 });

@@ -139,7 +139,7 @@
         "ahiCode.agentModels": {
           "type": "object",
           "default": {},
-          "markdownDescription": "Alt ajan başına model kimlikleri (rol → model). Anahtarlar: `manager`, `analyst`, `architect`, `backend`, `frontend`, `mobile`, `native`, `database`, `devops`, `explorer`, `git`, `quality`, `security`. Boş bırakılan roller sağlayıcının hazır ayarını (EVREN: manager/architect → GLM-5.3, explorer → MiMo-V2.6-Pro) ya da seçili modeli kullanır."
+          "markdownDescription": "Alt ajan başına model kimlikleri (rol → model). Anahtarlar: `manager`, `analyst`, `architect`, `backend`, `frontend`, `mobile`, `native`, `database`, `devops`, `explorer`, `git`, `quality`, `security`. Boş bırakılan roller sağlayıcının hazır ayarını (EVREN: manager/architect → glm-5.3, explorer → mimo-v2.6-pro) ya da seçili modeli kullanır."
         },
         "ahiCode.autoAcceptTerms": {
           "type": "boolean",

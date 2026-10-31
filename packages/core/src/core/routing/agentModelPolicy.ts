@@ -6,8 +6,8 @@
  * (1) kullanıcının rol bazlı override'ı, (2) sağlayıcı hazır ayarı,
  * (3) rol sınıfı varsayılanı, (4) seçili model.
  *
- * EVREN seçildiğinde orkestrasyon ve akıl yürütme rolleri GLM-5.3 ile,
- * keşif rolü MiMo-V2.6-Pro ile çalışır; GLM-5.3 kullanılamazsa otomatik
+ * EVREN seçildiğinde orkestrasyon ve akıl yürütme rolleri glm-5.3 ile,
+ * keşif rolü mimo-v2.6-pro ile çalışır; glm-5.3 kullanılamazsa otomatik
  * fallback MiMo-V2.6-Pro'dur. Fallback yalnızca sağlayıcı gerçekten hata
  * verdiğinde devreye girer ve mesaj geçmişi korunduğu için bağlam kaybolmaz.
  */
@@ -31,17 +31,25 @@ interface PresetEntry {
   fallback?: string;
 }
 
-export const EVREN_MODEL_GLM = 'GLM-5.3';
-export const EVREN_MODEL_MIMO = 'MiMo-V2.6-Pro';
+export const EVREN_MODEL_GLM = 'glm-5.3';
+export const EVREN_MODEL_MIMO = 'mimo-v2.6-pro';
+export const EVREN_MODEL_DEEPSEEK = 'deepseek-v4.1-flash';
 
-/** EVREN LLM için rol bazlı hazır ayar (kullanıcı override'ı yoksa geçerli). */
+/**
+ * EVREN LLM için rol bazlı hazır ayar (kullanıcı override'ı yoksa geçerli).
+ * Kimlikler kataloğun sunucudaki canonical (küçük) biçimidir; eski yazımlar
+ * 404 + öneri iyileştirmesiyle düzelir ama her ilk çağrıya bir gidiş-dönüş
+ * maliyeti bindirirdi. Sohbet hattına yalnızca Sohbet sınıfındaki modeller
+ * verilir; Karar/Görsel/OCR/Gömme modelleri kendi özellik uç noktalarında
+ * kullanılır, araç çağıran kod hattına verilmez.
+ */
 const EVREN_ROLE_PRESETS: Readonly<Partial<Record<OrchestratorRole, PresetEntry>>> = {
   manager: { model: EVREN_MODEL_GLM, fallback: EVREN_MODEL_MIMO },
   architect: { model: EVREN_MODEL_GLM, fallback: EVREN_MODEL_MIMO },
   analyst: { model: EVREN_MODEL_GLM, fallback: EVREN_MODEL_MIMO },
   quality: { model: EVREN_MODEL_GLM, fallback: EVREN_MODEL_MIMO },
   security: { model: EVREN_MODEL_GLM, fallback: EVREN_MODEL_MIMO },
-  explorer: { model: EVREN_MODEL_MIMO }
+  explorer: { model: EVREN_MODEL_MIMO, fallback: EVREN_MODEL_DEEPSEEK }
 };
 
 /** Bağımsız inceleme ve orkestrasyon rolleri; güçlü model isterler. */

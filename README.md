@@ -114,7 +114,7 @@ Aşağıdaki ayarları VS Code Ayarlarından (`settings.json`) veya AhiCode aray
 | `ahiCode.selectedProvider` | `ollama` | Model sağlayıcısı (`ollama`, `evren`, `openrouter`, `openai-compatible`) |
 | `ahiCode.selectedModel` | `llama3.1` | Kullanılacak model adı |
 | `ahiCode.autonomy` | `manual` | Otonomi seviyesi (`manual`, `guided`, `auto`); sohbet giriş alanından da değiştirilebilir |
-| `ahiCode.agentModels` | `{}` | Rol bazlı alt ajan modelleri (rol → model kimliği). Boş roller sağlayıcının hazır ayarını (EVREN: manager/architect → GLM-5.3, explorer → MiMo-V2.6-Pro) ya da seçili modeli kullanır |
+| `ahiCode.agentModels` | `{}` | Rol bazlı alt ajan modelleri (rol → model kimliği). Boş roller sağlayıcının hazır ayarını (EVREN: manager/architect → glm-5.3, explorer → mimo-v2.6-pro) ya da seçili modeli kullanır |
 | `ahiCode.embeddingBaseUrl` | `""` | OpenAI uyumlu embedding uç noktası (örn. EVREN `/v1`). Boşsa Ollama `/api/embed` kullanılır |
 
 ---

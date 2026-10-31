@@ -9,7 +9,7 @@
 import { DEFAULT_PROVIDER_URLS, HTTP_TIMEOUT_MS } from '@ahicode/core/shared/constants';
 import { normalizeBaseUrl } from '@ahicode/core/providers/openai';
 import { isRecord } from '@ahicode/core/shared/errors';
-import { classifyModelCapability } from '@ahicode/core/shared/modelCapability';
+import { capabilityFromTask, classifyModelCapability } from '@ahicode/core/shared/modelCapability';
 
 export interface ModelCatalogRequest {
   provider: string;
@@ -58,15 +58,18 @@ async function fetchEvrenModels(baseUrl: string, apiKey: string): Promise<string
     signal: AbortSignal.timeout(HTTP_TIMEOUT_MS.modelList)
   });
   // Sohbet/model seçici yalnızca konuşabilen modelleri listeler: embedding,
-  // rerank, OCR, ses ve görüntü üretim modelleri kendi özelliklerinde
-  // kullanılır; kod yazma modeli olarak seçilmez (görüş modelleri kalır).
+  // rerank, OCR, ses, güvenlik ve görüntü üretim modelleri kendi
+  // özelliklerinde kullanılır; kod yazma modeli olarak seçilmez
+  // (görüş modelleri kalır). EVREN görev etiketi (task) döndürüyorsa kimlik
+  // tahminine tercih edilir: kimlik değişiği (clef, laya) yanlış sınıflandırılamaz.
   return isRecordArray(data, 'data')
     .filter((item) => typeof item.id === 'string')
-    .map((item) => item.id as string)
-    .filter((id) => {
-      const capability = classifyModelCapability(id);
-      return capability === 'chat' || capability === 'vision';
-    });
+    .map((item) => ({
+      id: item.id as string,
+      capability: capabilityFromTask(item.task) ?? classifyModelCapability(item.id as string)
+    }))
+    .filter(({ capability }) => capability === 'chat' || capability === 'vision')
+    .map(({ id }) => id);
 }
 
 async function fetchOpenRouterModels(apiKey: string): Promise<string[]> {

@@ -100,7 +100,7 @@ export class ModelRouter {
    * Bir alt ajan görevi için model seçer.
    *
    * Karar rol bazlıdır: kullanıcının rol override'ı, sağlayıcı hazır ayarı
-   * (EVREN: manager/architect → GLM-5.3, explorer → MiMo-V2.6-Pro) ve rol
+   * (EVREN: manager/architect → glm-5.3, explorer → mimo-v2.6-pro) ve rol
    * sınıfı varsayılanları sırayla denenir. Dönen `fallbackModel`, sağlayıcı
    * gerçekten hata verdiğinde denenir; mesaj geçmişi korunduğu için model
    * değişimi görev bağlamını kaybettirmez.

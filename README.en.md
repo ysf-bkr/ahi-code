@@ -114,7 +114,7 @@ Configure the following settings in VS Code Settings (`settings.json`) or inside
 | `ahiCode.selectedProvider` | `ollama` | Model provider (`ollama`, `evren`, `openrouter`, `openai-compatible`) |
 | `ahiCode.selectedModel` | `llama3.1` | Model identifier to use |
 | `ahiCode.autonomy` | `manual` | Autonomy level (`manual`, `guided`, `auto`); also switchable from the chat composer |
-| `ahiCode.agentModels` | `{}` | Per-role subagent models (role → model id). Empty roles fall back to the provider preset (EVREN: manager/architect → GLM-5.3, explorer → MiMo-V2.6-Pro) or the selected model |
+| `ahiCode.agentModels` | `{}` | Per-role subagent models (role → model id). Empty roles fall back to the provider preset (EVREN: manager/architect → glm-5.3, explorer → mimo-v2.6-pro) or the selected model |
 | `ahiCode.embeddingBaseUrl` | `""` | OpenAI-compatible embedding endpoint (e.g. EVREN `/v1`). Empty uses Ollama `/api/embed` |
 
 ---
