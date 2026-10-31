@@ -120,6 +120,15 @@ describe('Web tools: URL and HTML safety', () => {
     assert.strictEqual(isPublicHttpUrl('http://[2606:4700:4700::1111]'), true);
   });
 
+  it('blocks IPv4-embedded IPv6 forms (SSRF gap)', () => {
+    // IPv4-uyumlu (::a.b.c.d) ve onaltılı gömülü (::7f00:1) biçimleri.
+    assert.strictEqual(isPublicHttpUrl('http://[::127.0.0.1]'), false);
+    assert.strictEqual(isPublicHttpUrl('http://[::7f00:1]'), false);
+    assert.strictEqual(isPublicHttpUrl('http://[::10.0.0.1]'), false);
+    assert.strictEqual(isPublicHttpUrl('http://[::8.8.8.8]'), false);
+    assert.strictEqual(isPublicHttpUrl('http://[::ffff:7f00:1]'), false);
+  });
+
   it('DNS/private IP validation rejects unsafe addresses', async () => {
     await assert.rejects(() => assertSafeUrl('http://127.0.0.1'), /blocked|private/i);
     await assert.rejects(() => assertSafeUrl('http://[::1]'), /blocked|private/i);

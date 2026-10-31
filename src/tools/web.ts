@@ -47,10 +47,22 @@ function isPrivateIpv4(address: string): boolean {
   return false;
 }
 
+/**
+ * IPv6 içine gömülü IPv4 biçimlerini yakalar: IPv4-uyumlu (::a.b.c.d —
+ * RFC 4291, yönlendirilemez), eşlenmiş onaltılı (::7f00:1 = 127.0.0.1) ve
+ * noktalı çiftin sonda göründüğü her değişken. Bu biçimler genel hedef
+ * olamaz; gömülü adres özel alanlı olmasa da tümüyle engellenir.
+ */
+function hasEmbeddedIpv4(normalized: string): boolean {
+  if (/(?:^|:)(?:\d{1,3}\.){3}\d{1,3}$/.test(normalized)) return true;
+  return /^::(?:[0-9a-f]{1,4}:)?[0-9a-f]{1,4}$/.test(normalized);
+}
+
 function isPrivateIpv6(address: string): boolean {
   const normalized = address.toLowerCase().replace(/^\[|\]$/g, '');
   if (normalized === '::' || normalized === '::1') return true;
   if (normalized.startsWith('::ffff:')) return true; // IPv4'e eşlenmiş adres
+  if (hasEmbeddedIpv4(normalized)) return true; // ::127.0.0.1 ve ::7f00:1 türü gömülmüş biçimler
   if (
     normalized.startsWith('fe8') ||
     normalized.startsWith('fe9') ||
