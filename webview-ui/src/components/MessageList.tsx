@@ -13,6 +13,7 @@ import {
   Pencil,
   Settings,
   Undo2,
+  RotateCcw,
   ChevronRight
 } from 'lucide-react';
 import { ChatMessage, CheckpointSummary, ToolCall } from '@shared/types';
@@ -31,6 +32,11 @@ interface MessageListProps {
   checkpoints?: CheckpointSummary[];
   /** Mesaj içeriği ve kimliği; düzenleme o turdan sonrasını yeniden çalıştırır. */
   onEditMessage?: (content: string, messageId: string) => void;
+  /**
+   * Hatalı turu aynı sohbette yerinde yeniden çalıştırır (besteciye uğramadan
+   * doğrudan gönderim). Yeni sohbet açmak yerine aynı istemden devam edilir.
+   */
+  onRetryMessage?: (content: string, messageId: string) => void;
   onSuggestionClick?: (prompt: string) => void;
   isConfigured?: boolean;
   onOpenSettings?: () => void;
@@ -377,31 +383,48 @@ export function summarizeTurn(turn: ChatTurn): string {
 const ToolSteps: React.FC<{ toolCalls: ToolCall[]; pendingToolCall?: ToolCall }> = ({
   toolCalls,
   pendingToolCall
-}) => (
-  <div className="ml-1 space-y-1 border-l ahi-border-surface pl-2">
-    <div className="flex items-center gap-1.5 px-0.5 ahi-overline">
-      <Layers className="ahi-icon-xs ahi-text-brand" />
-      Araç adımları
-      <span className="ahi-badge-soft rounded-full px-1.5 py-0.5 font-mono text-2xs ahi-text-muted">
-        {toolCalls.length}
-      </span>
-    </div>
-    {toolCalls.map((toolCall, index) => (
-      <ActionStepCard
-        key={toolCall.id}
-        toolCall={toolCall}
-        stepNumber={index + 1}
-        isPendingApproval={pendingToolCall?.id === toolCall.id}
-      />
-    ))}
-  </div>
-);
+}) => {
+  // Adım listesi varsayılan KAPALI: ekranı araç gürültüsü değil, yanıt metni
+  // kaplar. Onay bekleyen bir adım varsa bölüm kendini açar — onay kartı
+  // katlanmış listenin içinde gömülü kalamaz.
+  const needsAttention =
+    pendingToolCall !== undefined ||
+    toolCalls.some((call) => call.status === 'pending' || call.status === 'approved');
+  // Onayla açılmış bir bölüm, onay bitince kullanıcının önünden kendiliğinden
+  // kapanmasın: açılış kararı ilk görünürlükte kilitlenir.
+  const [openedAtMount] = useState(needsAttention);
+  return (
+    <Disclosure
+      summary={`Araç adımları (${toolCalls.length})`}
+      icon={<Layers className="ahi-icon-xs ahi-text-brand" />}
+      defaultOpen={needsAttention || openedAtMount}
+      className="ahi-soft-card rounded-md border ahi-border-surface px-2.5 py-1.5"
+    >
+      <div className="mt-1.5 space-y-1 border-t ahi-border-surface pt-1.5">
+        {toolCalls.map((toolCall, index) => (
+          <ActionStepCard
+            key={toolCall.id}
+            toolCall={toolCall}
+            stepNumber={index + 1}
+            isPendingApproval={pendingToolCall?.id === toolCall.id}
+          />
+        ))}
+      </div>
+    </Disclosure>
+  );
+};
 
 interface TurnBlockProps {
   turn: ChatTurn;
   /** Tur şu anda çalışıyorsa akordeon açık kalır. */
   active: boolean;
   pendingToolCall?: ToolCall;
+  /**
+   * Son turun hatalı yanıtını aynı sohbette yerinde yeniden çalıştırır.
+   * Yalnızca son tur, hata varsa ve ajan çalışmıyorken verilir; yeni sohbet
+   * açmak yerine aynı istem üzerinden devam etmeyi sağlar.
+   */
+  onRetry?: () => void;
 }
 
 /**
@@ -411,26 +434,19 @@ interface TurnBlockProps {
  * katlanır; çalışırken açık, bittiğinde kendiliğinden kapanır ve başlıkta
  * yanıtın kısa özetini gösterir.
  */
-const TurnBlock: React.FC<TurnBlockProps> = ({ turn, active, pendingToolCall }) => {
-  const [open, setOpen] = useState(active);
-  const wasActive = useRef(active);
+const TurnBlock: React.FC<TurnBlockProps> = ({ turn, active, pendingToolCall, onRetry }) => {
+  // Kapanma zinciri kaldırıldı: eskiden tur bitince akordeon kendiliğinden
+  // kapanıyor, akış sırasında isStreaming her gidip geldiğinde açılıp
+  // kapanıyordu. Yanıt artık görünür doğar; yalnızca kullanıcı başlıktan
+  // kendisi daraltır.
+  const [open, setOpen] = useState(true);
   const last = turn.assistant[turn.assistant.length - 1];
   const toolCalls = turn.assistant.flatMap((message) => message.toolCalls ?? []);
+  const hasError = turn.assistant.some((message) => message.error);
   const content = turn.assistant
     .map((message) => message.content)
     .filter(Boolean)
     .join('\n\n');
-
-  useEffect(() => {
-    // Çalışma bitince akordeonu kendiliğinden kapat; kullanıcı sonradan açarsa
-    // bir daha zorla kapatma.
-    if (active) {
-      setOpen(true);
-    } else if (wasActive.current) {
-      setOpen(false);
-    }
-    wasActive.current = active;
-  }, [active]);
 
   if (turn.assistant.length === 0) return null;
 
@@ -464,6 +480,18 @@ const TurnBlock: React.FC<TurnBlockProps> = ({ turn, active, pendingToolCall }) 
             </span>
           </span>
         </button>
+        {onRetry && hasError && !active && (
+          <Button
+            variant="secondary"
+            size="xs"
+            onClick={onRetry}
+            aria-label="Son yanıtı bu sohbette yeniden dene"
+            title="Yanıt alınamadı; aynı istemi bu sohbette yeniden çalıştırır"
+            icon={<RotateCcw className="ahi-icon-xs" aria-hidden="true" />}
+          >
+            Tekrar dene
+          </Button>
+        )}
         {content && <CopyMessageButton content={content} />}
       </div>
 
@@ -493,11 +521,15 @@ const TurnBlock: React.FC<TurnBlockProps> = ({ turn, active, pendingToolCall }) 
   );
 };
 
+/** Uzun sohbetlerde ilk çizgede tur sayısı; yukarı kaydırdıkça bu kadar daha eklenir. */
+const TURNS_PAGE = 25;
+
 export const MessageList: React.FC<MessageListProps> = ({
   messages,
   pendingToolCall,
   checkpoints,
   onEditMessage,
+  onRetryMessage,
   onSuggestionClick,
   isConfigured = true,
   onOpenSettings
@@ -507,18 +539,71 @@ export const MessageList: React.FC<MessageListProps> = ({
   // Yeni çıktı yalnızca kullanıcı zaten en alta yakınken takip edilsin. Önceki
   // bir yanıtı okumak için yukarı kaydırmak, her akış parçasında geri alınmamalı.
   const stickToBottom = useRef(true);
+  // Uzun sohbet püf noktası: geçmişin tamamı DOM'a bindirilmez; yalnızca en
+  // yeni turlar çizilir, kullanıcı yukarı çıktıkça eski turlar sayfa sayfa
+  // gelir. Eski mesajlar aranırken pencere aşağı zıplamasın diye yükleme
+  // öncesi yükseklik kayıtlanır ve sonra konum geri verilir.
+  const [visibleTurnCount, setVisibleTurnCount] = useState(TURNS_PAGE);
+  const visibleTurnCountRef = useRef(TURNS_PAGE);
+  const totalTurnsRef = useRef(0);
+  const scrollAnchor = useRef<number | null>(null);
+  // Kullanıcı yeni bir istem gönderdiğinde konuşma nerede okunuyor olursa
+  // olsun görünüm alta döner; aksi halde cevap ekranın dışında kalırdı.
+  const lastUserMessageId = useRef<string | null>(null);
 
   useEffect(() => {
     const element = scrollRef.current;
     if (!element) return;
     const onScroll = () => {
       stickToBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 48;
+      if (element.scrollTop < 48 && visibleTurnCountRef.current < totalTurnsRef.current) {
+        scrollAnchor.current = element.scrollHeight;
+        visibleTurnCountRef.current += TURNS_PAGE;
+        setVisibleTurnCount(visibleTurnCountRef.current);
+      }
     };
     element.addEventListener('scroll', onScroll, { passive: true });
     return () => element.removeEventListener('scroll', onScroll);
   }, []);
 
   useEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    if (scrollAnchor.current !== null) {
+      element.scrollTop = element.scrollHeight - scrollAnchor.current;
+      scrollAnchor.current = null;
+    } else if (
+      element.scrollHeight > 0 &&
+      element.scrollHeight <= element.clientHeight &&
+      visibleTurnCountRef.current < totalTurnsRef.current
+    ) {
+      // Sayfa ekrana sığıyorsa kaydırma olayı hiç doğmaz; ekranı doldurmak
+      // için eski turları kendimiz getiririz.
+      visibleTurnCountRef.current += TURNS_PAGE;
+      setVisibleTurnCount(visibleTurnCountRef.current);
+    }
+  }, [visibleTurnCount]);
+
+  useEffect(() => {
+    let newestUser: string | null = null;
+    for (let index = messages.length - 1; index >= 0; index--) {
+      if (messages[index]?.role === 'user') {
+        newestUser = messages[index]?.id ?? null;
+        break;
+      }
+    }
+    if (newestUser && newestUser !== lastUserMessageId.current) {
+      const hadPrevious = lastUserMessageId.current !== null;
+      lastUserMessageId.current = newestUser;
+      stickToBottom.current = true;
+      // Oturum değişti ya da yeni istem gönderildi: görünüm alta döneceği
+      // için eski turlar sayfasını ilk sayfaya indir; büyük sohbetler arası
+      // geçişte gereksiz tur çizilmesin.
+      if (hadPrevious && visibleTurnCountRef.current !== TURNS_PAGE) {
+        visibleTurnCountRef.current = TURNS_PAGE;
+        setVisibleTurnCount(TURNS_PAGE);
+      }
+    }
     if (stickToBottom.current) {
       bottomRef.current?.scrollIntoView({ block: 'end' });
     }
@@ -537,11 +622,14 @@ export const MessageList: React.FC<MessageListProps> = ({
   }
 
   const turns = groupMessages(messages);
+  totalTurnsRef.current = turns.length;
   const lastTurn = turns[turns.length - 1];
   const activeTurnId =
     lastTurn && (lastTurn.assistant.some((message) => message.isStreaming) || Boolean(pendingToolCall))
       ? lastTurn.id
       : undefined;
+  const hiddenTurnCount = Math.max(0, turns.length - visibleTurnCount);
+  const shownTurns = hiddenTurnCount > 0 ? turns.slice(hiddenTurnCount) : turns;
 
   return (
     <div
@@ -552,27 +640,47 @@ export const MessageList: React.FC<MessageListProps> = ({
       aria-label="Sohbet akışı"
     >
       <div className="space-y-3">
-        {turns.map((turn) => (
-          <div key={turn.id} className="ahi-message space-y-1.5">
-            {turn.user && (
-              <UserMessage message={turn.user} checkpoints={checkpoints} onEdit={onEditMessage} />
-            )}
-            {turn.assistant.some((message) => message.role === 'system') && (
-              <div className="space-y-1.5">
-                {turn.assistant
-                  .filter((message) => message.role === 'system')
-                  .map((message) => (
-                    <SystemMessage key={message.id} message={message} />
-                  ))}
-              </div>
-            )}
-            <TurnBlock
-              turn={{ ...turn, assistant: turn.assistant.filter((message) => message.role !== 'system') }}
-              active={turn.id === activeTurnId}
-              pendingToolCall={pendingToolCall}
-            />
+        {hiddenTurnCount > 0 && (
+          <div className="ahi-overline justify-center ahi-text-muted">
+            Yukarıda {hiddenTurnCount} eski tur var — kaydırdıkça yüklenecek
           </div>
-        ))}
+        )}
+        {shownTurns.map((turn) => {
+          const turnUser = turn.user;
+          return (
+            <div key={turn.id} className="ahi-message space-y-1.5">
+              {turnUser && (
+                <UserMessage message={turnUser} checkpoints={checkpoints} onEdit={onEditMessage} />
+              )}
+              {turn.assistant.some((message) => message.role === 'system') && (
+                <div className="space-y-1.5">
+                  {turn.assistant
+                    .filter((message) => message.role === 'system')
+                    .map((message) => (
+                      <SystemMessage key={message.id} message={message} />
+                    ))}
+                </div>
+              )}
+              <TurnBlock
+                turn={{ ...turn, assistant: turn.assistant.filter((message) => message.role !== 'system') }}
+                active={turn.id === activeTurnId}
+                pendingToolCall={pendingToolCall}
+                onRetry={
+                  (onRetryMessage ?? onEditMessage) &&
+                  turnUser &&
+                  lastTurn?.id === turn.id &&
+                  !turn.assistant.some((message) => message.isStreaming)
+                    ? () =>
+                        (onRetryMessage ?? onEditMessage)!(
+                          stripInjectedContext(turnUser.content),
+                          turnUser.id
+                        )
+                    : undefined
+                }
+              />
+            </div>
+          );
+        })}
 
         <div ref={bottomRef} className="h-1" />
       </div>

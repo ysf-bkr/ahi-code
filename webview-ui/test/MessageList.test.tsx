@@ -105,19 +105,18 @@ describe('MessageList: tur akordeonu', () => {
     { id: 'a2', role: 'assistant', content: 'İkinci adım tamamlandı.', timestamp: 3, turnId: 't1' }
   ];
 
-  it('biten turu kapatır, yanıtları tek blokta toplar ve özet gösterir', () => {
+  it('biten tur açık doğar; yanıtlar görünür, başlıktan daraltılabilir', () => {
     render(<MessageList messages={turnMessages(false)} />);
 
     const body = document.getElementById('turn-t1');
-    assert.ok(body, 'tur gövdesi bulunmalı');
-    assert.equal(body?.hidden, true, 'biten tur daraltılmış olmalı');
-    // İçerik DOM'da kalır; kullanıcı başlığa tıklayınca açılır.
+    assert.equal(body?.hidden, false, 'biten turun yanıtları görünür doğmalı');
     assert.ok(screen.getByText('İlk adım tamamlandı.'));
-    assert.equal(
-      screen.getAllByText('İkinci adım tamamlandı.').length,
-      2,
-      'başlıkta son yanıtın özeti de görünmeli'
-    );
+
+    const toggle = document.querySelector('[aria-controls="turn-t1"]') as HTMLElement;
+    fireEvent.click(toggle);
+    assert.equal(document.getElementById('turn-t1')?.hidden, true, 'kullanıcı daraltabilmeli');
+    // Daralınca içerik DOM'da kalır (hidden); başlıktaki özet ayrı bir span'dır.
+    assert.ok(screen.getByText('İkinci adım tamamlandı.', { selector: 'span.truncate' }));
   });
 
   it('çalışan turu açık tutar', () => {
@@ -125,6 +124,127 @@ describe('MessageList: tur akordeonu', () => {
 
     const body = document.getElementById('turn-t1');
     assert.equal(body?.hidden, false, 'süren yanıt görünür kalmalı');
+  });
+
+  const withToolCall = (status: 'completed' | 'pending'): ChatMessage[] => [
+    { id: 'u1', role: 'user', content: 'dosyayı oku', timestamp: 1, turnId: 't1' },
+    {
+      id: 'a1',
+      role: 'assistant',
+      content: 'Dosyayı okudum.',
+      timestamp: 2,
+      turnId: 't1',
+      toolCalls: [
+        {
+          id: 'call_1',
+          name: 'read_file',
+          args: { path: 'src/a.ts' },
+          requiresApproval: status === 'pending',
+          status,
+          result: status === 'completed' ? 'içerik' : undefined
+        }
+      ]
+    }
+  ];
+
+  const toolStepsDetails = (): HTMLDetailsElement | undefined =>
+    Array.from(document.querySelectorAll('details')).find((el) =>
+      el.querySelector('summary')?.textContent?.includes('Araç adımları')
+    );
+
+  it('araç adımları varsayılan kapalıdır; yanıt metni görünür kalır', () => {
+    render(<MessageList messages={withToolCall('completed')} />);
+
+    assert.ok(screen.getByText('Dosyayı okudum.'), 'yanıt metni görünür olmalı');
+    const details = toolStepsDetails();
+    assert.ok(details, 'araç adımları bölümü bulunmalı');
+    assert.equal(details.open, false, 'adım listesi kapalı gelmeli');
+  });
+
+  it('onay bekleyen adım varsa araç adımları kendiliğinden açıktır', () => {
+    const messages = withToolCall('pending');
+    render(<MessageList messages={messages} pendingToolCall={messages[1]?.toolCalls?.[0]} />);
+
+    const details = toolStepsDetails();
+    assert.ok(details, 'araç adımları bölümü bulunmalı');
+    assert.equal(details.open, true, 'onay kartı görünür doğmalı');
+  });
+});
+
+describe('MessageList: hatalı turu aynı sohbette yeniden deneme', () => {
+  const failedTurn = (): ChatMessage[] => [
+    { id: 'u1', role: 'user', content: 'Uzun görev', timestamp: 1, turnId: 't1' },
+    { id: 'a1', role: 'assistant', content: '', timestamp: 2, turnId: 't1', error: 'API error [400]' }
+  ];
+
+  it('son tur hatalıysa "Tekrar dene" aynı istem ve mesaj kimliğiyle geri çağrılır', () => {
+    const retries: Array<[string, string]> = [];
+    render(
+      <MessageList messages={failedTurn()} onRetryMessage={(content, id) => retries.push([content, id])} />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Son yanıtı bu sohbette yeniden dene' }));
+    assert.deepEqual(retries, [['Uzun görev', 'u1']]);
+  });
+
+  it('hata yoksa yeniden dene düğmesi gösterilmez', () => {
+    render(
+      <MessageList
+        messages={[
+          { id: 'u1', role: 'user', content: 'görev', timestamp: 1, turnId: 't1' },
+          { id: 'a1', role: 'assistant', content: 'yanıt', timestamp: 2, turnId: 't1' }
+        ]}
+        onRetryMessage={() => assert.fail('çağrılmamalı')}
+      />
+    );
+    assert.equal(screen.queryByRole('button', { name: 'Son yanıtı bu sohbette yeniden dene' }), null);
+  });
+
+  it('hatalı tur son tur değilse düğme gösterilmez', () => {
+    render(
+      <MessageList
+        messages={[
+          ...failedTurn(),
+          { id: 'u2', role: 'user', content: 'sonraki', timestamp: 3, turnId: 't2' },
+          { id: 'a2', role: 'assistant', content: 'tamam', timestamp: 4, turnId: 't2' }
+        ]}
+        onRetryMessage={() => assert.fail('çağrılmamalı')}
+      />
+    );
+    assert.equal(screen.queryByRole('button', { name: 'Son yanıtı bu sohbette yeniden dene' }), null);
+  });
+});
+
+describe('MessageList: uzun sohbet sayfalama', () => {
+  const manyTurns = (count: number): ChatMessage[] => {
+    const list: ChatMessage[] = [];
+    for (let i = 1; i <= count; i++) {
+      list.push({ id: `u${i}`, role: 'user', content: `istem-${i}`, timestamp: i, turnId: `t${i}` });
+      list.push({
+        id: `a${i}`,
+        role: 'assistant',
+        content: `yanıt-${i}`,
+        timestamp: i + 0.5,
+        turnId: `t${i}`
+      });
+    }
+    return list;
+  };
+
+  it('yalnızca en yeni turlar çizilir; yukarı kaydırınca eski turlar gelir', () => {
+    render(<MessageList messages={manyTurns(30)} />);
+
+    assert.equal(screen.queryByText('istem-1'), null, 'en eski turlar başta çizilmemeli');
+    assert.ok(screen.getByText('istem-30'), 'en yeni tur görünmeli');
+    assert.ok(screen.getByText(/Yukarıda 5 eski tur var/), 'gizli tur bilgisi gösterilmeli');
+
+    fireEvent.scroll(screen.getByRole('log'));
+    assert.ok(screen.getByText('istem-1'), 'yukarı kaydırınca en eski tur gelmeli');
+    assert.equal(
+      screen.queryByText(/Yukarıda \d+ eski tur var/),
+      null,
+      'tüm turlar gelince bilgi kaybolmalı'
+    );
   });
 });
 

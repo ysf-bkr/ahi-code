@@ -290,6 +290,16 @@ export const App: React.FC = () => {
     setDraftNonce((value) => value + 1);
   };
 
+  /**
+   * Hatalı turu aynı sohbette yeniden çalıştırır: besteciye uğramadan aynı
+   * istem EDIT_MESSAGE ile gönderilir; sunucu o turu yerden silip yeniden
+   * yürütür. Kullanıcı yeni sohbet açmak zorunda kalmaz.
+   */
+  const handleRetryMessage = (content: string, messageId: string) => {
+    setEditingMessageId(null);
+    vscode.postMessage({ type: 'EDIT_MESSAGE', payload: { messageId, text: content, mode: taskState.mode } });
+  };
+
   return (
     <div className="ahi-app">
       {/* Sabit Header — Sohbet ekranındayken TaskHeader; diğer ekranlar kendi ScreenHeader'ını tepe başlığı olarak kullanır */}
@@ -312,6 +322,7 @@ export const App: React.FC = () => {
               pendingToolCall={taskState.pendingToolCall}
               checkpoints={taskState.checkpoints}
               onEditMessage={handleEditMessage}
+              onRetryMessage={handleRetryMessage}
               onSuggestionClick={handleSuggestionClick}
               isConfigured={isChatConfigured(settings)}
               onOpenSettings={() => openView('settings')}
