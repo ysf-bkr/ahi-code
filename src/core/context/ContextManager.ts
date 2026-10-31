@@ -54,6 +54,13 @@ const TOOL_OUTPUT_LIMITS: Record<string, number> = {
   web_search: 3_000,
   invoke_subagent: 6_000,
   run_parallel_tasks: 8_000,
+  // Çağrı grafiği çıktıları büyük projelerde satır satır şişer; liste özeti
+  // yeter, tam graf zaten call_graph araçlarıyla yeniden çıkarılabilir.
+  get_callers: 2_500,
+  get_callees: 2_500,
+  call_graph_impact: 3_000,
+  find_related_code: 3_000,
+  call_graph_status: 1_000,
   default: 6_000
 };
 

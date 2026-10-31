@@ -60,6 +60,15 @@ describe('ContextManager: per-tool limits', () => {
     assert.ok(result.length <= 6_200);
   });
 
+  it('büyük projelerde çağrı grafiği çıktılarını sıkı sınırlar', () => {
+    const big = 'g'.repeat(30_000);
+    assert.ok(manager.truncateToolOutput(big, 'get_callers').length <= 2_700);
+    assert.ok(manager.truncateToolOutput(big, 'get_callees').length <= 2_700);
+    assert.ok(manager.truncateToolOutput(big, 'call_graph_impact').length <= 3_200);
+    assert.ok(manager.truncateToolOutput(big, 'find_related_code').length <= 3_200);
+    assert.ok(manager.truncateToolOutput(big, 'call_graph_status').length <= 1_200);
+  });
+
   it('falls back to general limit when tool name not provided', () => {
     const result = manager.truncateToolOutput('w'.repeat(30_000));
     assert.ok(result.length <= 12_200);

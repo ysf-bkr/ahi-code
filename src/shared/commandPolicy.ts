@@ -90,6 +90,20 @@ const RISKY_RULES: Rule[] = [
   { pattern: /\bgit\s+rebase\b/, reason: 'git rebase rewrites local history' },
   { pattern: /\bgit\s+push\b/, reason: 'git push publishes to a remote' },
   { pattern: /\bsed\s+(-[a-zA-Z]*i|--in-place)/, reason: 'in-place file editing (sed -i)' },
+  // GNU sed'de `e` komutu kabuk komutu çalıştırır, `w` dosyaya yazar; BSD sed
+  // fark etmez ama politika en kötü platformu varsayar.
+  {
+    pattern: /\bsed\b[^\n]*(?:\d+\s*e\s|;\s*e\b|s\/[^\/\n]+\/[^\/\n]+\/e(?:[\s"';]|$)|\bw\s+[^>\s|])/,
+    reason: 'GNU sed e/w commands execute shell commands or write files'
+  },
+  // Beyaz listedeki salt-okunur araçların dosya yazan bayrakları: `sort -o`,
+  // `tree -o`, `find -fprint*/-fls` listeyi diske döker.
+  { pattern: /\bsort\b[^\n]*\s(-o|--output)\b/, reason: 'sort -o writes to a file' },
+  { pattern: /\btree\b[^\n]*\s(-o|--output)\b/, reason: 'tree -o writes to a file' },
+  {
+    pattern: /\bfind\b[^\n]*\s-(fprint0?|fls|fprintf)\b/,
+    reason: 'find -fprint/-fls writes matches to files'
+  },
   { pattern: /\bperl\s+-[a-zA-Z]*i/, reason: 'in-place file editing (perl -i)' },
   { pattern: /\btruncate\s+-s\b/, reason: 'file truncation' },
   { pattern: /\bfind\b[^\n]*\s-delete\b/, reason: 'find -delete removes files' },
@@ -188,8 +202,8 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   // (yalnızca `git branch -d/-D` riskli kurala yakalanır).
   // `sed` için salt-okunur kullanım serbesttir (`sed -i` zaten RISKY_RULES ile engellenir).
   /^(ls|ll|la|pwd|cd|echo|printf|date|cal|whoami|id|uname|hostname|which|type|whatis|file|wc|head|tail|stat|du|df|tree|basename|dirname|realpath|readlink|cat|less|more|grep|egrep|fgrep|rg|ag|diff|cmp|sort|uniq|cut|column|rev|nl|sleep|true|false|test|mkdir|touch|dir|where|ver|sed)(\s|$)/,
-  // Güvenli dosya arama (yıkıcı -delete veya -exec parametreleri hariç)
-  /^find\s+(?![^\n]*\s(-exec|-execdir|-delete)\b)/,
+  // Güvenli dosya arama (yıkıcı -delete/-exec veya yazıcı -fprint* parametreleri hariç)
+  /^find\s+(?![^\n]*\s(-exec|-execdir|-delete|-fprint0?|-fls|-fprintf)\b)/,
   // Standart test/build/lint/typecheck akışları. `start`/`dev`/`watch`
   // bilinçli olarak yok: bunlar package.json'da tanımlı keyfi betiklerdir ve
   // doğrulama değil, sürekli çalışan geliştirme sunucusu akışlarıdır.
@@ -205,6 +219,9 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^(python|python3)\s+-m\s+(pytest|unittest)(\s|$)/,
   // Rust (Cargo) test, clippy ve kontrol
   /^cargo\s+(test|check|clippy|build|bench|verify|fmt|--version)(\s|$)/,
+  // .NET build ve test. `dotnet run` bilinçli yok: keyfi program çalıştırır;
+  // `dotnet restore` ağdan paket indirir ve riskli kalır.
+  /^dotnet\s+(build|test|format|verify)(\s|$)/,
   // Go test ve vet
   /^go\s+(test|vet|version)(\s|$)/,
   // Flutter & Dart mobil test ve analiz
@@ -372,11 +389,12 @@ function assessSingleStage(stage: string, isPipelineFilter: boolean): CommandAss
     return { risk: 'risky', reasons: risky };
   }
 
-  // Komut ikamesi (`...` veya $(...)) tehlikelidir; keyfi alt komut çalıştırabilir
-  if (/`|\$\(/.test(cleaned)) {
+  // Komut ikamesi (`...`, $(...) veya süreç ikamesi <(...) />(...)) tehlikelidir;
+  // keyfi alt komut çalıştırabilir.
+  if (/`|\$\(|[<>]\(/.test(cleaned)) {
     return {
       risk: 'risky',
-      reasons: ['command substitution (`...` or $(...)) can run arbitrary commands']
+      reasons: ['command substitution (`...`, $(...) or <(...) />(...)) can run arbitrary commands']
     };
   }
 

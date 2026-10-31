@@ -226,3 +226,50 @@ describe('CommandPolicy: permission engine integration', () => {
     assert.strictEqual(blocked.blocked, true);
   });
 });
+
+describe('CommandPolicy: güvenli liste kaçakları (denetim düzeltmesi)', () => {
+  it('beyaz listedeki araçların -o bayrağı dosyaya yazar → risky', () => {
+    assert.strictEqual(assessCommand('sort -o out.txt in.txt').risk, 'risky');
+    assert.strictEqual(assessCommand('sort --output=out.txt in.txt').risk, 'risky');
+    assert.strictEqual(assessCommand('tree -o out.txt').risk, 'risky');
+    // Saf kullanım yine sessiz kalmalı.
+    assert.strictEqual(assessCommand('sort a.txt | head').risk, 'safe');
+  });
+
+  it('find dosyaya yazan varyantları da yakalanır', () => {
+    assert.strictEqual(assessCommand('find . -fprint out.txt').risk, 'risky');
+    assert.strictEqual(assessCommand('find . -fls out.txt').risk, 'risky');
+    assert.strictEqual(assessCommand('find . -name x.ts').risk, 'safe');
+  });
+
+  it('GNU sed e/w komutları risky; normal kullanım safe', () => {
+    assert.strictEqual(assessCommand('sed -n "1e id" f').risk, 'risky');
+    assert.strictEqual(assessCommand("sed 's/x/y/e' f").risk, 'risky');
+    assert.strictEqual(assessCommand("sed 'w out.txt' f").risk, 'risky');
+    assert.strictEqual(assessCommand("sed 's/how/now/' f").risk, 'safe');
+    assert.strictEqual(assessCommand("sed -e 's/a/b/' f").risk, 'safe');
+    assert.strictEqual(assessCommand("sed -n '1,5p' f").risk, 'safe');
+  });
+
+  it('süreç ikamesi komut ikamesiyle eşdeğerdir', () => {
+    assert.strictEqual(assessCommand('cat <(id)').risk, 'risky');
+    assert.strictEqual(assessCommand('diff <(a) <(b)').risk, 'risky');
+  });
+
+  it('.NET build/test güvenli; run ve restore listede değildir', () => {
+    assert.strictEqual(assessCommand('dotnet test').risk, 'safe');
+    assert.strictEqual(assessCommand('dotnet build').risk, 'safe');
+    assert.notStrictEqual(assessCommand('dotnet run').risk, 'safe');
+    assert.notStrictEqual(assessCommand('dotnet restore').risk, 'safe');
+  });
+
+  it('auto modda bu kaçaklar onaysız çalışamaz', () => {
+    const manager = new PermissionManager({ ...settings, autonomy: 'auto' });
+    assert.strictEqual(
+      manager.requiresApproval('execute_command', { command: 'sort -o out.txt in.txt' }),
+      true
+    );
+    assert.strictEqual(manager.requiresApproval('execute_command', { command: 'cat <(id)' }), true);
+    assert.strictEqual(manager.requiresApproval('execute_command', { command: 'npm test' }), false);
+  });
+});
