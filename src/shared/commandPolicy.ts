@@ -93,7 +93,7 @@ const RISKY_RULES: Rule[] = [
   // GNU sed'de `e` komutu kabuk komutu çalıştırır, `w` dosyaya yazar; BSD sed
   // fark etmez ama politika en kötü platformu varsayar.
   {
-    pattern: /\bsed\b[^\n]*(?:\d+\s*e\s|;\s*e\b|s\/[^\/\n]+\/[^\/\n]+\/e(?:[\s"';]|$)|\bw\s+[^>\s|])/,
+    pattern: /\bsed\b[^\n]*(?:\d+\s*e\s|;\s*e\b|s\/[^/\n]+\/[^/\n]+\/e(?:[\s"';]|$)|\bw\s+[^>\s|])/,
     reason: 'GNU sed e/w commands execute shell commands or write files'
   },
   // Beyaz listedeki salt-okunur araçların dosya yazan bayrakları: `sort -o`,

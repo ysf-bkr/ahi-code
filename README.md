@@ -2,147 +2,148 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="./resources/logo-dark.png" />
-  <img src="./resources/logo.png" width="420" alt="AhiCode — Software Development Agent" />
+  <img src="./resources/logo.png" width="420" alt="AhiCode — Yazılım Geliştirme" />
 </picture>
 
 # AhiCode
 
-**Autonomous AI coding agent for VS Code, built with the Ahilik craftsmanship discipline and engineering rigor.**
+**VS Code içinde çalışan, Ahilik zanaat disipliniyle güçlendirilmiş otonom yazılım geliştirme ajanı.**
 
-[🇹🇷 Türkçe](README.tr.md) | **English**
+**Türkçe** | [🇬🇧 English](README.md)
 
-> _"Master your hand, your waist, and your tongue."_ — The Ahilik Craftsmanship Ethos  
-> **Hand (Craftsmanship):** Meticulous code writing and architectural analysis · **Waist (Belt of Discipline):** Unbreakable permission guardrails and directory jail · **Tongue (Ethics):** Honest status reporting and hash-chained audit trails.
+> _"Eline, beline, diline sahip ol."_ — Ahilik Zanaat Ahlakı  
+> **El (Zanaat):** Titiz kod yazımı ve mimari analiz · **Bel (Şed Kuşağı):** Kırılmaz izin kalkanı ve dizin hapsi · **Dil (Ahlak):** Dürüst durum bildirimi ve hash zincirli denetim.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.106-007ACC?logo=visualstudiocode)](https://code.visualstudio.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![CI](https://github.com/ysf-bkr/ahi-code/actions/workflows/ci.yml/badge.svg)](https://github.com/ysf-bkr/ahi-code/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-646%20passing-2ea44f)](./docs/DEVELOPMENT.md)
+[![Tests](https://img.shields.io/badge/tests-646%20passing-2ea44f)](./docs/DEVELOPMENT.tr.md)
 
-**Developer:** Yusuf BEKAR · **Email:** [ybekar@msn.com](mailto:ybekar@msn.com)
+**Geliştirici:** Yusuf BEKAR · **E-posta:** [ybekar@msn.com](mailto:ybekar@msn.com)
 
-[GitHub Repository](https://github.com/ysf-bkr/ahi-code) · [Issues & Requests](https://github.com/ysf-bkr/ahi-code/issues) · [Developer Guide](./docs/DEVELOPMENT.md)
+[GitHub Deposu](https://github.com/ysf-bkr/ahi-code) · [Hata Bildir / Özellik İste](https://github.com/ysf-bkr/ahi-code/issues) · [Geliştirici Kılavuzu](./docs/DEVELOPMENT.tr.md)
 
 </div>
 
 > [!IMPORTANT]
-> **Runs Locally and Privately by Default**
+> **Varsayılan Olarak Yerel ve Güvenli Çalışır**
 >
-> AhiCode does not depend on any cloud provider. **The default provider is Ollama**: ready to run completely offline on your local machine right after installation without requiring any API keys. EVREN LLM, OpenRouter, and OpenAI-compatible endpoints can be optionally configured.
+> AhiCode hiçbir bulut sağlayıcısına bağımlı değildir. **Varsayılan sağlayıcı Ollama'dır**: kurulum sonrasında herhangi bir API anahtarı gerekmeden, tamamen kendi makinenizde çevrimdışı çalışabilir. EVREN LLM, OpenRouter ve OpenAI uyumlu uç noktalar isteğe bağlı olarak yapılandırılabilir.
 
 ---
 
-## Key Features
+## Öne Çıkan Özellikler
 
-| Feature | Description |
+| Özellik | Açıklama |
 | --- | --- |
-| **Autonomous ReAct Loop** | Inspects files, executes terminal commands, runs tests, and autonomously resolves errors until the goal is achieved. |
-| **Code Changes & Review** | All edits made in a turn are grouped together; review them in the VS Code Diff view with a single click and roll back when needed. |
-| **Guided Workflow Stages** | Controlled engineering through Onboard → Intake → Spec Approval → Module Map + Plan Approval → Implementation → Review → Verification. |
-| **Industrial Module Flow** | Before writing code the agent splits the work into layered modules (shared → domain → infrastructure → application → interface), assigns an owning specialist and writes them in dependency order; layering violations and cycles are rejected. |
-| **Wide Model Compatibility** | Full support for EVREN LLM (SSYZ), local Ollama, LM Studio, OpenRouter, and all OpenAI API-compatible models. |
-| **Secure Credential Storage** | API keys are encrypted inside the operating system's secure keychain (`SecretStorage`) and never exposed in the UI. |
-| **Project Memory & Knowledge** | Retains architectural decisions, conventions, and symbols via `.ahi/memory.md` and `.ahi/knowledge/`. |
-| **Undo & Checkpoints** | A Git checkpoint is captured at the start of every turn; discard unwanted changes with a single click. |
-| **EVREN Quota & Model Bar** | The composer bar shows live EVREN daily token quota (used / limit / remaining) and lets you switch models without leaving the chat. |
-| **Background Chats** | Every chat runs in its own agent core: switching chats or starting a new one keeps the previous task (and its subagents) running. Shared services keep a second chat cheap. |
-| **Bilingual Documentation & Turkish UI** | Bilingual English/Turkish project docs; every error message, notification, and plan step in the interface is native Turkish. |
+| **Otonom ReAct Döngüsü** | Hedefe ulaşana kadar dosyaları inceler, terminal komutları çalıştırır, testleri koşturur ve hataları otonom olarak düzeltir. |
+| **Kod Değişiklikleri ve İnceleme (Review)** | Yapılan tüm kod düzenlemeleri tur sonunda toplanır; tek tıkla VS Code Diff görünümünde incelenebilir ve gerektiğinde geri alınabilir. |
+| **Yönlendirilmiş Geliştirme Akışı** | Anlama → İstek → Spec Onayı → Modül Haritası ve Plan Onayı → Uygulama → İnceleme → Doğrulama aşamalarıyla kontrollü mühendislik. |
+| **Endüstriyel Modül Akışı** | Kod yazmadan önce iş, katmanlı modüllere ayrılır (shared → domain → infrastructure → application → interface); her modüle sahip uzman atanır ve modüller bağımlılık sırasıyla yazılır. Katman ihlalleri ve döngüler reddedilir. |
+| **Geniş Model Desteği** | EVREN LLM (SSYZ), Yerel Ollama, LM Studio, OpenRouter ve tüm OpenAI API uyumlu modellerle tam uyum. |
+| **Güvenli Sır Saklama** | API anahtarları işletim sisteminin güvenli anahtarlığında (`SecretStorage`) şifreli saklanır, arayüzde asla açık gösterilmez. |
+| **Proje Hafızası ve Bilgi Tabanı** | `.ahi/memory.md` ve `.ahi/knowledge/` ile projeninizin mimari kararlarını, kurallarını ve sembollerini hatırlar. |
+| **Geri Alma (Undo) ve Kontrol Noktaları** | Her tur başında Git checkpoint'i alınır; istenmeyen değişiklikler tek tıkla eski haline döndürülür. |
+| **EVREN Kotası ve Model Çubuğu** | Sohbet altındaki çubuk, EVREN günlük token kotasını (kullanılan / sınır / kalan) canlı gösterir ve sohbetten ayrılmadan model değiştirmeyi sağlar. |
+| **Arka Planda Çalışan Sohbetler** | Her sohbet kendi ajan çekirdeğinde çalışır: sohbet değiştirmek veya yeni sohbet açmak önceki görevi (ve alt ajanlarını) durdurmaz. Paylaşılan servisler sayesinde ikinci sohbet ucuzdur. |
+| **İki Dilli Belgeler ve Türkçe Arayüz** | İngilizce/Türkçe iki dilli proje belgeleri; arayüzdeki tüm hata mesajları, bildirimler ve plan adımları eksiksiz Türkçe. |
 
 ---
 
-## Quick Start
+## Hızlı Başlangıç
 
-### 1. Installation
+### 1. Kurulum
 
 > [!NOTE]
-> The extension is not yet published to the VS Code Marketplace. Until the
-> first release, build the VSIX locally with the steps below.
+> Uzantı henüz VS Code Marketplace'te yayımlanmadı. İlk sürüme kadar VSIX
+> paketini aşağıdaki adımlarla yerel olarak üretip kurun.
 
-Build and install from the local VSIX package (`out/ahi-code-0.0.2.vsix`):
+Yerel VSIX paketiyle (`out/ahi-code-0.0.2.vsix`) derleyip kurabilirsiniz:
 
 ```bash
-# To build, package, and install automatically:
+# Otomatik derleme, paketleme ve kurulum için:
 npm run install:ext
 
-# Or install the generated VSIX package directly:
+# veya üretilen VSIX paketini doğrudan kurmak için:
 code --install-extension out/ahi-code-0.0.2.vsix --force
 ```
 
-### 2. Choose Your Model Provider
+### 2. Model Sağlayıcınızı Seçin
 
-Click the **AhiCode** icon in the VS Code secondary sidebar or open the command palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run `AhiCode: Sohbeti Aç` (Open Chat).
+VS Code ikincil kenar çubuğundaki (secondary sidebar) **AhiCode** simgesine tıklayın veya `Ctrl+Shift+P` (`Cmd+Shift+P`) ile `AhiCode: Sohbeti Aç` komutunu çalıştırın.
 
-- **Local Ollama (Recommended local option):** If Ollama is running, start chatting immediately without additional configuration.
-- **EVREN LLM:** Select EVREN in Settings and save your API key.
-- **OpenRouter / OpenAI-Compatible:** Choose your provider and save your credentials.
+- **Yerel Ollama (Önerilen yerel seçenek):** Ollama çalışıyorsa hiçbir ek ayar yapmadan doğrudan sohbete başlayabilirsiniz.
+- **EVREN LLM (SSYZ):** Ayarlar ekranından sağlayıcıyı EVREN seçip API anahtarınızı girin.
+- **OpenRouter / OpenAI Uyumlu:** İlgili sağlayıcıyı seçip anahtarınızı kaydedin.
 
-### 3. Start a Task
+### 3. Göreve Başlayın
 
-Type your request in the AhiCode composer:
-- _"Find and fix compilation and type errors in the project."_
-- _"Write and run unit tests for the authentication service."_
-- _"Review the codebase for security vulnerabilities and performance bottlenecks."_
-
----
-
-## Operating Modes: Code and Plan
-
-AhiCode provides two primary modes of operation:
-
-1. **Code Mode (`code`):** Has authority to create and edit files and execute terminal commands. Actively builds and refactors your project.
-2. **Plan Mode (`plan`):** File writing and command execution tools are locked down. Performs read-only exploration and architectural analysis to generate clear implementation blueprints.
+AhiCode giriş alanına görevinizi yazın:
+- _"Projede derleme ve tip hatalarını bulup düzelt."_
+- _"Auth servisi için birim testleri yaz ve çalıştır."_
+- _"Kod tabanını güvenlik ve performans açısından incele."_
 
 ---
 
-## Interactive Review Experience
+## Modlar: Kodlama ve Planlama
 
-AhiCode incorporates best-in-class coding agent patterns:
-- **Turn Changes Panel:** All created or modified files in a turn are consolidated into a review card.
-- **One-Click Diff:** Click **İncele (Diff)** to inspect color-coded side-by-side diffs.
-- **Granular Revert:** Discard unwanted file changes with the **Geri Al** (Undo) action.
-- **Live Plan Progress:** Track stage completions in real-time (`%25`, `%50`, `%100`).
+AhiCode iki temel çalışma moduna sahiptir:
+
+1. **Kodlama Modu (`code`):** Dosya oluşturma, düzenleme ve terminal komutlarını çalıştırma yetkisine sahiptir. Projenizi aktif olarak geliştirir.
+2. **Planlama Modu (`plan`):** Dosya yazma ve komut çalıştırma araçları teknik olarak kilitlidir. Yalnızca okuma, arama ve mimari analiz yaparak kapsamlı yol haritaları hazırlar.
 
 ---
 
-## Core Settings
+## Sohbet ve İnceleme (Review) Deneyimi
 
-Configure the following settings in VS Code Settings (`settings.json`) or inside the AhiCode Settings view:
+AhiCode arayüzü, modern kodlama ajanlarının en iyi pratiklerini bir araya getirir:
+- **Kod Değişiklikleri Paneli:** Asistanın bir turda oluşturduğu veya değiştirdiği tüm dosyalar bir kartta toplanır.
+- **Tek Tıkla Diff:** Değiştirilen satırları incelemek için **İncele (Diff)** butonuna tıklamanız yeterlidir.
+- **Adım Bazlı Geri Alma:** Herhangi bir dosyadaki değişikliği **Geri Al** butonuyla iptal edebilirsiniz.
+- **Görev Planı İlerlemesi:** Görev adımları durum çubuğunda canlı olarak takip edilir (`%25`, `%50`, `%100`).
 
-| Setting | Default | Description |
+---
+
+## Temel Ayarlar
+
+Aşağıdaki ayarları VS Code Ayarlarından (`settings.json`) veya AhiCode arayüzündeki Ayarlar ekranından yapılandırabilirsiniz:
+
+| Ayar | Varsayılan | Açıklama |
 | --- | --- | --- |
-| `ahiCode.selectedProvider` | `ollama` | Model provider (`ollama`, `evren`, `openrouter`, `openai-compatible`) |
-| `ahiCode.selectedModel` | `llama3.1` | Model identifier to use |
-| `ahiCode.autonomy` | `manual` | Autonomy level (`manual`, `guided`, `auto`); also switchable from the chat composer |
-| `ahiCode.agentModels` | `{}` | Per-role subagent models (role → model id). Empty roles fall back to the provider preset (EVREN: manager/architect → GLM-5.3, explorer → MiMo-V2.6-Pro) or the selected model |
-| `ahiCode.embeddingBaseUrl` | `""` | OpenAI-compatible embedding endpoint (e.g. EVREN `/v1`). Empty uses Ollama `/api/embed` |
+| `ahiCode.selectedProvider` | `ollama` | Model sağlayıcısı (`ollama`, `evren`, `openrouter`, `openai-compatible`) |
+| `ahiCode.selectedModel` | `llama3.1` | Kullanılacak model adı |
+| `ahiCode.autonomy` | `manual` | Otonomi seviyesi (`manual`, `guided`, `auto`); sohbet giriş alanından da değiştirilebilir |
+| `ahiCode.agentModels` | `{}` | Rol bazlı alt ajan modelleri (rol → model kimliği). Boş roller sağlayıcının hazır ayarını (EVREN: manager/architect → GLM-5.3, explorer → MiMo-V2.6-Pro) ya da seçili modeli kullanır |
+| `ahiCode.embeddingBaseUrl` | `""` | OpenAI uyumlu embedding uç noktası (örn. EVREN `/v1`). Boşsa Ollama `/api/embed` kullanılır |
 
 ---
 
-## Architecture & Developer Guide
+## Mimari ve Geliştirici Kılavuzu
 
-Internal architecture, module boundaries, testing instructions, and contribution guides are documented separately:
+AhiCode'un iç yapısı, modül katmanları, test çalıştırma ve katkı sağlama yönergeleri ayrı belgelere ayrılmıştır:
 
-- **[Developer Guide (docs/DEVELOPMENT.md)](./docs/DEVELOPMENT.md)** · **[🇹🇷 Türkçe](./docs/DEVELOPMENT.tr.md):** Build from source, test suites, design tokens, and MCP integration.
-- **[Architecture Guide (docs/ARCHITECTURE.md)](./docs/ARCHITECTURE.md)** · **[🇹🇷 Türkçe](./docs/ARCHITECTURE.tr.md):** ReAct loop, tool pipeline, audit ledger, and language services.
-- **[Privacy Notice (docs/PRIVACY.md)](./docs/PRIVACY.md)** · **[🇹🇷 Türkçe](./docs/PRIVACY.tr.md):** Data privacy, local-first principles, and telemetry policies.
-
----
-
-## Known Limitations
-
-- **Command undo needs a clean Git tree:** `execute_command` takes a Git checkpoint and can be reverted, but only when the repository has a `HEAD` and the working tree was clean before the command. Outside a Git repository, command side effects are not undoable; use Git yourself for those.
-- **Plan mode is a tool lock, not a sandbox:** plan mode removes write and command tools from the schema, but it does not replace OS-level isolation. Use a Dev Container for untrusted repositories.
-- **Not yet on the Marketplace:** installation currently requires a locally built VSIX.
+- **[Geliştirici Kılavuzu (docs/DEVELOPMENT.tr.md)](./docs/DEVELOPMENT.tr.md):** Kaynaktan derleme, test çalıştırma, tasarım sistemi değişkenleri, MCP entegrasyonu ve katkı kuralları.
+- **[Mimari Dokümantasyonu (docs/ARCHITECTURE.tr.md)](./docs/ARCHITECTURE.tr.md):** Çekirdek ReAct döngüsü, araç zinciri, denetim katmanı ve LSP detayları.
+- **[Gizlilik Bildirimi (docs/PRIVACY.tr.md)](./docs/PRIVACY.tr.md):** Veri güvenliği, yerel model ilkeleri ve telemetri politikası.
 
 ---
 
-## License & Support
+## Bilinen Sınırlamalar
 
-This project is open-source under the [MIT License](./LICENSE).
+- **Komut geri alma temiz Git ağacı ister:** `execute_command` bir Git checkpoint'i alır ve geri alınabilir; ancak bu yalnızca depoda bir `HEAD` varsa ve komut öncesi çalışma ağacı temizse çalışır. Git deposu olmayan alanlarda komut yan etkileri geri alınamaz; bu durumlar için Git'i kendiniz kullanın.
+- **Plan modu sandbox değil, araç kilididir:** plan modu yazma ve komut araçlarını şemadan çıkarır, ancak işletim sistemi düzeyinde yalıtım sağlamaz. Güvenilmeyen depolar için Dev Container kullanın.
+- **Henüz Marketplace'te değil:** kurulum şimdilik yerel olarak üretilen VSIX paketi gerektirir.
 
-Contributions are welcome: see [CONTRIBUTING.md](./CONTRIBUTING.md) and the
-[Code of Conduct](./CODE_OF_CONDUCT.md). Report security issues privately per
-[SECURITY.md](./SECURITY.md).
+---
 
-For questions, bug reports, and feature requests, visit the [GitHub Issues](https://github.com/ysf-bkr/ahi-code/issues) page or reach out directly at [ybekar@msn.com](mailto:ybekar@msn.com).
+## Lisans ve Destek
+
+Bu proje [MIT Lisansı](./LICENSE) kapsamında açık kaynak olarak geliştirilmektedir.
+
+Katkılar memnuniyetle karşılanır: [CONTRIBUTING.tr.md](./CONTRIBUTING.tr.md) ve
+[Davranış Kuralları](./CODE_OF_CONDUCT.tr.md) belgelerine bakın. Güvenlik
+sorunlarını [SECURITY.tr.md](./SECURITY.tr.md) uyarınca özel kanaldan bildirin.
+
+Sorularınız, hata bildirimleriniz ve özellik önerileriniz için [GitHub Issues](https://github.com/ysf-bkr/ahi-code/issues) sayfasını kullanabilir veya [ybekar@msn.com](mailto:ybekar@msn.com) adresinden iletişime geçebilirsiniz.
+
