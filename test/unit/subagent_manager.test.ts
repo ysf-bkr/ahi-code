@@ -329,4 +329,71 @@ describe('SubagentManager: agent bazlı model ve otomatik fallback', () => {
       `fallback bildirimi bekleniyordu: ${statuses.join('|')}`
     );
   });
+
+  it('uzman ve yedek model düşerse görev ana modelle sürer', async () => {
+    const used: string[] = [];
+    const base: ModelProvider = {
+      id: 'base',
+      name: 'base',
+      sendMessage: async () => {
+        used.push('base');
+        return { text: 'Ana model raporu' };
+      }
+    };
+    const routed: ModelProvider = {
+      id: 'glm',
+      name: 'glm',
+      sendMessage: async () => {
+        used.push('glm');
+        throw new Error('HTTP 404 model_not_found: GLM-5.3');
+      }
+    };
+    const fallbackBroken: ModelProvider = {
+      id: 'mimo',
+      name: 'mimo',
+      sendMessage: async () => {
+        used.push('mimo');
+        throw new Error('HTTP 429 quota');
+      }
+    };
+    const statuses: string[] = [];
+    const manager = managerWith(
+      base,
+      () => ({ model: 'GLM-5.3', fallbackModel: 'MiMo-V2.6-Pro', reason: '', routed: true }),
+      (model) => (model === 'GLM-5.3' ? routed : model === 'MiMo-V2.6-Pro' ? fallbackBroken : undefined),
+      (_role, status) => statuses.push(status)
+    );
+    const result = await manager.runSubagent({ role: 'explorer', task: 'depoyu tara' }, undefined, 1);
+    assert.ok(result.includes('Ana model raporu'), `ana modele düşülmeliydi: ${result}`);
+    assert.deepStrictEqual(used, ['glm', 'mimo', 'base'], 'merdiven sırası: uzman → yedek → ana');
+    assert.ok(
+      statuses.some((s) => s.includes('ana model')),
+      `ana model bildirimi: ${statuses.join('|')}`
+    );
+  });
+
+  it('tüm modeller düşerse ham istisna değil okunabilir rapor ve failed durumu döner', async () => {
+    const base: ModelProvider = {
+      id: 'base',
+      name: 'base',
+      sendMessage: async () => {
+        throw new Error('HTTP 503 provider down');
+      }
+    };
+    const statuses: string[] = [];
+    const manager = managerWith(
+      base,
+      () => ({ model: undefined, reason: '', routed: false }),
+      () => undefined,
+      (_role, status) => statuses.push(status)
+    );
+    const result = await manager.runSubagent({ role: 'backend', task: 'api yaz' }, undefined, 1);
+    assert.ok(result.includes('[Subagent Error]'), `rapor bekleniyordu: ${result}`);
+    assert.ok(result.includes('could not reach any model'));
+    assert.ok(result.includes('HTTP 503'), 'hata detayı raporda olmalı');
+    assert.ok(
+      statuses.some((s) => s.startsWith('Failed:')),
+      `failed durumu beklenmeli: ${statuses.join('|')}`
+    );
+  });
 });

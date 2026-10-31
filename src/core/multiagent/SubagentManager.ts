@@ -160,8 +160,12 @@ export class SubagentManager {
   }
 
   /**
-   * Model çağrısı: seçimdeki yedek model yalnızca ana model gerçekten hata
-   * verdiğinde denenir. Mesaj geçmişi korunduğu için bağlam kaybolmaz.
+   * Model çağrısı merdiveni: yolama ile seçilen uzman model → onun yedeği →
+   * kullanıcının seçili ana modeli. Son basamak kritik: uzman model hesapta
+   * yok ya da kotası biterse tüm görev ölmek yerine ana modelle sürer — ana
+   * model zaten çalışıyor (yönetici onu kullanıyor). Yollanmamış (ana)
+   * sağlayıcı hata verirse eski davranış korunur: hata fırlatılır.
+   * Mesaj geçmişi korunduğu için bağlam kaybolmaz.
    */
   private async callModel(
     provider: ModelProvider,
@@ -169,24 +173,41 @@ export class SubagentManager {
     tools: ToolDefinition[],
     signal: AbortSignal | undefined,
     choice: AgentModelChoice | undefined,
-    onFallback?: (from: string, to: string, reason: string) => void
+    onFallback?: (from: string, to: string, reason: string, provider: ModelProvider) => void
   ): Promise<ModelCompletionResponse> {
     try {
       return await provider.sendMessage(messages, tools, undefined, signal);
     } catch (err) {
       if (signal?.aborted) throw err;
+      let lastError: unknown = err;
+      const steps: Array<{ label: string; provider: ModelProvider }> = [];
       const fallback = choice?.fallbackModel;
-      if (!fallback || !this.providerForModel) throw err;
-      let fallbackProvider: ModelProvider | undefined;
-      try {
-        fallbackProvider = this.providerForModel(fallback);
-      } catch (fallbackErr) {
-        logWarning(`Could not create fallback provider ${fallback}`, fallbackErr);
+      if (fallback && this.providerForModel) {
+        try {
+          const fallbackProvider = this.providerForModel(fallback);
+          if (fallbackProvider) steps.push({ label: `yedek model ${fallback}`, provider: fallbackProvider });
+        } catch (fallbackErr) {
+          logWarning(`Could not create fallback provider ${fallback}`, fallbackErr);
+        }
       }
-      if (!fallbackProvider) throw err;
-      onFallback?.(choice?.model || 'primary', fallback, errorMessage(err, 'model request failed'));
-      // Yedek modelle bağlam korunur: mesaj geçmişi aynı dizi, yalnızca sağlayıcı değişir.
-      return fallbackProvider.sendMessage(messages, tools, undefined, signal);
+      if (provider !== this.provider) {
+        steps.push({ label: 'ana model', provider: this.provider });
+      }
+      for (const step of steps) {
+        onFallback?.(
+          choice?.model || 'seçili model',
+          step.label,
+          errorMessage(lastError, 'model request failed'),
+          step.provider
+        );
+        try {
+          return await step.provider.sendMessage(messages, tools, undefined, signal);
+        } catch (stepErr) {
+          if (signal?.aborted) throw stepErr;
+          lastError = stepErr;
+        }
+      }
+      throw lastError;
     }
   }
 
@@ -356,22 +377,40 @@ Complete your task and provide a clear report of the results to the main agent w
       }
 
       maxSteps--;
-      const response = await this.callModel(
-        activeProvider,
-        messages,
-        tools,
-        signal,
-        modelChoice,
-        (from, to, reason) => {
-          // Fallback kalıcıdır: sonraki turlar da yedek modelle sürer, bağlam korunur.
-          const provider = this.providerForModel?.(to);
-          if (provider) activeProvider = provider;
-          logWarning(`Subagent ${params.role}: model ${from} failed, falling back to ${to}`, reason);
-          this.onSubagentStatus?.(params.role, `Model ${from} başarısız; yedek model ${to} kullanılıyor.`, {
-            state: 'running'
-          });
-        }
-      );
+      let response: ModelCompletionResponse;
+      try {
+        response = await this.callModel(
+          activeProvider,
+          messages,
+          tools,
+          signal,
+          modelChoice,
+          (from, to, reason, fallbackProvider) => {
+            // Fallback kalıcıdır: sonraki turlar da seçilen sağlayıcıyla sürer,
+            // bağlam korunur. Sağlayıcı hazır gelir; "ana model" adından
+            // yeniden üretilmez.
+            activeProvider = fallbackProvider;
+            logWarning(
+              `Subagent ${params.role}: model ${from} failed, degrading to another provider`,
+              reason
+            );
+            this.onSubagentStatus?.(params.role, `Model ${from} başarısız; ${to} ile sürüyor.`, {
+              state: 'running'
+            });
+          }
+        );
+      } catch (err) {
+        // Ölüm kalım: uzman + yedek + ana model merdiveni de tükendiyse ham
+        // istisna yöneticiyi şaşırtır. Dürüst, okunabilir rapor döner ve alt
+        // ajan arayüzü 'başarısız' olarak temizlenir.
+        const detail = errorMessage(err, 'Model isteği tamamlanamadı.');
+        this.onSubagentStatus?.(params.role, `Failed: ${detail}`, {
+          state: 'failed',
+          isolate: isolated,
+          worktreePath: isolated ? workspaceRoot : undefined
+        });
+        return `[Subagent Error]: Subagent '${params.role}' could not reach any model (${detail}). The manager should continue this work directly or retry later.`;
+      }
 
       if (!response.toolCalls || response.toolCalls.length === 0) {
         this.onSubagentStatus?.(params.role, 'Completed', {
