@@ -119,6 +119,19 @@ describe('MessageList: tur akordeonu', () => {
     assert.ok(screen.getByText('İkinci adım tamamlandı.', { selector: 'span.truncate' }));
   });
 
+  it('ara anlatım satırları balon yerine kompakt izleme çizgisi olarak çizilir', () => {
+    render(<MessageList messages={turnMessages(false)} />);
+
+    const narration = Array.from(document.querySelectorAll('[data-testid="narration-line"]'));
+    assert.equal(narration.length, 1, 'final dışındaki tek ara metin anlatım satırı olmalı');
+    assert.equal(narration[0]?.textContent, 'İlk adım tamamlandı.');
+    assert.ok(
+      document.querySelector(`#turn-t1 .ahi-bubble--flush`),
+      'final yanıt normal balon olarak kalmalı'
+    );
+    assert.match(document.querySelector('#turn-t1 .ahi-bubble--flush')?.textContent ?? '', /İkinci adım/);
+  });
+
   it('çalışan turu açık tutar', () => {
     render(<MessageList messages={turnMessages(true)} />);
 

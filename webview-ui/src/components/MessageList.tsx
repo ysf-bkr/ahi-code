@@ -450,6 +450,13 @@ const TurnBlock: React.FC<TurnBlockProps> = ({ turn, active, pendingToolCall, on
     .map((message) => message.content)
     .filter(Boolean)
     .join('\n\n');
+  // İçerikli son mesaj turun teslimidir; ondan önceki kısa metinler arac
+  // araları arasındaki ara anlatımdır. Anlatım, balon boşluklarıyla ekranı
+  // seyrekleştirmesin diye tek satırlık soluk izleme çizgisine indirgenir.
+  const lastContentIndex = turn.assistant.reduce(
+    (acc, message, index) => (message.content ? index : acc),
+    -1
+  );
 
   if (turn.assistant.length === 0) return null;
 
@@ -503,16 +510,27 @@ const TurnBlock: React.FC<TurnBlockProps> = ({ turn, active, pendingToolCall, on
         hidden={!open}
         className="space-y-2 border-t ahi-border-surface px-2.5 py-2"
       >
-        {turn.assistant.map((message) => (
-          <div key={message.id} className="ahi-turn-msg space-y-1.5">
-            {(message.content || message.isStreaming) && (
-              <div className="ahi-bubble ahi-bubble--flush">
-                <Markdown content={message.content} isStreaming={message.isStreaming} />
-              </div>
-            )}
-            {message.error && <MessageError error={message.error} />}
-          </div>
-        ))}
+        {turn.assistant.map((message, index) => {
+          const isNarration = Boolean(message.content) && index !== lastContentIndex && !message.isStreaming;
+          return (
+            <div key={message.id} className="ahi-turn-msg space-y-1.5">
+              {(message.content || message.isStreaming) &&
+                (isNarration ? (
+                  <p
+                    data-testid="narration-line"
+                    className="text-2xs leading-relaxed ahi-text-muted opacity-85"
+                  >
+                    {message.content}
+                  </p>
+                ) : (
+                  <div className="ahi-bubble ahi-bubble--flush">
+                    <Markdown content={message.content} isStreaming={message.isStreaming} />
+                  </div>
+                ))}
+              {message.error && <MessageError error={message.error} />}
+            </div>
+          );
+        })}
 
         {turn.assistant.some((message) => message.toolCalls?.length) && (
           <TurnChangesReview toolCalls={toolCalls} />
