@@ -5,9 +5,13 @@
  * spec/plan onay kartları ve tur sonudur. Bu modül, hangi duraklamaların
  * otomatik geçileceğine karar verir.
  *
- * Güvenlik kapıları burada DEĞİLDİR: yazma/komut izinleri, komut risk
- * politikası ve yıkıcı komut engeli her seviyede aynı kalır. Otonomi yalnızca
- * *akış* duraklamalarını kaldırır.
+ * Otonomi hem akış duraklamalarını kaldırır hem de onay motorunu
+ * şekillendirir: "Otonom" seviyesinde olağan dosya yazma ve güvenli komutlar
+ * otomatik onaylı sayılır — seviyenin sözü "kendi başına bitir"dir.
+ *
+ * Güvenlik sınırları seviyeden BAĞIMSIZDIR: riskli/bilinmeyen komutlar,
+ * yıkıcı komut engeli, hassas dosyalar ve ağ/istem kanalı araçları
+ * ('always' politikası) her seviyede açık onay ister.
  */
 import { AutonomyLevel, UserSettings } from '../../shared/types';
 

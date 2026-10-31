@@ -42,9 +42,11 @@ describe('SettingsView: otonomi seçimi', () => {
     assert.equal(updated.getAttribute('aria-pressed'), 'true');
   });
 
-  it('güvenlik onaylarının otonomiden bağımsız olduğunu yazar', () => {
+  it('seviye sözleşmesini ve güvenlik sınırlarını dürüstçe yazar', () => {
     render(<SettingsView settings={settings({ autonomy: 'auto' })} onBack={() => {}} />);
 
-    assert.match(screen.getByText(/Otonomi yalnızca/).textContent ?? '', /Dosya yazma, komut çalıştırma/);
+    const caption = screen.getByText(/Otonom: akış kartları/).textContent ?? '';
+    assert.match(caption, /dosya yazma ve güvenli komutlar otomatik onaylanır/);
+    assert.match(caption, /Riskli ya da tanımadığımız komutlar.*her seviyede onay ister/);
   });
 });

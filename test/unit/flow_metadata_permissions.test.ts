@@ -65,10 +65,13 @@ describe('PermissionManager: delegation approval by autonomy', () => {
     }
   });
 
-  it('delegation mode does not relax writes or commands', () => {
+  it('otonom seviye yazmayı ve güvenli komutu otomatikleştirir, ağ aracını değil', () => {
+    // Sözleşme değişikliği (kullanıcı şikâyeti): "Otonom" seçiliyken rutin
+    // dosya yazma ve güvenli komutlar artık onay istemez; uç ağ aracı her
+    // seviyede sormaya devam eder. Ayrıntı: autonomy_permissions.test.ts
     const manager = new PermissionManager({ ...manualWriteSettings, autonomy: 'auto' });
-    assert.strictEqual(manager.requiresApproval('write_file', { path: 'src/a.ts' }), true);
-    assert.strictEqual(manager.requiresApproval('execute_command', { command: 'npm test' }), true);
+    assert.strictEqual(manager.requiresApproval('write_file', { path: 'src/a.ts' }), false);
+    assert.strictEqual(manager.requiresApproval('execute_command', { command: 'npm test' }), false);
     // Ağ araçları her modda onay ister.
     assert.strictEqual(manager.requiresApproval('web_fetch', { url: 'https://x' }), true);
   });

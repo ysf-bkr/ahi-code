@@ -299,8 +299,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               ))}
             </div>
             <p className="ahi-caption mt-1.5">
-              Otonomi yalnızca iş akışı adımlarını (soru sorma, spec tamamlama) etkiler. Dosya yazma, komut
-              çalıştırma gibi riskli işlemler aşağıdaki izin ayarlarına tabidir.
+              Elle: aşağıdaki izin ayarları geçerlidir. Yönlendirilmiş: spec/plan kartları ve sorular
+              beklemez, dosya yazma onayı ise her zaman sorulur. Otonom: akış kartları beklemez, dosya yazma
+              ve güvenli komutlar otomatik onaylanır. Riskli ya da tanımadığımız komutlar, hassas dosyalar ve
+              ağ erişimi her seviyede onay ister.
             </p>
           </div>
 

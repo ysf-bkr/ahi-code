@@ -6,6 +6,7 @@ import { ToolName, UserSettings } from '../../shared/types';
 import { isRecord } from '../../shared/errors';
 import { assessCommand, describeAssessment } from '../../shared/commandPolicy';
 import { isFlowMetadataTool, policyFor, targetPathFor } from './toolPolicy';
+import { autonomyLevel } from '../agent/autonomy';
 import { isBroadPattern, matchCommandPattern, matchPathPattern } from './patterns';
 
 /** Çalışma alanını değiştirebilen politika türleri; bozuk izin dosyası bunları engeller. */
@@ -402,15 +403,21 @@ export class PermissionManager {
     const allow = this.activeProjectPermissions?.allow;
     const projectAuto = this.activeProjectPermissions?.autoApprove;
     const targetPath = this.normalizeTarget(targetPathFor(toolName, args));
+    // Otonomi seviyesi onay motorunu da şekillendirir: "Otonom" seçiliyse
+    // olağan dosya yazma ve güvenli komutlar otomatik onaylı sayılır;aksi
+    // hâlde seviye sözü tutmuyor, her yazma kartı görevi durduruyordu.
+    // Güvenlik sınırları seviyeden BAĞIMSIZ durur: riskli/bilinmeyen komut,
+    // engelli komut, hassas dosya ve 'always' araçları her seviyede sorar.
+    const level = autonomyLevel(this.settings);
+    const autonomous = level === 'auto';
 
     switch (policyFor(toolName)) {
       case 'read': {
         // Öncelik: deny (isToolBlocked) > ana otomatik onay > allow filtresi.
         // Proje dosyası kullanıcı tercihini daraltabilir, asla genişletemez.
-        const autoRead = this.effectiveAutoApprove(
-          projectAuto?.readFiles,
-          this.settings.autoApprove.readFiles
-        );
+        const autoRead =
+          autonomous ||
+          this.effectiveAutoApprove(projectAuto?.readFiles, this.settings.autoApprove.readFiles);
         if (!autoRead) return true;
         return this.isNarrowedByAllowList(allow?.readFiles, targetPath);
       }
@@ -421,25 +428,29 @@ export class PermissionManager {
         // onay istemez; aksi hâlde spec onay kartı hiç görünmez ve ajan
         // `write_spec` için 10 dakikalık onay zaman aşımını bekler.
         if (isFlowMetadataTool(toolName)) return false;
-        const autoWrite = this.effectiveAutoApprove(
-          projectAuto?.writeFiles,
-          this.settings.autoApprove.writeFiles
-        );
+        // "Yönlendirilmiş" seviyesinin sözü: yazma öncesi her zaman sorulur.
+        if (level === 'guided') return true;
+        const autoWrite =
+          autonomous ||
+          this.effectiveAutoApprove(projectAuto?.writeFiles, this.settings.autoApprove.writeFiles);
         if (!autoWrite) return true;
         return this.isNarrowedByAllowList(allow?.writeFiles, targetPath);
       }
 
       case 'git-write':
-        return !this.effectiveAutoApprove(projectAuto?.writeFiles, this.settings.autoApprove.writeFiles);
+        return !(
+          autonomous ||
+          this.effectiveAutoApprove(projectAuto?.writeFiles, this.settings.autoApprove.writeFiles)
+        );
 
       case 'always':
         return true;
 
       case 'delegate': {
-        // Devretme akış adımıdır: otonom modda kullanıcıyı bekletmez. Alt ajanın
-        // kendi yazma/komut çağrıları ayrıca onaya tabidir, bu yüzden burada
-        // güvenlik gevşemesi oluşmaz.
-        return (this.settings.autonomy ?? 'manual') === 'manual';
+        // Devretme akış adımıdır: otonom/yönlendirilmiş modda kullanıcıyı
+        // bekletmez. Alt ajanın kendi yazma/komut çağrıları ayrıca onaya
+        // tabidir, bu yüzden burada güvenlik gevşemesi oluşmaz.
+        return level === 'manual';
       }
 
       case 'never':
@@ -457,10 +468,9 @@ export class PermissionManager {
           return true;
         }
 
-        const autoCmd = this.effectiveAutoApprove(
-          projectAuto?.executeCommands,
-          this.settings.autoApprove.executeCommands
-        );
+        const autoCmd =
+          autonomous ||
+          this.effectiveAutoApprove(projectAuto?.executeCommands, this.settings.autoApprove.executeCommands);
         if (!autoCmd) {
           return true;
         }
@@ -516,6 +526,9 @@ export class PermissionManager {
     }
 
     if (isWriteTool) {
+      if (autonomyLevel(this.settings) === 'guided') {
+        return 'Otonomi seviyesi "Yönlendirilmiş": yazma öncesi onay her zaman istenir; otomatik olmasını için seviyeyi "Otonom" yapın.';
+      }
       if (this.settings.autoApprove.writeFiles && projectAuto?.writeFiles === false) {
         return 'Proje izin dosyası (.ahi/permissions.json) yazma otomatik onayını kapatıyor; dosyadaki autoApprove.writeFiles değerini kaldırın veya true yapın.';
       }

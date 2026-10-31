@@ -13,7 +13,9 @@ import { TaskState, UserSettings } from '../../src/shared/types';
  *
  * İki sözleşme test edilir:
  * 1. `guided`/`auto` modunda spec ve plan kartı ajanı durdurmaz.
- * 2. Güvenlik onayları (dosya yazma, komut) otonom modda da sorulur.
+ * 2. `auto` modda olağan dosya yazma onay beklemeden yürür (seviyenin sözü);
+ *    hassas dosya/riskli komut gibi gerçek güvenlik sınırları ise ayrı
+ *    testlerde (autonomy_permissions.test.ts) her seviyede sorulur.
  */
 class ScriptedProvider implements ModelProvider {
   public readonly id = 'scripted';
@@ -192,7 +194,7 @@ describe('Autonomy: approval gates', () => {
     await core.cancelTask();
   });
 
-  it('autonomy never bypasses write approvals', async () => {
+  it('auto mode runs a routine write without an approval card', async () => {
     const root = await workspace();
     const writeCall: ModelCompletionResponse = {
       text: '',
@@ -206,6 +208,7 @@ describe('Autonomy: approval gates', () => {
     };
     const { core, states } = createAgent(new ScriptedProvider([writeCall, { text: 'bitti' }]), root, {
       autonomy: 'auto'
+      // autoApprove.writeFiles bilinçli kapalı: seviyenin kendisi otomatik onaylar.
     });
 
     const workflow = core.getState().workflow ?? {};
@@ -223,14 +226,17 @@ describe('Autonomy: approval gates', () => {
     core.getState().workflow!.specApproved = true;
     core.getState().workflow!.planApproved = true;
 
-    const run = core.handleSendMessage('dosya oluştur');
+    await core.handleSendMessage('dosya oluştur');
 
-    const pending = await waitFor(() => states.some((state) => state.status === 'waiting_approval'));
-    assert.ok(pending, 'otonom modda bile yazma onayı istenmeli');
-    assert.strictEqual(core.getState().pendingToolCall?.name, 'write_file');
-
-    await core.rejectTool(core.getState().pendingToolCall?.id ?? '', 'test');
-    await run;
+    assert.ok(
+      !states.some((state) => state.status === 'waiting_approval'),
+      'Otonom modda olağan dosya yazma onay kartıyla durmamalı'
+    );
+    const written = await fs.stat(path.join(root, 'src/new.ts')).then(
+      () => true,
+      () => false
+    );
+    assert.ok(written, 'yazma onaysız uygulanmış olmalı');
   });
 
   it('does not auto-continue in guided mode', async () => {
