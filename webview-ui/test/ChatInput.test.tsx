@@ -184,25 +184,28 @@ describe('ChatInput', () => {
       />
     );
 
-    // Kapalı seçici yalnızca ikonu gösterir: seçenek etiketleri çizilmez.
-    assert.equal(screen.queryByText('Yönlendir'), null, 'etiketler menü açıkken görünmeli');
-    const trigger = screen.getByRole('button', { name: 'Otonomi seviyesi: Elle' });
-    assert.ok(trigger, 'seçili seviye erişilebilir adta taşınmalı');
+    // Satır içi seçici: seçili seçenek etiketli, diğerleri yalnızca ikon.
+    assert.equal(screen.queryByText('Yönlendir'), null, 'seçili olmayan seçenek etiket çizmemeli');
+    assert.ok(screen.getByText('Elle'), 'seçili seçenek ikon + etiket göstermeli');
+    const autoButton = screen.getByRole('button', { name: 'Otonomi seviyesi: Otonom' });
+    assert.ok(autoButton, 'seçili olmayan seçenek erişilebilir adını korumalı');
+    assert.equal(
+      screen.getByRole('button', { name: 'Otonomi seviyesi: Elle' }).getAttribute('aria-pressed'),
+      'true',
+      'seçili seçeneğinpressed durumu true olmalı'
+    );
 
-    fireEvent.click(trigger);
-    assert.ok(screen.getByRole('listbox', { name: 'Otonomi seviyesi' }), 'etiketli menü açılmalı');
-    fireEvent.click(screen.getByRole('option', { name: /Otonom/ }));
+    fireEvent.click(autoButton);
     assert.deepEqual(changes, ['auto'], 'seviye değişimi bildirilmeli');
-    assert.equal(screen.queryByRole('listbox'), null, 'seçim sonrası menü kapanmalı');
   });
 
-  it('mod seçicisi kapalıyken etiket göstermez, tıklayınca açılır', () => {
+  it('mod seçicisi seçili modu etiketle, diğerini yalnızca ikonla gösterir', () => {
     const modes: string[] = [];
     render(<ChatInput state={createTaskState()} onSend={() => {}} onModeChange={(m) => modes.push(m)} />);
 
-    assert.equal(screen.queryByText('Planlama'), null, 'kapalı çubukta mod etiketi çizilmemeli');
-    fireEvent.click(screen.getByRole('button', { name: 'Görev modu: Kodlama' }));
-    fireEvent.click(screen.getByRole('option', { name: 'Planlama' }));
+    assert.equal(screen.queryByText('Planlama'), null, 'seçili olmayan mod etiket çizmemeli');
+    assert.ok(screen.getByText('Kodlama'), 'seçili mod etiketi görünmeli');
+    fireEvent.click(screen.getByRole('button', { name: 'Görev modu: Planlama' }));
     assert.deepEqual(modes, ['plan']);
   });
 });
