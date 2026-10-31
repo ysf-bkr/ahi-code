@@ -123,45 +123,45 @@ Bir sohbet görünüm durumu değil, yaşayan bir `AgentCore` örneğidir.
 
 ## 4. Güvenilirlik ve Güvenlik Sözleşmeleri
 
-| Konu                 | Tasarım Tercihi ve Davranış                                                              |
-| -------------------- | ---------------------------------------------------------------------------------------- |
-| **İptal ve Zaman Aşımı** | Streaming yanıtın tamamı anında iptal edilebilir; 2 dakika veri akışı durursa bağlantı zaman aşımına uğrar. |
-| **Token Sayacı**     | Streaming isteklerinde `include_usage` bayrağı ile sağlayıcıdan kesin token sayısı alınır. |
-| **Audit Log**        | Komutlar kaydedilirken `Bearer`, `sk-`, `api_key=` gibi hassas anahtar kalıpları maskelenir. |
-| **Docker Sandbox**   | Sandbox modu seçiliyse boş imajla ana makineye sessizce düşülmez; hata fırlatılır.        |
-| **Editör Bağlamı**   | Yalnızca çalışma alanı **içindeki** aktif dosya ve seçimler prompt bağlamına eklenir.     |
-| **Araç Kilidi**      | Plan modunda yazma/komut araçları şemadan çıkarılır; model çağırırsa işlem reddedilir.    |
-| **Oturum İzolasyonu**| Yeni oturum başladığında snapshot/checkpoint dizinleri sıfırlanır, oturumlar karışmaz.    |
-| **Plan İlerlemesi**  | Başlatılan adım `in_progress` işaretlenir; dosya değişikliği, araç etkinliği ya da görev tamamlanması üreten turun sonunda adım tamamlanır. |
+| Konu                     | Tasarım Tercihi ve Davranış                                                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **İptal ve Zaman Aşımı** | Streaming yanıtın tamamı anında iptal edilebilir; 2 dakika veri akışı durursa bağlantı zaman aşımına uğrar.                                 |
+| **Token Sayacı**         | Streaming isteklerinde `include_usage` bayrağı ile sağlayıcıdan kesin token sayısı alınır.                                                  |
+| **Audit Log**            | Komutlar kaydedilirken `Bearer`, `sk-`, `api_key=` gibi hassas anahtar kalıpları maskelenir.                                                |
+| **Docker Sandbox**       | Sandbox modu seçiliyse boş imajla ana makineye sessizce düşülmez; hata fırlatılır.                                                          |
+| **Editör Bağlamı**       | Yalnızca çalışma alanı **içindeki** aktif dosya ve seçimler prompt bağlamına eklenir.                                                       |
+| **Araç Kilidi**          | Plan modunda yazma/komut araçları şemadan çıkarılır; model çağırırsa işlem reddedilir.                                                      |
+| **Oturum İzolasyonu**    | Yeni oturum başladığında snapshot/checkpoint dizinleri sıfırlanır, oturumlar karışmaz.                                                      |
+| **Plan İlerlemesi**      | Başlatılan adım `in_progress` işaretlenir; dosya değişikliği, araç etkinliği ya da görev tamamlanması üreten turun sonunda adım tamamlanır. |
 
 ---
 
 ## 5. Geliştirici Scriptleri ve Araç Zinciri
 
-| Komut                          | Açıklama                                                                     |
-| ------------------------------ | ---------------------------------------------------------------------------- |
-| `npm run dev`                  | Derler ve yeni bir Extension Host penceresi açar.                            |
-| `npm run check`                | Tam kalite kapısı: format + tip + lint + dil + test + kapsam.                |
-| `npm run typecheck`            | Extension TypeScript tip kontrolü (`tsc --noEmit`).                          |
-| `npm run typecheck:test`       | Test dosyalarının tip kontrolü (`tsconfig.test.json`).                       |
-| `npm run lint`                 | ESLint kod kalitesi kontrolü (src, test, scripts).                           |
-| `npm run format`               | Prettier ile kod tabanını biçimlendirir.                                     |
-| `npm run format:check`         | Biçimlendirmenin bozulmadığını doğrular (CI kapısı).                         |
-| `npm test`                     | Çekirdek ve arayüz birim testlerini birlikte çalıştırır.                    |
-| `npm run test:ui`              | Yalnızca webview (React) testlerini çalıştırır.                              |
-| `npm run test:coverage`        | Node.js yerleşik test kapsam raporunu yazdırır.                              |
-| `npm run check:coverage`       | Satır kapsamı eşiğini (%75) doğrular.                                        |
-| `npm run check:version`        | `package.json`, lockfile ve `version.ts` tutarlılığını doğrular.             |
-| `npm run check:test-isolation` | Testlerin geçici dosyaları `os.tmpdir()` altında tuttuğunu doğrular.         |
+| Komut                          | Açıklama                                                                                                     |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `npm run dev`                  | Derler ve yeni bir Extension Host penceresi açar.                                                            |
+| `npm run check`                | Tam kalite kapısı: format + tip + lint + dil + test + kapsam.                                                |
+| `npm run typecheck`            | Extension TypeScript tip kontrolü (`tsc --noEmit`).                                                          |
+| `npm run typecheck:test`       | Test dosyalarının tip kontrolü (`tsconfig.test.json`).                                                       |
+| `npm run lint`                 | ESLint kod kalitesi kontrolü (src, test, scripts).                                                           |
+| `npm run format`               | Prettier ile kod tabanını biçimlendirir.                                                                     |
+| `npm run format:check`         | Biçimlendirmenin bozulmadığını doğrular (CI kapısı).                                                         |
+| `npm test`                     | Çekirdek ve arayüz birim testlerini birlikte çalıştırır.                                                     |
+| `npm run test:ui`              | Yalnızca webview (React) testlerini çalıştırır.                                                              |
+| `npm run test:coverage`        | Node.js yerleşik test kapsam raporunu yazdırır.                                                              |
+| `npm run check:coverage`       | Satır kapsamı eşiğini (%75) doğrular.                                                                        |
+| `npm run check:version`        | `package.json`, lockfile ve `version.ts` tutarlılığını doğrular.                                             |
+| `npm run check:test-isolation` | Testlerin geçici dosyaları `os.tmpdir()` altında tuttuğunu doğrular.                                         |
 | `npm run check:language`       | Ajan dosyalarının (`AGENTS.md`, `.agents/**`) İngilizce ve kaynak kod yorumlarının Türkçe olduğunu doğrular. |
-| `npm run build`                | Tüm kapılar + webview derleme + minified extension ve CLI bundle'ı üretir.  |
-| `npm run compile`              | Yalnızca extension bundle'ını esbuild ile derler.                            |
-| `npm run build:ui`             | Yalnızca webview uygulamasını Vite ile derler.                               |
-| `npm run build:cli`            | Yalnızca CLI bundle'ını derler.                                              |
-| `npm run package`              | `out/ahi-code-0.0.2.vsix` paketini üretir.                                   |
-| `npm run audit:verify`         | `.ahi/audit.log` hash zincirini doğrular (`-- --workspace <path>`).          |
-| `npm run cli`                  | Başsız (headless) terminal CLI'ını kaynaktan çalıştırır.                    |
-| `npm run test:e2e`             | Derler ve gerçek bir VS Code penceresinde uçtan uca testleri çalıştırır.     |
+| `npm run build`                | Tüm kapılar + webview derleme + minified extension ve CLI bundle'ı üretir.                                   |
+| `npm run compile`              | Yalnızca extension bundle'ını esbuild ile derler.                                                            |
+| `npm run build:ui`             | Yalnızca webview uygulamasını Vite ile derler.                                                               |
+| `npm run build:cli`            | Yalnızca CLI bundle'ını derler.                                                                              |
+| `npm run package`              | `out/ahi-code-0.0.2.vsix` paketini üretir.                                                                   |
+| `npm run audit:verify`         | `.ahi/audit.log` hash zincirini doğrular (`-- --workspace <path>`).                                          |
+| `npm run cli`                  | Başsız (headless) terminal CLI'ını kaynaktan çalıştırır.                                                     |
+| `npm run test:e2e`             | Derler ve gerçek bir VS Code penceresinde uçtan uca testleri çalıştırır.                                     |
 
 ---
 
@@ -188,6 +188,11 @@ dokunulmadan önce netleşir:
 5. **Doğrulama** — test, lint ve tip denetimi çalışır. Atlanan doğrulama, bitti
    kapısını yalnızca çalışma alanı hiç yokken tatmin eder; böylece test komutu
    bulunamadığında görev sessizce kapanmaz.
+
+İnceleme aşaması bulguları ve ajanın öz değerlendirmesi **tavsiye niteliğindedir**:
+neyin denendiğini, neyin denenemediğini özetler. Son söz her zaman kullanıcıya
+aittir; hiçbir şey, altta yatan test ya da komut gerçekten çalışıp geçmeden
+"doğrulandı" olarak sunulmaz.
 
 Modül haritası besteci altındaki şeritte görünür; görev çalışırken yazma sırası
 ve hangi modülün işlendiği tek bakışta izlenir.

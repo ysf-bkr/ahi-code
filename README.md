@@ -12,13 +12,13 @@
 **Türkçe** · [English](README.en.md)
 
 > _"Eline, beline, diline sahip ol."_ — Ahilik Zanaat Ahlakı  
-> **El (Zanaat):** Titiz kod yazımı ve mimari analiz · **Bel (Şed Kuşağı):** Kırılmaz izin kalkanı ve dizin hapsi · **Dil (Ahlak):** Dürüst durum bildirimi ve hash zincirli denetim.
+> **El (Zanaat):** Çağrı grafiğiyle mimariyi okur, hiçbir düzenlemeyi kanıtsız "başarılı" saymaz. · **Bel (Şed Kuşağı):** Kırılmaz izin kalkanı, dizin hapsi ve komut politikası — izin sizden alınmadan tek satır yazılmaz. · **Dil (Ahlak):** Dürüst durum bildirimi: tekrarlayan yanıt kesilir, çıkmaz sokakta üçüncü denemede durur, "testler geçti" yalnızca testler gerçekten geçince söylenir.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.106-007ACC?logo=visualstudiocode)](https://code.visualstudio.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![CI](https://github.com/ysf-bkr/ahi-code/actions/workflows/ci.yml/badge.svg)](https://github.com/ysf-bkr/ahi-code/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-646%20passing-2ea44f)](./docs/DEVELOPMENT.tr.md)
+[![Tests](https://img.shields.io/badge/tests-793%20passing-2ea44f)](./docs/DEVELOPMENT.tr.md)
 
 **Geliştirici:** Yusuf BEKAR · **E-posta:** [ybekar@msn.com](mailto:ybekar@msn.com)
 
@@ -35,19 +35,35 @@
 
 ## Öne Çıkan Özellikler
 
-| Özellik | Açıklama |
-| --- | --- |
-| **Otonom ReAct Döngüsü** | Hedefe ulaşana kadar dosyaları inceler, terminal komutları çalıştırır, testleri koşturur ve hataları otonom olarak düzeltir. |
-| **Kod Değişiklikleri ve İnceleme (Review)** | Yapılan tüm kod düzenlemeleri tur sonunda toplanır; tek tıkla VS Code Diff görünümünde incelenebilir ve gerektiğinde geri alınabilir. |
-| **Yönlendirilmiş Geliştirme Akışı** | Anlama → İstek → Spec Onayı → Modül Haritası ve Plan Onayı → Uygulama → İnceleme → Doğrulama aşamalarıyla kontrollü mühendislik. |
-| **Endüstriyel Modül Akışı** | Kod yazmadan önce iş, katmanlı modüllere ayrılır (shared → domain → infrastructure → application → interface); her modüle sahip uzman atanır ve modüller bağımlılık sırasıyla yazılır. Katman ihlalleri ve döngüler reddedilir. |
-| **Geniş Model Desteği** | EVREN LLM (SSYZ), Yerel Ollama, LM Studio, OpenRouter ve tüm OpenAI API uyumlu modellerle tam uyum. |
-| **Güvenli Sır Saklama** | API anahtarları işletim sisteminin güvenli anahtarlığında (`SecretStorage`) şifreli saklanır, arayüzde asla açık gösterilmez. |
-| **Proje Hafızası ve Bilgi Tabanı** | `.ahi/memory.md` ve `.ahi/knowledge/` ile projeninizin mimari kararlarını, kurallarını ve sembollerini hatırlar. |
-| **Geri Alma (Undo) ve Kontrol Noktaları** | Her tur başında Git checkpoint'i alınır; istenmeyen değişiklikler tek tıkla eski haline döndürülür. |
-| **EVREN Kotası ve Model Çubuğu** | Sohbet altındaki çubuk, EVREN günlük token kotasını (kullanılan / sınır / kalan) canlı gösterir ve sohbetten ayrılmadan model değiştirmeyi sağlar. |
-| **Arka Planda Çalışan Sohbetler** | Her sohbet kendi ajan çekirdeğinde çalışır: sohbet değiştirmek veya yeni sohbet açmak önceki görevi (ve alt ajanlarını) durdurmaz. Paylaşılan servisler sayesinde ikinci sohbet ucuzdur. |
-| **İki Dilli Belgeler ve Türkçe Arayüz** | İngilizce/Türkçe iki dilli proje belgeleri; arayüzdeki tüm hata mesajları, bildirimler ve plan adımları eksiksiz Türkçe. |
+| Özellik                                     | Açıklama                                                                                                                                                                                                                        |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Otonom ReAct Döngüsü**                    | Hedefe ulaşana kadar dosyaları inceler, terminal komutları çalıştırır, testleri koşturur ve hataları otonom olarak düzeltir.                                                                                                    |
+| **Kod Değişiklikleri ve İnceleme (Review)** | Yapılan tüm kod düzenlemeleri tur sonunda toplanır; tek tıkla VS Code Diff görünümünde incelenebilir ve gerektiğinde geri alınabilir.                                                                                           |
+| **Yönlendirilmiş Geliştirme Akışı**         | Anlama → İstek → Spec Onayı → Modül Haritası ve Plan Onayı → Uygulama → İnceleme → Doğrulama aşamalarıyla kontrollü mühendislik.                                                                                                |
+| **Endüstriyel Modül Akışı**                 | Kod yazmadan önce iş, katmanlı modüllere ayrılır (shared → domain → infrastructure → application → interface); her modüle sahip uzman atanır ve modüller bağımlılık sırasıyla yazılır. Katman ihlalleri ve döngüler reddedilir. |
+| **Geniş Model Desteği**                     | EVREN LLM (SSYZ), Yerel Ollama, LM Studio, OpenRouter ve tüm OpenAI API uyumlu modellerle tam uyum.                                                                                                                             |
+| **Güvenli Sır Saklama**                     | API anahtarları işletim sisteminin güvenli anahtarlığında (`SecretStorage`) şifreli saklanır, arayüzde asla açık gösterilmez.                                                                                                   |
+| **Proje Hafızası ve Bilgi Tabanı**          | `.ahi/memory.md` ve `.ahi/knowledge/` ile projeninizin mimari kararlarını, kurallarını ve sembollerini hatırlar.                                                                                                                |
+| **Geri Alma (Undo) ve Kontrol Noktaları**   | Her tur başında Git checkpoint'i alınır; istenmeyen değişiklikler tek tıkla eski haline döndürülür.                                                                                                                             |
+| **EVREN Kotası ve Model Çubuğu**            | Sohbet altındaki çubuk, EVREN günlük token kotasını (kullanılan / sınır / kalan) canlı gösterir ve sohbetten ayrılmadan model değiştirmeyi sağlar.                                                                              |
+| **Arka Planda Çalışan Sohbetler**           | Her sohbet kendi ajan çekirdeğinde çalışır: sohbet değiştirmek veya yeni sohbet açmak önceki görevi (ve alt ajanlarını) durdurmaz. Paylaşılan servisler sayesinde ikinci sohbet ucuzdur.                                        |
+| **İki Dilli Belgeler ve Türkçe Arayüz**     | İngilizce/Türkçe iki dilli proje belgeleri; arayüzdeki tüm hata mesajları, bildirimler ve plan adımları eksiksiz Türkçe.                                                                                                        |
+| **Çağrı Grafiği Ekranı**                    | Dil sunucusundan çıkarılan sembol haritası arayüzde gezilebilir: bir fonksiyonu kimler çağırıyor, kendisi neyi çağırıyor, etki alanı ne?                                                                                        |
+| **Akıl Sağlığı Korumaları**                 | Model bir satıra kilitlenip aynı metni sonsuza dek tekrarladığında akış otomatik kesilir; aynı araç aynı argümanla üçüncü kez patlarsa tur duraklatılır. Uzun görevler sessizce kontrolden çıkamaz.                             |
+| **Bağlam Penceresi Ayarı**                  | Modelinin bağlam pencereyi ayarlardan bildir; sohbet geçmişi ve araç çıktıları gerçek sınıra göre budanır, istekler taşmaz.                                                                                                     |
+| **Terminal Arayüzü (`ahi`)**                | Aynı çekirdek terminalde: tek istemlik çalıştırma ya da `ahi` ile etkileşimli sohbet; onaylar, plan ve korumalar VS Code ile aynı.                                                                                              |
+
+---
+
+## İnsani Mühendislik: Ajan Sana Değil, Sen Ajana Hükmedersin
+
+AhiCode bir otonomluk şovu değil, zanaatkâr çırağı gibi tasarlandı: çalışır, sorar, yanlışı saklamaz.
+
+- **Son söz her zaman senin.** Spec ve plan onayı, araç izinleri, tehlike sınıflandırması ve dizin hapsi olmadan tek satır değişmez; `manual` varsayılandır, otonomluk açıkça kuşanılır.
+- **Yanlışı kendine saklamaz.** Tekrarlayan yanıt, takılan araç ve doğrulanmayan iddia kullanıcıdan gizlenmez: akış kesilir, tur duraklatılır, sebep Türkçe bildirilir.
+- **Başarısızlığı süslemez.** Hiçbir şey değiştirmeyen düzenleme "başarılı" sayılmaz; "doğrulandı" yalnızca testler gerçekten koşunca denir; kanıtı olmayan bulgu rapor edilmez.
+- **Biten iş sohbette kalır.** Tamamlanan görevin izi konuşmanın içinde okunabilir kalır; arayüz, bittiği hâlde ekranda takılı kalan göstergelerle gürültü üretmez.
+- **Kaynağa saygı.** Sabit değerin üstünde iş yapmaz: adım, dakika ve token senin ayarladığın sınırların esiri değildir; bağlam penceresi modele göre gerçekten yapılandırılır.
 
 ---
 
@@ -80,6 +96,7 @@ VS Code ikincil kenar çubuğundaki (secondary sidebar) **AhiCode** simgesine t�
 ### 3. Göreve Başlayın
 
 AhiCode giriş alanına görevinizi yazın:
+
 - _"Projede derleme ve tip hatalarını bulup düzelt."_
 - _"Auth servisi için birim testleri yaz ve çalıştır."_
 - _"Kod tabanını güvenlik ve performans açısından incele."_
@@ -98,6 +115,7 @@ AhiCode iki temel çalışma moduna sahiptir:
 ## Sohbet ve İnceleme (Review) Deneyimi
 
 AhiCode arayüzü, modern kodlama ajanlarının en iyi pratiklerini bir araya getirir:
+
 - **Kod Değişiklikleri Paneli:** Asistanın bir turda oluşturduğu veya değiştirdiği tüm dosyalar bir kartta toplanır.
 - **Tek Tıkla Diff:** Değiştirilen satırları incelemek için **İncele (Diff)** butonuna tıklamanız yeterlidir.
 - **Adım Bazlı Geri Alma:** Herhangi bir dosyadaki değişikliği **Geri Al** butonuyla iptal edebilirsiniz.
@@ -109,13 +127,13 @@ AhiCode arayüzü, modern kodlama ajanlarının en iyi pratiklerini bir araya ge
 
 Aşağıdaki ayarları VS Code Ayarlarından (`settings.json`) veya AhiCode arayüzündeki Ayarlar ekranından yapılandırabilirsiniz:
 
-| Ayar | Varsayılan | Açıklama |
-| --- | --- | --- |
-| `ahiCode.selectedProvider` | `ollama` | Model sağlayıcısı (`ollama`, `evren`, `openrouter`, `openai-compatible`) |
-| `ahiCode.selectedModel` | `llama3.1` | Kullanılacak model adı |
-| `ahiCode.autonomy` | `manual` | Otonomi seviyesi (`manual`, `guided`, `auto`); sohbet giriş alanından da değiştirilebilir |
-| `ahiCode.agentModels` | `{}` | Rol bazlı alt ajan modelleri (rol → model kimliği). Boş roller sağlayıcının hazır ayarını (EVREN: manager/architect → glm-5.3, explorer → mimo-v2.6-pro) ya da seçili modeli kullanır |
-| `ahiCode.embeddingBaseUrl` | `""` | OpenAI uyumlu embedding uç noktası (örn. EVREN `/v1`). Boşsa Ollama `/api/embed` kullanılır |
+| Ayar                       | Varsayılan | Açıklama                                                                                                                                                                              |
+| -------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ahiCode.selectedProvider` | `ollama`   | Model sağlayıcısı (`ollama`, `evren`, `openrouter`, `openai-compatible`)                                                                                                              |
+| `ahiCode.selectedModel`    | `llama3.1` | Kullanılacak model adı                                                                                                                                                                |
+| `ahiCode.autonomy`         | `manual`   | Otonomi seviyesi (`manual`, `guided`, `auto`); sohbet giriş alanından da değiştirilebilir                                                                                             |
+| `ahiCode.agentModels`      | `{}`       | Rol bazlı alt ajan modelleri (rol → model kimliği). Boş roller sağlayıcının hazır ayarını (EVREN: manager/architect → glm-5.3, explorer → mimo-v2.6-pro) ya da seçili modeli kullanır |
+| `ahiCode.embeddingBaseUrl` | `""`       | OpenAI uyumlu embedding uç noktası (örn. EVREN `/v1`). Boşsa Ollama `/api/embed` kullanılır                                                                                           |
 
 ---
 
@@ -146,4 +164,3 @@ Katkılar memnuniyetle karşılanır: [CONTRIBUTING.tr.md](./CONTRIBUTING.tr.md)
 sorunlarını [SECURITY.tr.md](./SECURITY.tr.md) uyarınca özel kanaldan bildirin.
 
 Sorularınız, hata bildirimleriniz ve özellik önerileriniz için [GitHub Issues](https://github.com/ysf-bkr/ahi-code/issues) sayfasını kullanabilir veya [ybekar@msn.com](mailto:ybekar@msn.com) adresinden iletişime geçebilirsiniz.
-

@@ -12,13 +12,13 @@
 **English** · [Türkçe](README.md)
 
 > _"Master your hand, your waist, and your tongue."_ — The Ahilik Craftsmanship Ethos  
-> **Hand (Craftsmanship):** Meticulous code writing and architectural analysis · **Waist (Belt of Discipline):** Unbreakable permission guardrails and directory jail · **Tongue (Ethics):** Honest status reporting and hash-chained audit trails.
+> **Hand (Craftsmanship):** Reads architecture through the call graph; never calls an edit "successful" without proof. · **Waist (Belt of Discipline):** Unbreakable permission guardrails, directory jail and command policy — not a single line is written without your consent. · **Tongue (Ethics):** Honest status reporting: collapsed repetition is cut off, the agent stops after the third failed dead-end attempt, and "tests passed" is only said when tests actually passed.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%5E1.106-007ACC?logo=visualstudiocode)](https://code.visualstudio.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![CI](https://github.com/ysf-bkr/ahi-code/actions/workflows/ci.yml/badge.svg)](https://github.com/ysf-bkr/ahi-code/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-646%20passing-2ea44f)](./docs/DEVELOPMENT.md)
+[![Tests](https://img.shields.io/badge/tests-793%20passing-2ea44f)](./docs/DEVELOPMENT.md)
 
 **Developer:** Yusuf BEKAR · **Email:** [ybekar@msn.com](mailto:ybekar@msn.com)
 
@@ -35,19 +35,35 @@
 
 ## Key Features
 
-| Feature | Description |
-| --- | --- |
-| **Autonomous ReAct Loop** | Inspects files, executes terminal commands, runs tests, and autonomously resolves errors until the goal is achieved. |
-| **Code Changes & Review** | All edits made in a turn are grouped together; review them in the VS Code Diff view with a single click and roll back when needed. |
-| **Guided Workflow Stages** | Controlled engineering through Onboard → Intake → Spec Approval → Module Map + Plan Approval → Implementation → Review → Verification. |
-| **Industrial Module Flow** | Before writing code the agent splits the work into layered modules (shared → domain → infrastructure → application → interface), assigns an owning specialist and writes them in dependency order; layering violations and cycles are rejected. |
-| **Wide Model Compatibility** | Full support for EVREN LLM (SSYZ), local Ollama, LM Studio, OpenRouter, and all OpenAI API-compatible models. |
-| **Secure Credential Storage** | API keys are encrypted inside the operating system's secure keychain (`SecretStorage`) and never exposed in the UI. |
-| **Project Memory & Knowledge** | Retains architectural decisions, conventions, and symbols via `.ahi/memory.md` and `.ahi/knowledge/`. |
-| **Undo & Checkpoints** | A Git checkpoint is captured at the start of every turn; discard unwanted changes with a single click. |
-| **EVREN Quota & Model Bar** | The composer bar shows live EVREN daily token quota (used / limit / remaining) and lets you switch models without leaving the chat. |
-| **Background Chats** | Every chat runs in its own agent core: switching chats or starting a new one keeps the previous task (and its subagents) running. Shared services keep a second chat cheap. |
-| **Bilingual Documentation & Turkish UI** | Bilingual English/Turkish project docs; every error message, notification, and plan step in the interface is native Turkish. |
+| Feature                                  | Description                                                                                                                                                                                                                                     |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Autonomous ReAct Loop**                | Inspects files, executes terminal commands, runs tests, and autonomously resolves errors until the goal is achieved.                                                                                                                            |
+| **Code Changes & Review**                | All edits made in a turn are grouped together; review them in the VS Code Diff view with a single click and roll back when needed.                                                                                                              |
+| **Guided Workflow Stages**               | Controlled engineering through Onboard → Intake → Spec Approval → Module Map + Plan Approval → Implementation → Review → Verification.                                                                                                          |
+| **Industrial Module Flow**               | Before writing code the agent splits the work into layered modules (shared → domain → infrastructure → application → interface), assigns an owning specialist and writes them in dependency order; layering violations and cycles are rejected. |
+| **Wide Model Compatibility**             | Full support for EVREN LLM (SSYZ), local Ollama, LM Studio, OpenRouter, and all OpenAI API-compatible models.                                                                                                                                   |
+| **Secure Credential Storage**            | API keys are encrypted inside the operating system's secure keychain (`SecretStorage`) and never exposed in the UI.                                                                                                                             |
+| **Project Memory & Knowledge**           | Retains architectural decisions, conventions, and symbols via `.ahi/memory.md` and `.ahi/knowledge/`.                                                                                                                                           |
+| **Undo & Checkpoints**                   | A Git checkpoint is captured at the start of every turn; discard unwanted changes with a single click.                                                                                                                                          |
+| **EVREN Quota & Model Bar**              | The composer bar shows live EVREN daily token quota (used / limit / remaining) and lets you switch models without leaving the chat.                                                                                                             |
+| **Background Chats**                     | Every chat runs in its own agent core: switching chats or starting a new one keeps the previous task (and its subagents) running. Shared services keep a second chat cheap.                                                                     |
+| **Bilingual Documentation & Turkish UI** | Bilingual English/Turkish project docs; every error message, notification, and plan step in the interface is native Turkish.                                                                                                                    |
+| **Call Graph Screen**                    | The symbol map extracted from the language server is browsable in the UI: who calls a function, what does it call, and what is its blast radius?                                                                                                |
+| **Sanity Guards**                        | When a model locks onto one line and repeats it forever the stream is cut automatically; when the same tool fails with the same arguments for the third time the turn pauses. Long tasks cannot silently spiral out of control.                 |
+| **Context Window Setting**               | Declare your model's context window in settings; chat history and tool outputs are pruned against the real limit instead of a hardcoded guess.                                                                                                  |
+| **Terminal Interface (`ahi`)**           | The same core in your terminal: single-prompt runs or an interactive chat via `ahi`; approvals, planning and guards identical to VS Code.                                                                                                       |
+
+---
+
+## Human-Centered Engineering: You Command the Agent, Not the Other Way Around
+
+AhiCode is designed as a craftsperson's apprentice rather than an autonomy show: it works, it asks, and it does not hide its mistakes.
+
+- **You always have the last word.** Nothing changes without spec/plan approval, tool permissions, risk classification and directory jail; `manual` is the default and autonomy is explicitly opted into.
+- **It does not keep its failures to itself.** Repeated output, stuck tools and unverified claims are never hidden from you: the stream is cut, the turn pauses, and the reason is reported.
+- **It does not dress up failure.** An edit that changed nothing is not "successful"; "verified" is only said when tests actually ran; findings without evidence are not reported.
+- **Finished work stays in the chat.** A completed task remains readable inside the conversation; the UI does not leave finished indicators hanging on screen.
+- **Respect for resources.** It never works above the limits you set: step, minute and token boundaries are honored, and the context window is genuinely configured per model.
 
 ---
 
@@ -80,6 +96,7 @@ Click the **AhiCode** icon in the VS Code secondary sidebar or open the command 
 ### 3. Start a Task
 
 Type your request in the AhiCode composer:
+
 - _"Find and fix compilation and type errors in the project."_
 - _"Write and run unit tests for the authentication service."_
 - _"Review the codebase for security vulnerabilities and performance bottlenecks."_
@@ -98,6 +115,7 @@ AhiCode provides two primary modes of operation:
 ## Interactive Review Experience
 
 AhiCode incorporates best-in-class coding agent patterns:
+
 - **Turn Changes Panel:** All created or modified files in a turn are consolidated into a review card.
 - **One-Click Diff:** Click **İncele (Diff)** to inspect color-coded side-by-side diffs.
 - **Granular Revert:** Discard unwanted file changes with the **Geri Al** (Undo) action.
@@ -109,13 +127,13 @@ AhiCode incorporates best-in-class coding agent patterns:
 
 Configure the following settings in VS Code Settings (`settings.json`) or inside the AhiCode Settings view:
 
-| Setting | Default | Description |
-| --- | --- | --- |
-| `ahiCode.selectedProvider` | `ollama` | Model provider (`ollama`, `evren`, `openrouter`, `openai-compatible`) |
-| `ahiCode.selectedModel` | `llama3.1` | Model identifier to use |
-| `ahiCode.autonomy` | `manual` | Autonomy level (`manual`, `guided`, `auto`); also switchable from the chat composer |
-| `ahiCode.agentModels` | `{}` | Per-role subagent models (role → model id). Empty roles fall back to the provider preset (EVREN: manager/architect → glm-5.3, explorer → mimo-v2.6-pro) or the selected model |
-| `ahiCode.embeddingBaseUrl` | `""` | OpenAI-compatible embedding endpoint (e.g. EVREN `/v1`). Empty uses Ollama `/api/embed` |
+| Setting                    | Default    | Description                                                                                                                                                                   |
+| -------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ahiCode.selectedProvider` | `ollama`   | Model provider (`ollama`, `evren`, `openrouter`, `openai-compatible`)                                                                                                         |
+| `ahiCode.selectedModel`    | `llama3.1` | Model identifier to use                                                                                                                                                       |
+| `ahiCode.autonomy`         | `manual`   | Autonomy level (`manual`, `guided`, `auto`); also switchable from the chat composer                                                                                           |
+| `ahiCode.agentModels`      | `{}`       | Per-role subagent models (role → model id). Empty roles fall back to the provider preset (EVREN: manager/architect → glm-5.3, explorer → mimo-v2.6-pro) or the selected model |
+| `ahiCode.embeddingBaseUrl` | `""`       | OpenAI-compatible embedding endpoint (e.g. EVREN `/v1`). Empty uses Ollama `/api/embed`                                                                                       |
 
 ---
 

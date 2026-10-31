@@ -124,45 +124,45 @@ A chat is not a view state: it is a live `AgentCore` instance.
 
 ## 4. Reliability and Security Contracts
 
-| Topic | Design choice and behavior |
-| --- | --- |
-| **Cancellation and timeout** | A streaming response can be canceled immediately; the connection times out after two minutes without data. |
-| **Token counter** | Streaming requests use the `include_usage` flag to obtain exact token counts from the provider. |
-| **Audit log** | Sensitive key patterns such as `Bearer`, `sk-` and `api_key=` are redacted before commands are recorded. |
-| **Docker sandbox** | When sandbox mode is selected, the agent never silently falls back to the host; it raises an error instead. |
-| **Editor context** | Only the active file and selections **inside** the workspace are added to the prompt context. |
-| **Tool lock** | Plan mode removes write/command tools from the schema and rejects the call if the model still invokes them. |
-| **Session isolation** | Starting a new session resets snapshot/checkpoint directories so sessions never mix. |
-| **Plan progress** | A started step is marked `in_progress` and completes at the end of a turn that produced file changes, tool activity, or task completion. |
+| Topic                        | Design choice and behavior                                                                                                               |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cancellation and timeout** | A streaming response can be canceled immediately; the connection times out after two minutes without data.                               |
+| **Token counter**            | Streaming requests use the `include_usage` flag to obtain exact token counts from the provider.                                          |
+| **Audit log**                | Sensitive key patterns such as `Bearer`, `sk-` and `api_key=` are redacted before commands are recorded.                                 |
+| **Docker sandbox**           | When sandbox mode is selected, the agent never silently falls back to the host; it raises an error instead.                              |
+| **Editor context**           | Only the active file and selections **inside** the workspace are added to the prompt context.                                            |
+| **Tool lock**                | Plan mode removes write/command tools from the schema and rejects the call if the model still invokes them.                              |
+| **Session isolation**        | Starting a new session resets snapshot/checkpoint directories so sessions never mix.                                                     |
+| **Plan progress**            | A started step is marked `in_progress` and completes at the end of a turn that produced file changes, tool activity, or task completion. |
 
 ---
 
 ## 5. Developer Scripts and Toolchain
 
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Builds the extension and opens a new Extension Development Host window. |
-| `npm run check` | Full quality gate: format + type + lint + language + tests + coverage. |
-| `npm run typecheck` | Extension TypeScript type check (`tsc --noEmit`). |
-| `npm run typecheck:test` | Type check for test files (`tsconfig.test.json`). |
-| `npm run lint` | ESLint static analysis (src, test, scripts). |
-| `npm run format` | Formats the codebase with Prettier. |
-| `npm run format:check` | Verifies formatting is intact (CI gate). |
-| `npm test` | Runs core and webview unit tests together. |
-| `npm run test:ui` | Runs only the webview (React) tests. |
-| `npm run test:coverage` | Prints Node's built-in coverage report. |
-| `npm run check:coverage` | Enforces the 75% line coverage floor. |
-| `npm run check:version` | Verifies `package.json`, lockfiles and `version.ts` agree. |
-| `npm run check:test-isolation` | Verifies tests keep temporary files under `os.tmpdir()`. |
-| `npm run check:language` | Verifies agent docs (`AGENTS.md`, `.agents/**`) are English and source comments are Turkish. |
-| `npm run build` | All gates + webview build + minified extension and CLI bundles. |
-| `npm run compile` | Bundles only the extension with esbuild. |
-| `npm run build:ui` | Builds only the webview application with Vite. |
-| `npm run build:cli` | Builds only the CLI bundle. |
-| `npm run package` | Produces the `out/ahi-code-<version>.vsix` package. |
-| `npm run audit:verify` | Verifies the `.ahi/audit.log` hash chain (`-- --workspace <path>`). |
-| `npm run cli` | Runs the headless terminal CLI from source. |
-| `npm run test:e2e` | Builds and runs end-to-end tests in a real VS Code window. |
+| Command                        | Description                                                                                  |
+| ------------------------------ | -------------------------------------------------------------------------------------------- |
+| `npm run dev`                  | Builds the extension and opens a new Extension Development Host window.                      |
+| `npm run check`                | Full quality gate: format + type + lint + language + tests + coverage.                       |
+| `npm run typecheck`            | Extension TypeScript type check (`tsc --noEmit`).                                            |
+| `npm run typecheck:test`       | Type check for test files (`tsconfig.test.json`).                                            |
+| `npm run lint`                 | ESLint static analysis (src, test, scripts).                                                 |
+| `npm run format`               | Formats the codebase with Prettier.                                                          |
+| `npm run format:check`         | Verifies formatting is intact (CI gate).                                                     |
+| `npm test`                     | Runs core and webview unit tests together.                                                   |
+| `npm run test:ui`              | Runs only the webview (React) tests.                                                         |
+| `npm run test:coverage`        | Prints Node's built-in coverage report.                                                      |
+| `npm run check:coverage`       | Enforces the 75% line coverage floor.                                                        |
+| `npm run check:version`        | Verifies `package.json`, lockfiles and `version.ts` agree.                                   |
+| `npm run check:test-isolation` | Verifies tests keep temporary files under `os.tmpdir()`.                                     |
+| `npm run check:language`       | Verifies agent docs (`AGENTS.md`, `.agents/**`) are English and source comments are Turkish. |
+| `npm run build`                | All gates + webview build + minified extension and CLI bundles.                              |
+| `npm run compile`              | Bundles only the extension with esbuild.                                                     |
+| `npm run build:ui`             | Builds only the webview application with Vite.                                               |
+| `npm run build:cli`            | Builds only the CLI bundle.                                                                  |
+| `npm run package`              | Produces the `out/ahi-code-<version>.vsix` package.                                          |
+| `npm run audit:verify`         | Verifies the `.ahi/audit.log` hash chain (`-- --workspace <path>`).                          |
+| `npm run cli`                  | Runs the headless terminal CLI from source.                                                  |
+| `npm run test:e2e`             | Builds and runs end-to-end tests in a real VS Code window.                                   |
 
 ---
 
@@ -191,6 +191,11 @@ file is touched:
 
 The module map is shown in the composer dock, so the write order and the
 current module are visible while the task runs.
+
+Review-stage findings and the agent's self-assessment are **advisory**: they
+summarize what the agent checked and could not check. Final authority always
+belongs to the user — nothing is presented as verified unless the underlying
+test or command actually ran and passed.
 
 ---
 
