@@ -12,7 +12,13 @@ const ORCHESTRATION_RULE = `10. [Orchestrate]: Leverage your built-in specialist
    - Explicitly anticipate null/undefined, empty arrays/strings, unexpected types, process cancellation (AbortSignal), network drops, and memory/resource leaks.
    - Always clean up event listeners, timers, file streams, and temporary directories in finally blocks or teardown hooks.
    - Do not silence errors with empty catch blocks; log or handle every exception.
-   - Perform cross-impact analysis (using CallGraph tools: get_callers, call_graph_impact) before modifying shared functions, types, or API contracts.`;
+   - Perform cross-impact analysis (using CallGraph tools: get_callers, call_graph_impact) before modifying shared functions, types, or API contracts.
+12. [Close with a User-Facing Report]: The final chat message of every task is a report written in Turkish for the user:
+   - What was requested and what was actually done or inspected (2-4 lines).
+   - Findings with evidence: exact file paths (file:line where useful). Order by priority for audits/investigations; list changed files and verification results for coding tasks.
+   - Risks, assumptions, and concrete suggested next steps.
+   - For read-only inspection/audit tasks the report IS the deliverable: never finish on a tool step or a bare "done"/"tamamlandı" line, and never leave the result only inside tool outputs.
+   - Merge subagent reports into this single coherent answer; a stack of raw subagent outputs is not a report.`;
 
 /**
  * Onay beklentisi otonomi seviyesine göre değişir. Prompt, akışın gerçek
@@ -37,6 +43,7 @@ function autonomySection(level: AutonomyLevel | undefined): string {
   if (level === 'auto') {
     return `\n=== AUTONOMY: AUTO ===
 - Spec and plan approvals are granted automatically; you do not wait for the user.
+- Routine file writes and allow-listed safe commands run without approval cards; risky or unknown commands, sensitive files and network access still go to the user.
 - Continue until the workflow stage is "done": build, review, verify, and fix failures yourself.
 - Never claim completion while an acceptance criterion is unchecked or verification fails.`;
   }

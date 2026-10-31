@@ -44,4 +44,19 @@ describe('systemPrompt: autonomy consistency', () => {
     const prompt = await generateSystemPrompt('/w');
     assert.match(prompt, /Wait for approval before building/);
   });
+
+  it('her seviyede kullanıcı-facing rapor sözleşmesi taşır', async () => {
+    for (const level of ['manual', 'guided', 'auto'] as const) {
+      const prompt = await generateSystemPrompt('/w', 'code', '', '', '', level);
+      assert.match(prompt, /\[Close with a User-Facing Report\]/, `${level} için rapor kuralı yok`);
+      assert.match(prompt, /the report IS the deliverable/);
+      assert.match(prompt, /Merge subagent reports/);
+    }
+  });
+
+  it('auto bölümü yeni onay gerçekliğini yansıtır', async () => {
+    const prompt = await generateSystemPrompt('/w', 'code', '', '', '', 'auto');
+    assert.match(prompt, /Routine file writes and allow-listed safe commands run without approval cards/);
+    assert.match(prompt, /risky or unknown commands.*still go to the user/);
+  });
 });

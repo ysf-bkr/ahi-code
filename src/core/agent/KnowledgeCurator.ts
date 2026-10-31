@@ -61,7 +61,8 @@ it is saved. Do not block or delay the user's task for this.`;
       '    write_knowledge_file tool (file: "decisions" or "conventions").',
       '(2) Add short gotchas or constraints with add_knowledge_note.',
       'Keep entries factual and short (max ~10 lines each). The user approves every write.',
-      'Then finish with a one-line confirmation only — do not repeat the task summary.'
+      'Then close THIS knowledge-recording step with a one-line confirmation only —',
+      'do not re-summarize the task; your user-facing report was already delivered.'
     ].join('\n');
   }
 
