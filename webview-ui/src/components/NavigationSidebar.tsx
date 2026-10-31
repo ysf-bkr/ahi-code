@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Bot, FileDiff, History, Info, MessageSquare, Server, Settings } from 'lucide-react';
+import { Bot, FileDiff, History, Info, MessageSquare, Network, Server, Settings } from 'lucide-react';
 import { NavigationDestination } from '@shared/types';
 import { NavButton } from './ui';
 
@@ -23,6 +23,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'changes', title: 'Değişiklikler', icon: <FileDiff className="ahi-icon-md" /> },
   { id: 'history', title: 'Görev Geçmişi', icon: <History className="ahi-icon-md" /> },
   { id: 'agents', title: 'Ajanlar & Beceriler', icon: <Bot className="ahi-icon-md" /> },
+  { id: 'callgraph', title: 'Çağrı Grafiği', icon: <Network className="ahi-icon-md" /> },
   { id: 'mcp', title: 'MCP Sunucuları', icon: <Server className="ahi-icon-md" /> },
   { id: 'settings', title: 'Ayarlar', icon: <Settings className="ahi-icon-md" /> },
   { id: 'about', title: 'Hakkında', icon: <Info className="ahi-icon-md" /> }

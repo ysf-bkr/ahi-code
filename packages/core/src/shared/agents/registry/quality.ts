@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const quality: AgentDefinition = {
   name: 'quality',
-  displayName: 'Quality Gatekeeper',
+  displayName: 'Kalite Uzmanı',
   role: 'Quality Assurance & Testing',
   description:
     'Audit, Testing, and Compliance specialist. ' +

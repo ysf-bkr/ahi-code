@@ -27,8 +27,9 @@ export interface VerificationResult {
   /**
    * Doğrulama neden çalışmadı? `no-commands` projede test/lint komutu
    * bulunmadığı, `aborted` iptal edildiği, `no-workspace` ise çalışma alanı
-   * olmadığı anlamına gelir. "Bitti" kapısı yalnızca `no-workspace` durumunda
-   * atlanmış doğrulamayı kabul eder.
+   * olmadığı anlamına gelir. "Bitti" kapısı `no-workspace` ve `no-commands`
+   * atlamalarını kabul eder (yapılamayan doğrulama görevi bloke edemez);
+   * `aborted` kabul etmez.
    */
   skippedReason?: 'no-commands' | 'aborted' | 'no-workspace';
 }

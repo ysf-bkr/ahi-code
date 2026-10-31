@@ -105,38 +105,37 @@ describe('MessageList: tur akordeonu', () => {
     { id: 'a2', role: 'assistant', content: 'İkinci adım tamamlandı.', timestamp: 3, turnId: 't1' }
   ];
 
-  it('biten tur açık doğar; yanıtlar görünür, başlıktan daraltılabilir', () => {
+  it('yanıtlar her zaman görünür; tur akordeonu kaldırıldı, metin saklanmaz', () => {
     render(<MessageList messages={turnMessages(false)} />);
 
-    const body = document.getElementById('turn-t1');
-    assert.equal(body?.hidden, false, 'biten turun yanıtları görünür doğmalı');
-    assert.ok(screen.getByText('İlk adım tamamlandı.'));
-
-    const toggle = document.querySelector('[aria-controls="turn-t1"]') as HTMLElement;
-    fireEvent.click(toggle);
-    assert.equal(document.getElementById('turn-t1')?.hidden, true, 'kullanıcı daraltabilmeli');
-    // Daralınca içerik DOM'da kalır (hidden); başlıktaki özet ayrı bir span'dır.
-    assert.ok(screen.getByText('İkinci adım tamamlandı.', { selector: 'span.truncate' }));
+    // Kullanıcı isteği: sohbet akordeon olmaz — daraltma düğmesi hiç olmamalı.
+    assert.equal(
+      document.querySelector('[aria-controls="turn-t1"]'),
+      null,
+      'tur düzeyinde daraltma düğmesi kaldırılsa da test eski akordeonu aramamalı'
+    );
+    assert.ok(screen.getByText('İlk adım tamamlandı.'), 'ara anlatım görünür doğmalı');
+    assert.ok(screen.getByText(/İkinci adım tamamlandı/), 'final yanıt görünür doğmalı');
   });
 
   it('ara anlatım satırları balon yerine kompakt izleme çizgisi olarak çizilir', () => {
     render(<MessageList messages={turnMessages(false)} />);
 
-    const narration = Array.from(document.querySelectorAll('[data-testid="narration-line"]'));
+    const card = document.querySelector('.ahi-turn-card');
+    assert.ok(card, 'tur kartı çizilmeli');
+    const narration = Array.from(card?.querySelectorAll('[data-testid="narration-line"]') ?? []);
     assert.equal(narration.length, 1, 'final dışındaki tek ara metin anlatım satırı olmalı');
     assert.equal(narration[0]?.textContent, 'İlk adım tamamlandı.');
-    assert.ok(
-      document.querySelector(`#turn-t1 .ahi-bubble--flush`),
-      'final yanıt normal balon olarak kalmalı'
-    );
-    assert.match(document.querySelector('#turn-t1 .ahi-bubble--flush')?.textContent ?? '', /İkinci adım/);
+    assert.ok(card?.querySelector('.ahi-bubble--flush'), 'final yanıt normal balon olarak kalmalı');
+    assert.match(card?.querySelector('.ahi-bubble--flush')?.textContent ?? '', /İkinci adım/);
   });
 
-  it('çalışan turu açık tutar', () => {
+  it('çalışan tur da görünürdür; akordeon gürültüsü yerine canlı metin', () => {
     render(<MessageList messages={turnMessages(true)} />);
 
-    const body = document.getElementById('turn-t1');
-    assert.equal(body?.hidden, false, 'süren yanıt görünür kalmalı');
+    const card = document.querySelector('.ahi-turn-card');
+    assert.ok(card, 'süren tur çizilmeli');
+    assert.ok(card?.querySelector('.ahi-bubble--flush'), 'süren/son yanıt balon olarak görünmeli');
   });
 
   const withToolCall = (status: 'completed' | 'pending'): ChatMessage[] => [

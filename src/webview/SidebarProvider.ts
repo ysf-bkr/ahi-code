@@ -28,6 +28,7 @@ import {
   settingsDiffer
 } from './settingsStore';
 import { fetchModelIds } from './modelCatalog';
+import { resolveCallGraphPanelRequest } from './callgraphPanel';
 import { collectGitChanges } from './gitChanges';
 import { ROLE_ALIASES, getAgentDefinition } from '@ahicode/core/shared/agents';
 import { AhiCodeDiffContentProvider } from '../shared/diffContentProvider';
@@ -998,6 +999,38 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             workspaceFolders: (vscode.workspace.workspaceFolders || []).map((f) => f.name)
           }
         });
+      },
+
+      CALLGRAPH_QUERY: async (message) => {
+        // Çağrı grafiği ekranı: durum/arama/komşu/yeniden kurma tek kapıdan.
+        const workspaceRoot = getActiveWorkspaceRoot();
+        const manager = this._agentCore?.getCallGraphManager();
+        if (!manager) {
+          this.postMessage({
+            type: 'CALLGRAPH_RESULT',
+            payload: {
+              action: message.payload.action,
+              ready: false,
+              building: false,
+              message: 'Ajan çekirdeği henüz hazır değil.'
+            }
+          });
+          return;
+        }
+        try {
+          const result = await resolveCallGraphPanelRequest(manager, workspaceRoot, message.payload);
+          this.postMessage({ type: 'CALLGRAPH_RESULT', payload: result });
+        } catch (err) {
+          this.postMessage({
+            type: 'CALLGRAPH_RESULT',
+            payload: {
+              action: message.payload.action,
+              ready: false,
+              building: false,
+              message: errorMessage(err, 'Çağrı grafiği sorgulanamadı.')
+            }
+          });
+        }
       },
 
       OPEN_EXTERNAL: async (message) => {

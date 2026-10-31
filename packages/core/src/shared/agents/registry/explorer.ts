@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const explorer: AgentDefinition = {
   name: 'explorer',
-  displayName: 'Intel Explorer',
+  displayName: 'Keşif Uzmanı',
   role: 'Reconnaissance',
   description:
     'Intelligence, Reconnaissance, and Context Discovery. ' +

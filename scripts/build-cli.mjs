@@ -1,8 +1,12 @@
-import { chmodSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { chmodSync, mkdirSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { build } from 'esbuild';
 
-const outputFile = 'dist/cli.js';
+// packages/cli/package.json "bin": ahi → ./dist/cli.js. Çıktı doğrudan paketin
+// dist dizinine yazılır; kopya adımlı akışta bayat dosya yarışı yaratıyordu.
+const outputFile = resolve('packages/cli/dist/cli.js');
+
+mkdirSync(dirname(outputFile), { recursive: true });
 
 await build({
   entryPoints: ['packages/cli/src/index.ts'],

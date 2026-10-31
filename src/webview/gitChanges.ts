@@ -6,7 +6,9 @@
  * Tek dosyanın side-by-side farkı SidebarProvider.showGitFileDiff içinde
  * HEAD içeriği üzerinden üretilir; burada ayrı bir diff yolu yoktur.
  */
-import { GitChangesPayload } from '@ahicode/core/shared/types';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import { GitChangesPayload, GitFileChange } from '@ahicode/core/shared/types';
 import { GitManager } from '@ahicode/core/core/git/GitManager';
 import { errorMessage } from '@ahicode/core/shared/errors';
 
@@ -49,7 +51,21 @@ export async function collectGitChanges(
       git.listRecentCommits(workspaceRoot, RECENT_COMMIT_LIMIT)
     ]);
 
-    return { isRepository: true, branch, files, commits };
+    // Değişiklik tarih/saati ve boyut diskten okunur; kullanıcı "bu dosya ne
+    // zaman değişti?" sorusunu terminalde sormak zorunda kalmasın.
+    const enriched = await Promise.all(
+      files.map(async (file): Promise<GitFileChange> => {
+        try {
+          const stat = await fs.stat(path.join(workspaceRoot, file.path));
+          return { ...file, modifiedAt: stat.mtimeMs, sizeBytes: stat.size };
+        } catch {
+          // Silinmiş ya da erişilemeyen dosya: zaman/boyut yok, silindi işaretlenir.
+          return { ...file, deleted: true };
+        }
+      })
+    );
+
+    return { isRepository: true, branch, files: enriched, commits };
   } catch (err) {
     return emptyGitPayload(errorMessage(err, 'Git durumu alınamadı.'));
   }

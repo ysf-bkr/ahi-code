@@ -1,5 +1,16 @@
 import React from 'react';
-import { Bot, ChevronRight, FileDiff, History, Info, Server, Settings, X, MessageSquare } from 'lucide-react';
+import {
+  Bot,
+  ChevronRight,
+  FileDiff,
+  History,
+  Info,
+  Network,
+  Server,
+  Settings,
+  X,
+  MessageSquare
+} from 'lucide-react';
 import { NavigationDestination } from '@shared/types';
 import { Badge, IconButton, ListButton } from './ui';
 
@@ -47,6 +58,13 @@ const MENU_ITEMS: MenuItem[] = [
     title: 'Ajanlar ve beceriler',
     description: '13 uzman alt ajan ve proje yönergeleri',
     icon: <Bot className="ahi-icon-md ahi-text-success" />,
+    category: 'ai'
+  },
+  {
+    id: 'callgraph',
+    title: 'Çağrı grafiği',
+    description: 'Sembollerin kimlerce çağrıldığını incele',
+    icon: <Network className="ahi-icon-md ahi-text-brand" />,
     category: 'ai'
   },
   {

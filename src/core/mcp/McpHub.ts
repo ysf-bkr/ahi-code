@@ -108,12 +108,22 @@ export class McpHub {
       fingerprint: fingerprintOf(servers),
       store: this.approvals,
       ask: async () => {
+        // Yalnızca sunucu adlarını göstermek "filesystem" adlı bir sunucuya
+        // saklanan komutu gizlerdi: komut/argüman ve env anahtarları artık
+        // onay penceresinde listelenir (denetim bulgusu).
+        const summary = Object.entries(servers)
+          .map(([name, cfg]) => {
+            const target = cfg.url ?? [cfg.command, ...(cfg.args ?? [])].filter(Boolean).join(' ');
+            const envKeys = Object.keys(cfg.env ?? {});
+            const envNote = envKeys.length > 0 ? ` [env: ${envKeys.join(', ')}]` : '';
+            return `• ${name}: ${target || '?'}${envNote}`;
+          })
+          .join('\n');
         const choice = await vscode.window.showWarningMessage(
           `Bu proje, yapılandırmasında tanımlı MCP sunucularını başlatmak istiyor: ${names}`,
           {
             modal: true,
-            detail:
-              'MCP sunucuları projenin .ahi/mcp_config.json dosyasından okunur ve bilgisayarınızda komut çalıştırabilir. Yalnızca güvendiğiniz projelerde onaylayın.'
+            detail: `MCP sunucuları projenin .ahi/mcp_config.json dosyasından okunur ve bilgisayarınızda komut çalıştırabilir. Yalnızca güvendiğiniz projelerde onaylayın.\n\n${summary}`
           },
           'Başlat',
           'Atla'
@@ -188,8 +198,12 @@ export class McpHub {
           continue;
         }
         return parsed as McpConfigFile;
-      } catch {
-        // Dosya yok ya da geçersiz JSON içeriyor.
+      } catch (err) {
+        // Dosya yoksa sessizce sıradaki yolu dene; VAR ama bozuksa kullanıcı
+        // sessizce MCP'siz kalmasın (denetim bulgusu).
+        if ((err as NodeJS.ErrnoException)?.code !== 'ENOENT') {
+          logWarning(`MCP configuration at ${p} was ignored: ${errorMessage(err)}`);
+        }
       }
     }
     return null;

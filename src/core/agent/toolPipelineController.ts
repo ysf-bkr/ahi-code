@@ -605,6 +605,14 @@ export class ToolPipelineController {
         }
       }
 
+      // Komutun dosya değiştirip değiştirmediğini ölçmek için öncesi anlık
+      // görüntüsü (denetim bulgusu): `ls` bile filesChanged: true döndürüp
+      // typecheck+lint ve tur sonu doğrulamasını boşuna tetikliyordu.
+      let commandStatusBefore: string | undefined;
+      if (workspaceRoot && tc.name === 'execute_command') {
+        commandStatusBefore = await this.porcelainSnapshot(workspaceRoot);
+      }
+
       // Tekrar-okuma koruması: ölçülen asıl israf "aynı dosyayı oku → düşün →
       // yine oku" döngüsü. Birebir aynı okuma son birkaç adımın çıktısı
       // arasında zaten varsa VE dosya o arada değişmemişse içerik yeniden
@@ -655,8 +663,11 @@ export class ToolPipelineController {
 
       if (tc.name === 'write_spec') {
         // Spec artık yazıldı: planlama ya da kod yazma öncesinde dur ve
-        // kullanıcıdan onay iste.
-        const drafted = this.host.specStore.list()[0];
+        // kullanıcıdan onay iste. Kimlik araç sonucundan okunur; list()[0]
+        // eşzamanlı oturumlarda yanlış spec'i onaya sunabilirdi (denetim m.13).
+        const draftedId = /^Spec drafted:\s*(\S+)/m.exec(tc.result || '')?.[1];
+        const drafted =
+          (draftedId ? this.host.specStore.get(draftedId) : undefined) ?? this.host.specStore.list()[0];
         if (drafted && (await this.host.workflow.pauseForSpecApproval(drafted, modelToolCalls, tc.id))) {
           return { paused: true, filesChanged: false };
         }
@@ -693,8 +704,14 @@ export class ToolPipelineController {
         return { paused: false, filesChanged: true };
       }
       if (tc.name === 'execute_command') {
-        // Kod üretme/biçimlendirme komutları dosyaları değiştirebilir.
-        return { paused: false, filesChanged: true };
+        // Kod üretme/biçimlendirme komutları dosyaları değiştirebilir — ama
+        // hepsi değiştirmez. Ölçülebildiğinde (Git deposu) gerçek farka bakılır;
+        // ölçülemediğinde muhafazakâr davranıp "değişti" kabul edilir.
+        if (commandStatusBefore === undefined || !workspaceRoot) {
+          return { paused: false, filesChanged: true };
+        }
+        const statusAfter = await this.porcelainSnapshot(workspaceRoot);
+        return { paused: false, filesChanged: statusAfter !== commandStatusBefore };
       }
     } catch (err) {
       tc.status = 'error';
@@ -704,6 +721,15 @@ export class ToolPipelineController {
       if (commandCheckpoint) commandCheckpoint.completedAt = Date.now();
     }
     return { paused: false, filesChanged: false };
+  }
+
+  /** Ölçüm amaçlı `git status` anlık görüntüsü; Git yoksa undefined. */
+  private async porcelainSnapshot(workspaceRoot: string): Promise<string | undefined> {
+    try {
+      return await this.host.gitManager.status(workspaceRoot);
+    } catch {
+      return undefined;
+    }
   }
 
   /** Geçerli spec'in kabul kriteri kimlikleri; spec yoksa boş küme. */

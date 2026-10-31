@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const security: AgentDefinition = {
   name: 'security',
-  displayName: 'Security Specialist',
+  displayName: 'Güvenlik Uzmanı',
   role: 'Security Enforcement',
   description:
     'Auth, Encryption, and Safety enforcement specialist. ' +

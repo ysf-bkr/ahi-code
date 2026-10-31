@@ -61,13 +61,19 @@ export const ComposerDock: React.FC<ComposerDockProps> = ({ state }) => {
   const hasModules = Boolean(state.modules && state.modules.modules.length > 0);
   const building = state.workflow?.stage === 'build' || Boolean(state.workflow?.planApproved);
 
+  // Görev temiz bittiğinde şerit kalkar: bitmiş plan bestecinin üstünde ölü
+  // bir kalas olarak durmaz; özeti sohbete sistem mesajı olarak işlenmiştir.
+  const finishedQuietly =
+    state.status === 'completed' && !state.pendingApproval && !state.pendingQuestion && !state.activeSubagent;
+
   const hasContent =
-    hasModules ||
-    hasPlan ||
-    Boolean(state.pendingQuestion) ||
-    Boolean(state.pendingApproval) ||
-    Boolean(state.activeSubagent) ||
-    state.status === 'paused';
+    !finishedQuietly &&
+    (hasModules ||
+      hasPlan ||
+      Boolean(state.pendingQuestion) ||
+      Boolean(state.pendingApproval) ||
+      Boolean(state.activeSubagent) ||
+      state.status === 'paused');
   if (!hasContent) return null;
 
   return (

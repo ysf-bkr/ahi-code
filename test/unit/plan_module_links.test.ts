@@ -56,27 +56,46 @@ describe('TaskPlanner: modül ve kriter bağı', () => {
     );
   });
 
-  it('bilinmeyen modül kimliğini reddeder', () => {
+  it('bilinmeyen modül kimliği planı kırmaz: bağ düşer, uyarı ürer', () => {
     const { modules, criteria, planner } = setup();
-    assert.throws(
-      () =>
-        planner.update({
-          steps: [{ title: 'Yaz', moduleId: 'yok' }],
-          validation: { moduleIds: modules, criteriaIds: criteria }
-        }),
-      /unknown module/
-    );
+    const plan = planner.update({
+      steps: [{ title: 'Yaz', moduleId: 'yok' }],
+      validation: { moduleIds: modules, criteriaIds: criteria }
+    });
+    assert.strictEqual(plan.steps[0]?.moduleId, undefined);
+    const warnings = planner.getValidationWarnings();
+    assert.strictEqual(warnings.length, 1);
+    assert.match(warnings[0] || '', /unknown module "yok"/);
+    // Uyarı araç sonucunda da görünmeli ki model düzeltebilsin.
+    assert.match(planner.formatForTool(), /unknown module "yok"/);
   });
 
-  it('bilinmeyen kriter kimliğini reddeder', () => {
+  it('yazım farkı normalize edilerek doğru modüle bağlanır', () => {
     const { modules, criteria, planner } = setup();
+    const plan = planner.update({
+      steps: [{ title: 'Yaz', moduleId: 'CORE' }],
+      validation: { moduleIds: modules, criteriaIds: criteria }
+    });
+    assert.strictEqual(plan.steps[0]?.moduleId, 'core');
+    assert.match(planner.getValidationWarnings()[0] || '', /corrected to "core"/);
+  });
+
+  it('bilinmeyen kriter düşer; kriter zorunluysa ve hepsi sahteyse hata fırlatır', () => {
+    const { modules, criteria, planner } = setup();
+    const plan = planner.update({
+      steps: [{ title: 'Yaz', moduleId: 'core', criteria: ['ac-9'] }],
+      validation: { moduleIds: modules, criteriaIds: criteria }
+    });
+    assert.deepStrictEqual(plan.steps[0]?.criteria, []);
+    assert.match(planner.getValidationWarnings()[0] || '', /unknown acceptance criterion/);
+
     assert.throws(
       () =>
         planner.update({
           steps: [{ title: 'Yaz', moduleId: 'core', criteria: ['ac-9'] }],
-          validation: { moduleIds: modules, criteriaIds: criteria }
+          validation: { moduleIds: modules, criteriaIds: criteria, requireCriteria: true }
         }),
-      /unknown acceptance criterion/
+      /only unknown criteria/
     );
   });
 

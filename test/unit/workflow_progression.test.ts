@@ -198,8 +198,10 @@ describe('AgentCore: aşama ilerlemesi', () => {
     for (const criterion of spec.acceptanceCriteria) {
       await core.getSpecStore().setCriterionDone(root, spec.id, criterion.id, true);
     }
-    // Projede test/lint komutu yok: doğrulama atlandı. Bu "geçti" sayılmamalı,
-    // yoksa hiç test çalışmadan görev sessizce kapanır.
+    // Politika güncellendi (denetim bulgusu): projede test/lint komutu yoksa
+    // doğrulama yapılamaz; kapıyı süresiz bloke etmek görevi asla
+    // bitirmiyordu (verify→build→review sonsuz döngüsü). no-commands artık
+    // kabul; `aborted` (yarım kalmış iptal) hâlâ reddedilir.
     core.getState().stats.verification = {
       status: 'skipped',
       attempts: 0,
@@ -208,17 +210,33 @@ describe('AgentCore: aşama ilerlemesi', () => {
     };
 
     core.getState().workflow!.stage = 'verify';
-    const blocked = await core.setWorkflowStage('done');
-    assert.strictEqual(blocked.ok, false, 'komut yokluğu bitti kapısını kapatmalı');
-    assert.strictEqual(core.workflow.verificationPassed(), false);
+    const allowed = await core.setWorkflowStage('done');
+    assert.strictEqual(allowed.ok, true, 'komut yokluğu görevi sonsuza dek kilitleyemez');
+    assert.strictEqual(core.workflow.verificationPassed(), true);
 
-    // Çalışma alanı hiç yoksa doğrulama imkânsızdır; bu tek istisna kabul edilir.
+    core.getState().stats.verification = {
+      status: 'skipped',
+      attempts: 0,
+      summary: 'aborted',
+      skippedReason: 'aborted'
+    };
+    assert.strictEqual(core.workflow.verificationPassed(), false, 'iptal edilen doğrulama geçmez');
+
+    // Çalışma alanı hiç yoksa doğrulama imkânsızdır; bu da kabul edilir.
     core.getState().stats.verification = {
       status: 'skipped',
       attempts: 0,
       summary: 'no workspace',
       skippedReason: 'no-workspace'
     };
+    assert.strictEqual(core.workflow.verificationPassed(), true);
+  });
+
+  it('autoVerify kapalıyken bitti kapısı doğrulama sormaz', async () => {
+    const root = await workspace();
+    const { core } = await buildStageAgent(root, ['a']);
+    core.getState().stats.verification = undefined;
+    (core as unknown as { settings: { autoVerify: boolean } }).settings.autoVerify = false;
     assert.strictEqual(core.workflow.verificationPassed(), true);
   });
 });

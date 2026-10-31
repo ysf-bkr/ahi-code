@@ -16,6 +16,12 @@ import { VerificationManager } from '@ahicode/core/core/verification/Verificatio
 import { GitManager } from '@ahicode/core/core/git/GitManager';
 import { ProjectMemoryManager } from '@ahicode/core/core/memory/ProjectMemoryManager';
 import { TaskPlanner } from '@ahicode/core/core/plan/TaskPlanner';
+import { ContextManager } from '@ahicode/core/core/context/ContextManager';
+import {
+  collapseRepetition,
+  findRepetitionCollapse,
+  StreamRepetitionGuard
+} from '@ahicode/core/shared/repetition';
 import { ProviderMessage } from '@ahicode/core/providers/base';
 import { ModelProviderType, ToolName, UserSettings } from '@ahicode/core/shared/types';
 import { errorMessage } from '@ahicode/core/shared/errors';
@@ -82,6 +88,7 @@ function usage(): string {
     '',
     'Usage:',
     '  npm run cli -- --prompt "Task" [options]',
+    '  npm run cli --                    Interactive chat (terminalde sohbet; exit ile çık)',
     '',
     'Options:',
     '  --workspace <path>   Workspace (default: cwd)',
@@ -168,7 +175,9 @@ export function parseArgs(argv: string[]): CliOptions {
     }
   }
 
-  if (!options.prompt.trim()) {
+  // Etkileşimli sohbet yalnızca gerçek bir terminalde anlamlıdır; boru/hook
+  // altında istem boşsa hâlâ --prompt şarttır.
+  if (!options.prompt.trim() && !process.stdin.isTTY) {
     throw new Error(`--prompt is required.\n\n${usage()}`);
   }
   // Sağlayıcıya göre anahtar ortam değişkenini seç
@@ -214,14 +223,19 @@ export function buildSettings(options: CliOptions): UserSettings {
   };
 }
 
-async function askApproval(question: string): Promise<boolean> {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  try {
-    const answer = (await rl.question(`${question} [y/N] `)).trim().toLowerCase();
-    return answer === 'e' || answer === 'evet' || answer === 'y' || answer === 'yes';
-  } finally {
-    rl.close();
+// Tek paylaşılan readline akışı: onay soruları ile etkileşimli sohbet aynı
+// stdin'i kullanır; her soru için yeni arayüz açmak girdiyi bölüp kilitlerdi.
+let sharedReadline: ReturnType<typeof createInterface> | undefined;
+function getReadline(): ReturnType<typeof createInterface> {
+  if (!sharedReadline) {
+    sharedReadline = createInterface({ input: process.stdin, output: process.stdout });
   }
+  return sharedReadline;
+}
+
+async function askApproval(question: string): Promise<boolean> {
+  const answer = (await getReadline().question(`${question} [y/N] `)).trim().toLowerCase();
+  return answer === 'e' || answer === 'evet' || answer === 'y' || answer === 'yes';
 }
 
 async function main(): Promise<void> {
@@ -266,10 +280,7 @@ async function main(): Promise<void> {
     '',
     planner.formatForPrompt()
   );
-  const messages: ProviderMessage[] = [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: options.prompt }
-  ];
+  const messages: ProviderMessage[] = [{ role: 'system', content: systemPrompt }];
   const context: ToolExecutionContext = {
     workspaceRoot: options.workspace,
     snapshotManager,
@@ -280,68 +291,158 @@ async function main(): Promise<void> {
     signal: abortController.signal
   };
 
-  for (let step = 0; step < options.maxSteps; step++) {
-    let response;
-    try {
-      response = await provider.sendMessage(
-        messages,
-        tools,
-        (chunk) => {
-          process.stdout.write(chunk);
-        },
-        abortController.signal
-      );
-    } catch (err) {
-      if (abortController.signal.aborted) {
-        process.stdout.write('\nCancelled.\n');
-        process.exit(130);
-      }
-      throw err;
-    }
-    if (response.text) process.stdout.write('\n');
+  // Bağlam bütçesi: araç şemaları da sayılır; uzun görevlerde istek taşmasın.
+  const contextManager = new ContextManager({
+    contextWindowTokens: Number(process.env.AHI_CONTEXT_WINDOW_TOKENS) || undefined,
+    tools
+  });
+  // Dejeneratif tekrar koruması: model bir satıra kilitlenirse akışı kes.
+  let repetitionHit = false;
 
-    messages.push({
-      role: 'assistant',
-      content: response.text,
-      toolCalls: response.toolCalls
-    });
+  // Döngü koruması: aynı araç aynı argümanlarla art arda üçüncü kez patlarsa
+  // dur; aksi hâlde CLI otuz adımı aynı hatayla tüketir.
+  let lastFailure: { key: string; count: number } | undefined;
 
-    if (!response.toolCalls || response.toolCalls.length === 0) {
-      return;
-    }
-
-    for (const toolCall of response.toolCalls) {
-      const toolName = toolCall.name as ToolName;
-      // Kapı zinciri paylaşılan yürütücüdedir; CLI kendi kopyasını taşımaz.
-      const outcome = await runToolCall(
-        {
-          id: toolCall.id,
-          name: toolName,
-          args: toolCall.arguments ?? {},
-          requiresApproval: false,
-          status: 'pending'
-        },
-        {
-          workspaceRoot: options.workspace,
-          permissionManager,
-          snapshotManager,
-          planner,
-          context,
-          allowedTools,
-          approve: options.yes
-            ? async () => true
-            : (explanation) => askApproval(`${explanation} Do you approve?`)
+  // Tek istem turu: etkileşimli modda aynı mesaj geçmişi sürer; model araçsız
+  // yanıt verince tur biter ve söz terminale döner.
+  const runPrompt = async (promptText: string): Promise<boolean> => {
+    messages.push({ role: 'user', content: promptText });
+    for (let step = 0; step < options.maxSteps; step++) {
+      const outbound = contextManager.pruneMessages(contextManager.compactHistory(messages), tools);
+      const guard = new StreamRepetitionGuard();
+      repetitionHit = false;
+      // Adıma özel iptal: tekrar kesintisi sonraki istekleri sakatlamasın.
+      const stepAbort = new AbortController();
+      const stepSignal =
+        typeof AbortSignal.any === 'function'
+          ? AbortSignal.any([abortController.signal, stepAbort.signal])
+          : abortController.signal;
+      let assistantProbe = '';
+      let response;
+      try {
+        response = await provider.sendMessage(
+          outbound,
+          tools,
+          (chunk) => {
+            if (repetitionHit) return;
+            process.stdout.write(chunk);
+            assistantProbe += chunk;
+            if (guard.check(assistantProbe)) {
+              repetitionHit = true;
+              process.stdout.write('\n⚠ Model tekrara girdi; yanıt kesildi.\n');
+              stepAbort.abort();
+            }
+          },
+          stepSignal
+        );
+      } catch (err) {
+        if (repetitionHit) {
+          // Korumalı kesinti: iptal değil, yanıtsız tur. Modele durumu bildir.
+          messages.push({
+            role: 'assistant',
+            content: '[The response collapsed into repeated lines and was truncated by the client.]'
+          });
+          messages.push({
+            role: 'user',
+            content:
+              'Your previous answer collapsed into a repeated line. Continue the task concisely without repeating.'
+          });
+          continue;
         }
-      );
+        if (abortController.signal.aborted) {
+          process.stdout.write('\nCancelled.\n');
+          process.exit(130);
+        }
+        throw err;
+      }
+      if (response.text) {
+        // Akışsız sağlayıcılar için son kontrol; akışta yazılan metin tekrar
+        // içermiyorsa hiçbir şey değişmez.
+        if (!repetitionHit && findRepetitionCollapse(response.text)) {
+          response = { ...response, text: collapseRepetition(response.text) };
+        }
+        process.stdout.write('\n');
+      }
 
-      const result = outcome.output;
-      process.stdout.write(`\n[${toolName}] ${result.slice(0, 2_000)}\n`);
-      messages.push({ role: 'tool', toolCallId: toolCall.id, content: result });
+      messages.push({
+        role: 'assistant',
+        content: response.text,
+        toolCalls: response.toolCalls
+      });
+
+      if (!response.toolCalls || response.toolCalls.length === 0) {
+        return true;
+      }
+
+      for (const toolCall of response.toolCalls) {
+        const toolName = toolCall.name as ToolName;
+        // Kapı zinciri paylaşılan yürütücüdedir; CLI kendi kopyasını taşımaz.
+        const outcome = await runToolCall(
+          {
+            id: toolCall.id,
+            name: toolName,
+            args: toolCall.arguments ?? {},
+            requiresApproval: false,
+            status: 'pending'
+          },
+          {
+            workspaceRoot: options.workspace,
+            permissionManager,
+            snapshotManager,
+            planner,
+            context,
+            allowedTools,
+            approve: options.yes
+              ? async () => true
+              : (explanation) => askApproval(`${explanation} Do you approve?`)
+          }
+        );
+
+        const result = outcome.output;
+        process.stdout.write(`\n[${toolName}] ${result.slice(0, 2_000)}\n`);
+        messages.push({ role: 'tool', toolCallId: toolCall.id, content: result });
+
+        // Döngü koruması: aynı araç aynı argümanlarla art arda üçüncü kez
+        // patlarsa çıkmaz sokakta dönülüyordur; CLI'ı nazikçe durdur.
+        if (!outcome.ok) {
+          const key = `${toolName}::${JSON.stringify(toolCall.arguments ?? {})}`;
+          lastFailure =
+            lastFailure && lastFailure.key === key
+              ? { key, count: lastFailure.count + 1 }
+              : { key, count: 1 };
+          if (lastFailure.count >= 3) {
+            process.stderr.write(
+              `\n“${toolName}” aynı argümanlarla üst üste üç kez hata verdi; döngü durduruldu. ` +
+                'Yaklaşımı değiştirin ya da onay/izin ayarlarını gözden geçirin.\n'
+            );
+            process.exit(1);
+          }
+        } else {
+          lastFailure = undefined;
+        }
+      }
     }
+    process.stderr.write(`Maximum step limit (${options.maxSteps}) reached.\n`);
+    return false;
+  };
+
+  if (options.prompt.trim()) {
+    const completed = await runPrompt(options.prompt);
+    sharedReadline?.close();
+    if (!completed) {
+      process.exit(1);
+    }
+    return;
   }
 
-  process.stderr.write(`Maximum step limit (${options.maxSteps}) reached.\n`);
-  process.exit(1);
+  // Terminal sohbeti: mesaj geçmişi istemler arasında kalıcıdır.
+  process.stdout.write('AhiCode etkileşimli sohbet — çıkmak için: exit\n');
+  for (;;) {
+    const line = (await getReadline().question('\nsen> ')).trim();
+    if (!line || /^(exit|quit|\/exit|\/q)$/i.test(line)) break;
+    await runPrompt(line);
+  }
+  sharedReadline?.close();
 }
 
 function isMainModule(): boolean {

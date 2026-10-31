@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const devops: AgentDefinition = {
   name: 'devops',
-  displayName: 'Infrastructure Specialist',
+  displayName: 'DevOps Uzmanı',
   role: 'DevOps',
   description:
     'CI/CD, Deployment, and Infrastructure specialist. ' +

@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const analyst: AgentDefinition = {
   name: 'analyst',
-  displayName: 'Business Analyst',
+  displayName: 'İş Analisti',
   role: 'Strategy Analysis',
   description:
     'Specs verification and Contract Audit specialist. ' + 'Audits truth and contracts within the AL.',

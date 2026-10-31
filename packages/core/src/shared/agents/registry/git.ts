@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const git: AgentDefinition = {
   name: 'git',
-  displayName: 'Git Specialist',
+  displayName: 'Git Uzmanı',
   role: 'Logistics',
   description:
     'Version control, Branching, and Commit hygiene specialist. ' +

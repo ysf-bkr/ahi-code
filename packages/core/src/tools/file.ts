@@ -148,6 +148,15 @@ export const editFileTool: ToolDefinition = {
       throw new Error(`Target text was not found in file: ${targetPath}`);
     }
 
+    // Hedef ile yedek aynıysa yazma hiçbir şey değiştirmez; "başarılı" demek
+    // modeli yanlış yönlendirir (denetim m.15). Dosyaya dokunmadan patla.
+    if (normalizedTarget === normalizedReplacement) {
+      throw new Error(
+        `targetText and replacementText are identical; the edit would change nothing in ${targetPath}. ` +
+          'Describe the intended change instead.'
+      );
+    }
+
     const occurrences = normalizedContent.split(normalizedTarget).length - 1;
     if (occurrences > 1 && !argBoolean(args.allowMultiple)) {
       throw new Error(

@@ -1,8 +1,20 @@
 import { ProviderMessage } from '../../providers/base';
 
+/** Bütçeye sayılan araç şemasının asgari biçimi (ToolDefinition'la uyumlu). */
+export interface ContextToolSchema {
+  name: string;
+  description?: string;
+  parameters?: unknown;
+}
+
 export interface ContextWindowOptions {
   /** Model bağlam penceresi; yalnızca taşma koruması (harcama sınırı değil). */
   contextWindowTokens?: number;
+  /**
+   * Modele her turda gönderilen araç tanımları. Şemalar pencerenin kalıcı
+   * bir bölümünü işgal eder; bütçe hesabı bunları da saymalıdır (denetim m.7).
+   */
+  tools?: ContextToolSchema[];
   maxToolOutputChars?: number;
   /** Konuşma bu adım sayısına ulaşınca eski araç çıktılarını sıkıştır. */
   summarizeAfterSteps?: number;
@@ -143,12 +155,28 @@ export class ContextManager {
   private maxToolOutputChars: number;
   private summarizeAfterSteps: number;
   private compactionTokenRatio: number;
+  private toolSchemas: ContextToolSchema[];
 
   constructor(options: ContextWindowOptions = {}) {
     this.contextWindowTokens = options.contextWindowTokens || DEFAULT_CONTEXT_WINDOW_TOKENS;
     this.maxToolOutputChars = options.maxToolOutputChars || 12000;
     this.summarizeAfterSteps = options.summarizeAfterSteps ?? 8;
     this.compactionTokenRatio = options.compactionTokenRatio ?? 0.5;
+    this.toolSchemas = options.tools ?? [];
+  }
+
+  /** Kalıcı araç tanımı yükünün token tahmini (kaba ama güvenli taraflı). */
+  public estimateToolSchemaTokens(tools: ContextToolSchema[] = this.toolSchemas): number {
+    let total = 0;
+    for (const tool of tools) {
+      total += 8; // kayıt başına yapısal ek yük
+      total += this.estimateTokens(tool.name);
+      total += this.estimateTokens(tool.description);
+      if (tool.parameters) {
+        total += this.estimateTokens(JSON.stringify(tool.parameters));
+      }
+    }
+    return total;
   }
 
   /**
@@ -241,9 +269,19 @@ export class ContextManager {
    * 2. Son kullanıcı sorgusu ve son 4 tur (korunur)
    * 3. Bağlam şişerse ortadaki mesajlar budanır/özetlenir
    */
-  public pruneMessages(messages: ProviderMessage[]): ProviderMessage[] {
+  public pruneMessages(messages: ProviderMessage[], tools?: ContextToolSchema[]): ProviderMessage[] {
+    // Araç şemaları her istekle gider: gerçekçi bütçe, pencereden onların payını
+    // düşerek bulunur (denetim m.7).
+    const schemaTokens = this.estimateToolSchemaTokens(tools ?? this.toolSchemas);
+    // Alt sınır pencerenin kendisini aşamaz: küçük test pencereleri varsa
+    // budama hiç çalışmasın diye değil, şema yükü gerçek pencereyi yutmasın
+    // diye var.
+    const effectiveWindow = Math.max(
+      Math.min(4_000, this.contextWindowTokens),
+      this.contextWindowTokens - schemaTokens
+    );
     const totalTokens = this.estimateMessagesTokens(messages);
-    if (totalTokens <= this.contextWindowTokens || messages.length <= 4) {
+    if (totalTokens <= effectiveWindow || messages.length <= 4) {
       return messages;
     }
 
@@ -274,11 +312,22 @@ export class ContextManager {
     const head = units[0];
     if (!head) return messages;
 
+    // Son kullanıcı mesajı bu turun kimliğidir: ne düşürülebilir ne kırpılabilir
+    // (denetim m.7). Birimi işaretlenir ve tüm aşamalarda muaf tutulur.
+    let lastUserUnitIndex = -1;
+    for (let i = units.length - 1; i >= 0; i--) {
+      if (units[i]?.some((message) => message.role === 'user')) {
+        lastUserUnitIndex = i;
+        break;
+      }
+    }
+
     // Eski birimleri sıkıştır; en yeniler olduğu gibi kalır ki model az önce
     // ne yaptığını hâlâ görebilsin.
     const recentUnitCount = 6;
     const rest = units.slice(1);
     const compacted = rest.map((unit, index) => {
+      if (index + 1 === lastUserUnitIndex) return unit;
       if (index >= rest.length - recentUnitCount) return unit;
       return unit.map((msg) => compressOldMessage(msg));
     });
@@ -289,18 +338,23 @@ export class ContextManager {
     // Baştaki system prompt'tan sonra en eski konuşma birimlerini düşür. Yalnızca
     // system mesajları kaldığında düşürülmez, aşağıda kırpılırlar: ana talimatları
     // kaybetmek, kısaltmaktan daha kötüdür.
-    while (kept.length > 2 && estimate() > this.contextWindowTokens) {
-      const dropIndex = kept.findIndex((unit, index) => index > 0 && unit.every((m) => m.role !== 'system'));
+    // Referans eşitliğiyle izlenir: düşürme sonrası indeks kayabilir.
+    const protectedUnit = lastUserUnitIndex >= 0 ? units[lastUserUnitIndex] : undefined;
+    while (kept.length > 2 && estimate() > effectiveWindow) {
+      const dropIndex = kept.findIndex(
+        (unit, index) => index > 0 && unit !== protectedUnit && unit.every((m) => m.role !== 'system')
+      );
       if (dropIndex === -1) break;
       kept = [...kept.slice(0, dropIndex), ...kept.slice(dropIndex + 1)];
     }
 
-    // Büyük çıktıları kademeli olarak kırp; yalnızca baştaki system prompt muaftır.
+    // Büyük çıktıları kademeli olarak kırp; baştaki system prompt ve son
+    // kullanıcı mesajı muaftır.
     const limits = [3_000, 1_500, 800, 400];
     for (const limit of limits) {
-      if (estimate() <= this.contextWindowTokens) break;
+      if (estimate() <= effectiveWindow) break;
       kept = kept.map((unit, unitIndex) => {
-        if (unitIndex === 0) return unit;
+        if (unitIndex === 0 || unit === protectedUnit) return unit;
         return unit.map((message) => {
           if (message.content.length <= limit) return message;
           const label =

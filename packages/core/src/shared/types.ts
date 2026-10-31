@@ -70,6 +70,11 @@ export interface UserSettings {
   maxStepsPerTask?: number;
   /** Görev başına en fazla token bütçesi (0 veya tanımsızsa sınırsız). */
   maxTokensPerTask?: number;
+  /**
+   * Modelin bağlam penceresi (token). Buda/sıkıştırma eşikleri buna göre
+   * hesaplanır; boşsa varsayılan 96.000 kullanılır.
+   */
+  contextWindowTokens?: number;
   /** Otonom modda en fazla otomatik devam turu (varsayılan: 12). */
   maxContinuations?: number;
   /** Göreve göre hızlı ya da derin akıl yürütme modeli seç. */
@@ -159,6 +164,54 @@ export type ToolName =
   | 'call_graph_impact'
   | 'find_related_code'
   | 'call_graph_status';
+
+/** Birleşimle aynı listede tutulan çalışma zamanı tablosu (arayüz tamlık testleri için). */
+export const TOOL_NAMES: readonly ToolName[] = [
+  'read_file',
+  'write_file',
+  'edit_file',
+  'search_files',
+  'list_directory',
+  'execute_command',
+  'run_tests',
+  'run_linter',
+  'git_diff',
+  'git_status',
+  'invoke_subagent',
+  'ask_followup_question',
+  'read_skill',
+  'get_diagnostics',
+  'get_definition',
+  'get_hover',
+  'undo_change',
+  'update_plan',
+  'update_module_plan',
+  'run_verification',
+  'get_references',
+  'get_workspace_symbols',
+  'index_workspace',
+  'find_symbol',
+  'analyze_impact',
+  'git_create_branch',
+  'git_commit',
+  'prepare_pr',
+  'web_fetch',
+  'web_search',
+  'search_memory',
+  'read_notebook',
+  'run_parallel_tasks',
+  'merge_worktree',
+  'write_spec',
+  'update_acceptance_criteria',
+  'write_knowledge_file',
+  'get_project_knowledge',
+  'add_knowledge_note',
+  'get_callers',
+  'get_callees',
+  'call_graph_impact',
+  'find_related_code',
+  'call_graph_status'
+];
 
 export interface ToolCall {
   id: string;
@@ -412,12 +465,20 @@ export interface GitFileChange {
   indexStatus: string;
   /** Çalışma ağacı durum harfi; değişmemişse ' '. */
   workTreeStatus: string;
+  /** Dosyanın diskteki son değişim zamanı (mtime, ms); silinmişse tanımsız. */
+  modifiedAt?: number;
+  /** Dosya boyutu (bayt); silinmişse tanımsız. */
+  sizeBytes?: number;
+  /** Çalışma ağacında dosya artık yoksa true. */
+  deleted?: boolean;
 }
 
-/** Son commit listesinin bir kaydı (`git log --oneline`). */
+/** Son commit listesinin bir kaydı (`git log`). */
 export interface GitCommitSummary {
   hash: string;
   subject: string;
+  /** Yazar tarihi (ISO 8601); eski kayıtlarda bulunmayabilir. */
+  date?: string;
 }
 
 /** Değişiklikler ekranının yükü: çalışma alanının canlı Git durumu. */
@@ -449,7 +510,52 @@ export interface SubagentRunInfo {
 /**
  * Webview içi gezinme hedefleri (ekranlar).
  */
-export type NavigationDestination = 'chat' | 'settings' | 'history' | 'changes' | 'mcp' | 'agents' | 'about';
+export type NavigationDestination =
+  | 'chat'
+  | 'settings'
+  | 'history'
+  | 'changes'
+  | 'mcp'
+  | 'agents'
+  | 'callgraph'
+  | 'about';
+
+/** Çağrı grafiği ekranının düğüm kaydı; motor tiplerinden bağımsız taşınabilir biçim. */
+export interface CallGraphPanelNode {
+  id: string;
+  name: string;
+  kind: string;
+  file: string;
+  startLine: number;
+  exported: boolean;
+  isTest: boolean;
+  className?: string;
+}
+
+/** Komşu listesi satırı: düğüm + kaç adımda ulaşıldığı + çağrı satırları. */
+export interface CallGraphPanelNeighbor extends CallGraphPanelNode {
+  depth: number;
+  lines: number[];
+}
+
+export interface CallGraphPanelRequest {
+  action: 'status' | 'search' | 'neighbors' | 'rebuild';
+  query?: string;
+  nodeId?: string;
+  depth?: number;
+}
+
+export interface CallGraphPanelResult {
+  action: CallGraphPanelRequest['action'];
+  ready: boolean;
+  building: boolean;
+  progress?: number;
+  message: string;
+  stats?: { files: number; nodes: number; edges: number; updatedAt?: number; incompleteFiles: number };
+  matches?: CallGraphPanelNode[];
+  callers?: CallGraphPanelNeighbor[];
+  callees?: CallGraphPanelNeighbor[];
+}
 
 /**
  * Kullanıcı bildirim düzeyleri ve nesnesi.
@@ -593,6 +699,7 @@ export type WebviewToExtensionMessage =
   | { type: 'SHOW_COMMIT'; payload: { commitHash: string } }
   | { type: 'START_SUBAGENT'; payload: { role: string; task: string; context?: string; isolate?: boolean } }
   | { type: 'GET_ABOUT_INFO' }
+  | { type: 'CALLGRAPH_QUERY'; payload: CallGraphPanelRequest }
   | { type: 'CLEAR_PROJECT_MEMORY' }
   | { type: 'CUSTOMIZE_BUILTIN_AGENT'; payload: { role: string } }
   | { type: 'RESET_BUILTIN_AGENT'; payload: { role: string } }
@@ -625,6 +732,7 @@ export type ExtensionToWebviewMessage =
   | { type: 'GIT_CHANGES_LOADED'; payload: GitChangesPayload }
   | { type: 'VSCODE_THEME_CHANGED'; payload: VsCodeThemeConfig }
   | { type: 'ABOUT_INFO_LOADED'; payload: AboutInfo }
+  | { type: 'CALLGRAPH_RESULT'; payload: CallGraphPanelResult }
   | { type: 'NOTIFICATION'; payload: { level: ToastLevel; message: string }; sessionKey?: string }
   /** Etkin oturum değişti; arayüz kendi odağını buna göre taşır. */
   | { type: 'SESSION_ACTIVATED'; payload: { sessionKey: string } }

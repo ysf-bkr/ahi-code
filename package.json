@@ -76,6 +76,7 @@
       "title": "AhiCode Ayarları",
       "properties": {
         "ahiCode.selectedProvider": {
+          "scope": "application",
           "type": "string",
           "enum": [
             "ollama",
@@ -92,6 +93,7 @@
           "description": "Kullanılacak varsayılan model kimliği. Yerel ve kendi barındırdığınız uç noktalarda somut bir model kimliği gerekir; \"auto\" yalnızca OpenRouter için anlamlıdır."
         },
         "ahiCode.autonomy": {
+          "scope": "application",
           "type": "string",
           "enum": [
             "manual",
@@ -142,6 +144,7 @@
           "markdownDescription": "Alt ajan başına model kimlikleri (rol → model). Anahtarlar: `manager`, `analyst`, `architect`, `backend`, `frontend`, `mobile`, `native`, `database`, `devops`, `explorer`, `git`, `quality`, `security`. Boş bırakılan roller sağlayıcının hazır ayarını (EVREN: manager/architect → glm-5.3, explorer → mimo-v2.6-pro) ya da seçili modeli kullanır."
         },
         "ahiCode.autoAcceptTerms": {
+          "scope": "application",
           "type": "boolean",
           "default": false,
           "description": "EVREN LLM kullanım koşullarını kullanıcı adına otomatik kabul et. Varsayılan olarak devre dışıdır."
@@ -152,6 +155,7 @@
           "description": "Varsayılan kapalı (opt-in). Etkinleştirilirse eklenti kendi hatalarını GitHub deposunda (ysf-bkr/ahi-code) herkese açık sorun olarak bildirir; bildirim, gh oturumu açık olan GitHub hesabın adına açılır. Aynı hatanın mükerrer kaydı açılmaz; dosya yolları, anahtarlar, e-postalar ve URL sorgu dizileri maskelenir. GitHub CLI (gh) kurulu ve oturumu açık değilse bildirim sessizce atlanır."
         },
         "ahiCode.sandboxMode": {
+          "scope": "application",
           "type": "string",
           "enum": [
             "none",
@@ -161,11 +165,13 @@
           "description": "Komutları Docker kapsayıcısında çalıştır. Varsayılan: ana makine (none)."
         },
         "ahiCode.sandboxImage": {
+          "scope": "application",
           "type": "string",
           "default": "node:20-bookworm",
           "description": "Docker yalıtılmış ortamında kullanılacak imaj."
         },
         "ahiCode.sandboxNetwork": {
+          "scope": "application",
           "type": "boolean",
           "default": false,
           "description": "Docker yalıtılmış ortamı kapsayıcısı için ağ erişimine izin ver."
@@ -186,9 +192,17 @@
           "description": "Sistem prompt'u ve araç şemalarını sağlayıcı tarafında önbelleğe al. Destekleyen sağlayıcılarda tekrarlanan ön ek daha düşük ücretle faturalanır; desteklemeyen sunucular bu alanı yok sayar."
         },
         "ahiCode.knowledgeEmbeddings": {
+          "scope": "application",
           "type": "boolean",
           "default": false,
           "description": "Bilgi tabanı aramasında yerel anlamsal eşleştirme (Ollama embedding) kullan. Varsayılan kapalıdır; Ollama üzerinde bir embedding modeli (örn. nomic-embed-text) gerektirir. Her şey kullanıcının makinesinde kalır."
+        },
+        "ahiCode.contextWindowTokens": {
+          "type": "number",
+          "default": 96000,
+          "minimum": 8000,
+          "maximum": 4000000,
+          "description": "Seçili modelin bağlam penceresi (token). Sohbet geçmişi bu sınıra göre budanır ve sıkıştırılır; kullandığın modelin penceresine göre ayarla (örn. 128000, 200000). Varsayılan 96000."
         },
         "ahiCode.callGraphEnabled": {
           "type": "boolean",
@@ -196,11 +210,13 @@
           "description": "Fonksiyon çağrı ilişkilerini dil sunucusundan çıkarıp .ahi/callgraph.json altında tutar. Ajan bu haritayı çağıranları, çağrılanları ve etki alanını bulmak için kullanır. Kapalıyken araçlar \"kapalı\" cevabı verir."
         },
         "ahiCode.embeddingModel": {
+          "scope": "application",
           "type": "string",
           "default": "nomic-embed-text",
           "description": "Bilgi tabanı anlamsal araması için embedding modeli. Ollama için örn. nomic-embed-text; OpenAI uyumlu uç noktada (örn. EVREN) qwen3-embedding-8b."
         },
         "ahiCode.embeddingBaseUrl": {
+          "scope": "application",
           "type": "string",
           "default": "",
           "description": "Anlamsal arama için OpenAI uyumlu uç nokta kökü (örn. https://evren-llmapi.ssyz.org.tr/v1). Boş bırakılırsa Ollama /api/embed kullanılır; API anahtarı gizli depodaki sağlayıcı anahtarından alınır."

@@ -298,6 +298,7 @@ Plan rules:
       return acc;
     }, {});
     return [
+      ...this.validationWarnings.map((warning) => `⚠ ${warning}`),
       `Task plan updated: ${this.plan.goal || '(goal not specified)'}`,
       ...this.plan.steps.map((step) => {
         const deps = step.dependsOn.length ? ` (depends on: ${step.dependsOn.join(', ')})` : '';
@@ -315,9 +316,34 @@ Plan rules:
    * aittir ve en az bir kabul kriterini karşılar. Bu bağ kurulmazsa plan
    * "yapılacaklar listesi" olur, sözleşmeye bağlı bir yol haritası olmaz.
    */
+  /** Son doğrulamada üretilen uyarılar; araç sonucunda modele gösterilir. */
+  private validationWarnings: string[] = [];
+
+  public getValidationWarnings(): string[] {
+    return [...this.validationWarnings];
+  }
+
+  /**
+   * Adım ↔ modül/kriter bağlarını doğrular.
+   *
+   * Varlık ihlalleri (modülsüz adım, kriteri boş adım) sözleşme ihlalidir ve
+   * fırlatılır. Kimlik yazım hataları ise fırlatılmaz: önce normalize ederek
+   * düzeltilir, olmazsa bağ düşürülüp uyarıya dönüşür. Katı hata modeli aynı
+   * planı tekrar tekrar yazdırıp döngü üretiyordu (Mutabakat vakası:
+   * "step-1 → m-ast"); uyarı, modeli düzeltmeye yönlendirirken akışı kesmez.
+   */
   private validateModuleLinks(steps: PlanStep[], validation?: PlanUpdateInput['validation']): void {
+    this.validationWarnings = [];
     if (!validation) return;
     const { moduleIds, criteriaIds, requireModule = false, requireCriteria = false } = validation;
+    const canonicalModule = new Map<string, string>();
+    for (const id of moduleIds ?? []) {
+      canonicalModule.set(id.toLowerCase().replace(/[^a-z0-9]/g, ''), id);
+    }
+    const canonicalCriteria = new Map<string, string>();
+    for (const id of criteriaIds ?? []) {
+      canonicalCriteria.set(id.toLowerCase().replace(/[^a-z0-9-]/g, ''), id);
+    }
 
     for (const step of steps) {
       if (requireModule && !step.moduleId) {
@@ -327,10 +353,21 @@ Plan rules:
         );
       }
       if (step.moduleId && moduleIds && !moduleIds.has(step.moduleId)) {
-        throw new Error(
-          `Step "${step.id}" references unknown module "${step.moduleId}". ` +
-            `Known modules: ${[...moduleIds].join(', ') || '(none)'}.`
-        );
+        const fixed = canonicalModule.get(step.moduleId.toLowerCase().replace(/[^a-z0-9]/g, ''));
+        if (fixed) {
+          this.validationWarnings.push(
+            `Step "${step.id}" module id "${step.moduleId}" was corrected to "${fixed}".`
+          );
+          step.moduleId = fixed;
+        } else {
+          // Var olmayan modüle hayat hakkı yok ama plan ölmesin: bağı düşür.
+          this.validationWarnings.push(
+            `Step "${step.id}" referenced unknown module "${step.moduleId}"; the link was dropped. ` +
+              `Known modules: ${[...moduleIds].join(', ') || '(none)'}. ` +
+              'Use one of these ids or extend the map with update_module_plan.'
+          );
+          step.moduleId = undefined;
+        }
       }
       const criteria = step.criteria ?? [];
       if (requireCriteria && criteria.length === 0) {
@@ -338,14 +375,24 @@ Plan rules:
           `Step "${step.id}" must list at least one acceptance criterion id (for example "ac-1").`
         );
       }
-      if (criteriaIds) {
+      if (criteriaIds && criteria.length > 0) {
+        const kept: string[] = [];
         for (const criterion of criteria) {
-          if (!criteriaIds.has(criterion)) {
-            throw new Error(
-              `Step "${step.id}" references unknown acceptance criterion "${criterion}". ` +
+          const fixed = canonicalCriteria.get(criterion.toLowerCase().replace(/[^a-z0-9-]/g, ''));
+          if (criteriaIds.has(criterion)) kept.push(criterion);
+          else if (fixed) kept.push(fixed);
+          else
+            this.validationWarnings.push(
+              `Step "${step.id}" referenced unknown acceptance criterion "${criterion}"; it was dropped. ` +
                 `Known criteria: ${[...criteriaIds].join(', ') || '(none)'}.`
             );
-          }
+        }
+        step.criteria = [...new Set(kept)];
+        if (requireCriteria && step.criteria.length === 0) {
+          throw new Error(
+            `Step "${step.id}" listed only unknown criteria; at least one known criterion id is required. ` +
+              `Known criteria: ${[...criteriaIds].join(', ') || '(none)'}.`
+          );
         }
       }
     }

@@ -49,7 +49,7 @@ describe('SubagentManager: orchestration', () => {
     // kapatır (3). Kritik olan, delege çağrısının gerçekten yürütülmesi.
     assert.ok(provider.requests.length >= 2, 'delege çağrısı gerçekten yürütülmeli');
     const secondSystem = provider.requests[1]?.[0]?.content ?? '';
-    assert.match(secondSystem, /Backend Specialist/);
+    assert.match(secondSystem, /Backend Uzmanı/);
     assert.match(result, /Rapor tamam|Backend işi bitti/);
   });
 
@@ -155,11 +155,11 @@ describe('SubagentManager: orchestration', () => {
     // Her iki uzman da personasıyla çağrılmalı.
     const systems = provider.requests.map((request) => request[0]?.content ?? '');
     assert.ok(
-      systems.some((text) => /Backend Specialist/.test(text)),
+      systems.some((text) => /Backend Uzmanı/.test(text)),
       'backend çalışmalı'
     );
     assert.ok(
-      systems.some((text) => /Frontend Specialist/.test(text)),
+      systems.some((text) => /Frontend Uzmanı/.test(text)),
       'frontend çalışmalı'
     );
     assert.match(result, /ozet/);
@@ -203,7 +203,7 @@ describe('SubagentManager: orchestration', () => {
 
     const specialistSystem = provider.requests[1]?.[0]?.content ?? '';
     assert.match(specialistSystem, /READ-ONLY MODE|read-only/i);
-    assert.doesNotMatch(specialistSystem, /You are the "AhiCode - Backend Specialist"[\s\S]*write_file tool/);
+    assert.doesNotMatch(specialistSystem, /You are the "AhiCode - Backend Uzmanı"[\s\S]*write_file tool/);
   });
 
   it('read-only specialists never receive mutating tools', async () => {

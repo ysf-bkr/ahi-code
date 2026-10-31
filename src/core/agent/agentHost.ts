@@ -98,6 +98,8 @@ export interface AgentHost {
   commandCheckpoints: Map<string, CommandCheckpoint>;
   lastVerificationSkip: string;
   changedFilesInLastTurn: boolean;
+  /** Ardışık aynı araç+hata imzası sayacı (döngü koruması). */
+  lastToolFailure: { key: string; count: number } | undefined;
   activePlanStepId: string | undefined;
   baselineCaptured: boolean;
   repairAttempts: number;

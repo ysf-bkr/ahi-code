@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const manager: AgentDefinition = {
   name: 'manager',
-  displayName: 'Manager (Orchestrator)',
+  displayName: 'Yönetici',
   role: 'Task Orchestration & Governance',
   description:
     'Supreme Manager and Strategic Orchestrator. ' +

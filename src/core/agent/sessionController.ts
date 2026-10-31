@@ -123,6 +123,8 @@ export class SessionController {
     if (saved) {
       this.host.isCancelled = true;
       this.host.runGeneration++;
+      // Yeni oturum: eski oturumun okuma kayıtları yeni sohbete taşınmaz.
+      this.host.readDeduper.reset();
       if (this.host.activeAbortController) {
         this.host.activeAbortController.abort();
         this.host.activeAbortController = undefined;
@@ -404,6 +406,14 @@ export class SessionController {
     // Başarısız turu (asistan çıktısı, askıda kalan araç çağrıları) ve kullanıcı
     // mesajını at; handleSendMessage temiz birini ekler.
     this.host.state.messages = this.host.state.messages.slice(0, lastUserIndex);
+    // Sohbet geri sarıldı: diskteki dosyalar geri sarılmıyor. Deduper'ın
+    // "önceki sonuç sohbette" notu artık doğru değil (denetim bulgusu).
+    this.host.readDeduper.reset();
+    this.host.notify({
+      level: 'warning',
+      message:
+        'Sohbet geri sarıldı; dosyalar, plan ve şartname geri sarılmaz. Önceki tur dosya değiştirdiyse model güncel dosyaları görür.'
+    });
     this.host.state.pendingApproval = undefined;
     this.host.state.pendingToolCall = undefined;
     this.host.state.pendingQuestion = undefined;
@@ -444,6 +454,14 @@ export class SessionController {
     // Düzenlenen mesaj ve sonrası atılır; handleSendMessage güncel istemi
     // yeni bir tur olarak ekler.
     this.host.state.messages = this.host.state.messages.slice(0, index);
+    // Geri sarma yalnızca sohbeti kapsar; deduper notları geçersizleşir ve
+    // kullanıcı dosyaların geri sarılmadığı hakkında dürüstçe bilgilendirilir.
+    this.host.readDeduper.reset();
+    this.host.notify({
+      level: 'warning',
+      message:
+        'Sohbet geri sarıldı; dosyalar, plan ve şartname geri sarılmaz. Önceki turlar dosya değiştirdiyse model güncel dosyaları görür.'
+    });
     this.host.state.pendingApproval = undefined;
     this.host.state.pendingToolCall = undefined;
     this.host.state.pendingQuestion = undefined;

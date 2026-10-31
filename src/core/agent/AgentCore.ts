@@ -16,6 +16,7 @@ import { SnapshotManager } from '@ahicode/core/core/snapshot/SnapshotManager';
 import { HookManager } from '@ahicode/core/core/hooks/HookManager';
 import { CheckpointManager } from '@ahicode/core/core/checkpoint/CheckpointManager';
 import { ContextManager } from '@ahicode/core/core/context/ContextManager';
+import { ALL_TOOLS } from '@ahicode/core/tools';
 import { ReadDeduper } from '@ahicode/core/core/agent/readDeduper';
 import { ProjectMemoryManager, ProjectMemoryStatus } from '@ahicode/core/core/memory/ProjectMemoryManager';
 import { VectorMemory } from '@ahicode/core/core/memory/VectorMemory';
@@ -208,6 +209,13 @@ export class AgentCore implements AgentHost {
   public lastVerificationSkip = '';
   /** Son turda dosyaların değişip değişmediği (yalnızca yazma değil, her araç). */
   public changedFilesInLastTurn = false;
+
+  /**
+   * Aynı araç + aynı argüman kümesi art arda kaç kez hata aldı? Model aynı
+   * başarısız çağrıyı sonsuza dek tekrarlayabilir; üçüncüde tur duraklatılır
+   * (denetim bulgusu: tek başına ReadDeduper döngü koruması değildi).
+   */
+  public lastToolFailure: { key: string; count: number } | undefined;
   /** Güncel build turunun üstlendiği plan adımı; dürüst ilerleme göstergesi için. */
   public activePlanStepId: string | undefined;
   /** Otonom modda yapılan otomatik devam sayısı (döngü koruması). */
@@ -264,7 +272,10 @@ export class AgentCore implements AgentHost {
       () => vscode.workspace.isTrusted,
       (fingerprint, commands) => this.confirmWorkspaceHooks(fingerprint, commands)
     );
-    this.contextManager = new ContextManager();
+    this.contextManager = new ContextManager({
+      contextWindowTokens: this.settings.contextWindowTokens,
+      tools: Object.values(ALL_TOOLS)
+    });
     this.callGraphManager =
       shared?.callGraphManager ??
       new CallGraphManager({
@@ -357,6 +368,21 @@ export class AgentCore implements AgentHost {
           logWarning(`Could not create provider for agent model ${model}`, err);
           return undefined;
         }
+      },
+      // Alt ajan çıpaları: aynı zaman aşımı, aynı bağlam penceresi, aynı
+      // hook'lar ve kirli editör koruması (denetim m.2/7/8).
+      {
+        requestTimeoutSeconds: () => this.settings.requestTimeoutSeconds ?? 180,
+        contextWindowTokens: () => this.settings.contextWindowTokens,
+        hookRunner: () => this.hookManager,
+        dirtyFileReason: (absolutePath) => {
+          const dirty = vscode.workspace.textDocuments.find(
+            (doc) => doc.uri.fsPath === absolutePath && doc.isDirty
+          );
+          return dirty
+            ? `"${absolutePath}" contains unsaved editor changes. Save or revert them first.`
+            : undefined;
+        }
       }
     );
   }
@@ -414,6 +440,11 @@ export class AgentCore implements AgentHost {
     this.settings = newSettings;
     this.provider = createModelProvider(newSettings);
     this.permissionManager.updateSettings(newSettings);
+    // Durumsuz olduğu için güvenle yeniden kurulur; yeni pencere hemen etkili olur.
+    this.contextManager = new ContextManager({
+      contextWindowTokens: newSettings.contextWindowTokens,
+      tools: Object.values(ALL_TOOLS)
+    });
     this.refreshEmbeddingIndex();
     // Küratör sağlayıcı referansını tutar; yenisiyle yeniden kurulur.
     this.knowledgeCurator = new KnowledgeCurator(this.knowledgeStore, this.provider, this.lspClient);

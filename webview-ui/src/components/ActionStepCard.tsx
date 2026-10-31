@@ -9,6 +9,8 @@ import {
   ChevronDown,
   ChevronRight,
   GitBranch,
+  Globe,
+  ListChecks,
   Loader2,
   AlertTriangle,
   Bot,
@@ -16,10 +18,12 @@ import {
   Undo2,
   HelpCircle,
   BookOpen,
-  Stethoscope
+  Stethoscope,
+  Wrench
 } from 'lucide-react';
-import { ToolCall } from '@shared/types';
+import { ToolCall, ToolName } from '@shared/types';
 import { Button, Disclosure } from './ui';
+import { TOOL_TITLES, subagentRoleName, toolStepDetail } from '../utils/toolLabels';
 import { vscode } from '../utils/vscode';
 
 interface ActionStepCardProps {
@@ -28,10 +32,65 @@ interface ActionStepCardProps {
   isPendingApproval?: boolean;
 }
 
-const text = (value: unknown, fallback = ''): string => {
-  if (typeof value === 'string') return value;
-  if (value === undefined || value === null) return fallback;
-  return String(value);
+/** Adım simgesi: aracın kategorisini taşır; renk tonları durum jetonlarındandır. */
+const toolStepIcon = (name: ToolName): React.ReactElement => {
+  switch (name) {
+    case 'execute_command':
+    case 'run_tests':
+    case 'run_linter':
+    case 'run_verification':
+    case 'run_parallel_tasks':
+    case 'merge_worktree':
+      return <Terminal className="ahi-icon-sm ahi-text-warning" />;
+    case 'write_file':
+      return <FileCode className="ahi-icon-sm ahi-text-success" />;
+    case 'edit_file':
+      return <FileDiff className="ahi-icon-sm ahi-text-brand" />;
+    case 'read_file':
+      return <FileCode className="ahi-icon-sm ahi-text-brand" />;
+    case 'read_notebook':
+      return <BookOpen className="ahi-icon-sm ahi-text-brand" />;
+    case 'list_directory':
+      return <FolderTree className="ahi-icon-sm ahi-text-info" />;
+    case 'web_fetch':
+      return <Globe className="ahi-icon-sm ahi-text-info" />;
+    case 'invoke_subagent':
+      return <Bot className="ahi-icon-sm ahi-text-warning" />;
+    case 'ask_followup_question':
+      return <HelpCircle className="ahi-icon-sm ahi-text-brand" />;
+    case 'get_diagnostics':
+      return <Stethoscope className="ahi-icon-sm ahi-text-error" />;
+    case 'update_plan':
+    case 'update_module_plan':
+    case 'update_acceptance_criteria':
+      return <ListChecks className="ahi-icon-sm ahi-text-brand" />;
+    case 'write_spec':
+    case 'read_skill':
+    case 'write_knowledge_file':
+    case 'add_knowledge_note':
+      return <BookOpen className="ahi-icon-sm ahi-text-info" />;
+    default:
+      break;
+  }
+  if (name.startsWith('git_') || name === 'prepare_pr') {
+    return <GitBranch className="ahi-icon-sm ahi-text-muted" />;
+  }
+  if (
+    name.startsWith('get_') ||
+    name.startsWith('call_graph') ||
+    [
+      'search_files',
+      'web_search',
+      'search_memory',
+      'find_symbol',
+      'find_related_code',
+      'analyze_impact',
+      'index_workspace'
+    ].includes(name)
+  ) {
+    return <Search className="ahi-icon-sm ahi-text-brand" />;
+  }
+  return <Wrench className="ahi-icon-sm ahi-text-muted" />;
 };
 
 export const ActionStepCard: React.FC<ActionStepCardProps> = ({
@@ -47,89 +106,16 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
     }
   }, [isPendingApproval, toolCall.status]);
 
+  // Başlık ve ayrıntı artık tüm araçları kapsayan Türkçe etiket haritasından
+  // gelir; ikon yalnızca aracın kategorisini taşır. Böylece hiçbir adım ham
+  // İngilizce kimlikle (`update_plan` gibi) ve boş açıklamayla çizilmez.
   const meta = (() => {
-    switch (toolCall.name) {
-      case 'execute_command':
-      case 'run_tests':
-      case 'run_linter':
-        return {
-          icon: <Terminal className="ahi-icon-sm ahi-text-warning" />,
-          title:
-            toolCall.name === 'run_tests'
-              ? 'Testler çalıştırılıyor'
-              : toolCall.name === 'run_linter'
-                ? 'Kod denetleyicisi çalıştırılıyor'
-                : 'Terminal komutu',
-          detail: text(toolCall.args.command, 'Komut otomatik seçildi')
-        };
-      case 'write_file':
-        return {
-          icon: <FileCode className="ahi-icon-sm ahi-text-success" />,
-          title: 'Dosya oluşturuluyor',
-          detail: text(toolCall.args.path)
-        };
-      case 'edit_file':
-        return {
-          icon: <FileDiff className="ahi-icon-sm ahi-text-brand" />,
-          title: 'Dosya düzenleniyor',
-          detail: text(toolCall.args.path)
-        };
-      case 'read_file':
-        return {
-          icon: <FileCode className="ahi-icon-sm ahi-text-brand" />,
-          title: 'Dosya okunuyor',
-          detail: text(toolCall.args.path)
-        };
-      case 'list_directory':
-        return {
-          icon: <FolderTree className="ahi-icon-sm ahi-text-info" />,
-          title: 'Klasör taranıyor',
-          detail: text(toolCall.args.path) || '.'
-        };
-      case 'search_files':
-        return {
-          icon: <Search className="ahi-icon-sm ahi-text-brand" />,
-          title: 'Kod aranıyor',
-          detail: `"${text(toolCall.args.query)}"`
-        };
-      case 'invoke_subagent':
-        return {
-          icon: <Bot className="ahi-icon-sm ahi-text-warning" />,
-          title: `Alt ajan: ${text(toolCall.args.role, 'uzman')}`,
-          detail: text(toolCall.args.task)
-        };
-      case 'ask_followup_question':
-        return {
-          icon: <HelpCircle className="ahi-icon-sm ahi-text-brand" />,
-          title: 'Kullanıcıya soru soruluyor',
-          detail: text(toolCall.args.question)
-        };
-      case 'read_skill':
-        return {
-          icon: <BookOpen className="ahi-icon-sm ahi-text-info" />,
-          title: 'Beceri okunuyor',
-          detail: text(toolCall.args.skill_name)
-        };
-      case 'get_diagnostics':
-        return {
-          icon: <Stethoscope className="ahi-icon-sm ahi-text-error" />,
-          title: 'Tanılar inceleniyor',
-          detail: text(toolCall.args.path) || 'Tüm proje'
-        };
-      case 'git_status':
-      case 'git_diff':
-        return {
-          icon: <GitBranch className="ahi-icon-sm ahi-text-muted" />,
-          title: toolCall.name === 'git_diff' ? 'Git farkı alınıyor' : 'Git durumu okunuyor',
-          detail: 'Çalışma ağacı'
-        };
-      default:
-        return {
-          icon: <GitBranch className="ahi-icon-sm ahi-text-muted" />,
-          title: toolCall.name,
-          detail: ''
-        };
-    }
+    const name = toolCall.name;
+    const title =
+      name === 'invoke_subagent'
+        ? `Alt ajan: ${subagentRoleName(toolCall.args.role)}`
+        : (TOOL_TITLES[name] ?? name);
+    return { icon: toolStepIcon(name), title, detail: toolStepDetail(toolCall) };
   })();
 
   const statusChip = (() => {

@@ -6,9 +6,11 @@ import { ChatInput } from './components/ChatInput';
 import { ChatMetaBar } from './components/ChatMetaBar';
 import { ChatStatusBar } from './components/ChatStatusBar';
 import { ComposerDock } from './components/ComposerDock';
+import { PendingActionNotice } from './components/PendingActionNotice';
 import { SettingsView } from './components/SettingsView';
 import { HistoryView } from './components/HistoryView';
 import { McpView } from './components/McpView';
+import { CallGraphView } from './components/CallGraphView';
 import { AgentsView } from './components/AgentsView';
 import { AboutView } from './components/AboutView';
 import { ChangesView } from './components/ChangesView';
@@ -36,6 +38,18 @@ export const App: React.FC = () => {
    * çalıştığı için state yerine ref okunur; yoksa eski değer görülür.
    */
   const activeSessionRef = useRef<string | undefined>(undefined);
+  // Akış tamponu: her token tüm mesaj listesini yeniden çizdirip uzun yanıtlarda
+  // arayüzü kilitliyordu; parçalar birikir ve ~50 ms'de bir tek seferde çizilir.
+  // Tam durum güncellemesi metni zaten eksiksiz taşıdığı için tampon düşürülür.
+  const streamBuffer = useRef(new Map<string, string>());
+  const streamFlushTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const flushStreamBuffer = () => {
+    if (streamFlushTimer.current) {
+      clearTimeout(streamFlushTimer.current);
+      streamFlushTimer.current = undefined;
+    }
+    streamBuffer.current.clear();
+  };
   // Basit gezinme yığını: "Geri" her zaman sohbete değil, kullanıcının geldiği
   // ekrana dönsün (örn. Ayarlar -> Hakkında -> Geri -> Ayarlar).
   const [viewStack, setViewStack] = useState<NavigationDestination[]>([]);
@@ -100,11 +114,15 @@ export const App: React.FC = () => {
             activeSessionRef.current = msg.sessionKey;
             setActiveSessionKey(msg.sessionKey);
           }
+          // Tam durum metnin güncel hâlini taşır; bekleyen parçalar çizilirse
+          // aynı metin iki kez eklenir.
+          flushStreamBuffer();
           setTaskState(msg.payload);
           break;
         case 'SESSION_ACTIVATED':
           activeSessionRef.current = msg.payload.sessionKey;
           setActiveSessionKey(msg.payload.sessionKey);
+          flushStreamBuffer();
           // Oturum değişti: yarım kalan düzenleme ve besteci taslağı o sohbete
           // ait değil. `draftNonce` artırılarak besteci yeniden kurulur.
           setEditingMessageId(null);
@@ -128,10 +146,22 @@ export const App: React.FC = () => {
         case 'STREAM_CHUNK': {
           if (msg.sessionKey && msg.sessionKey !== activeSessionRef.current) break;
           const { messageId, text } = msg.payload;
-          setTaskState((prev) => ({
-            ...prev,
-            messages: prev.messages.map((m) => (m.id === messageId ? { ...m, content: m.content + text } : m))
-          }));
+          streamBuffer.current.set(messageId, (streamBuffer.current.get(messageId) ?? '') + text);
+          if (!streamFlushTimer.current) {
+            streamFlushTimer.current = setTimeout(() => {
+              streamFlushTimer.current = undefined;
+              const buffer = streamBuffer.current;
+              streamBuffer.current = new Map();
+              if (buffer.size === 0) return;
+              setTaskState((prev) => ({
+                ...prev,
+                messages: prev.messages.map((m) => {
+                  const pending = buffer.get(m.id);
+                  return pending ? { ...m, content: m.content + pending } : m;
+                })
+              }));
+            }, 50);
+          }
           break;
         }
         case 'VSCODE_THEME_CHANGED': {
@@ -176,7 +206,10 @@ export const App: React.FC = () => {
     };
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      if (streamFlushTimer.current) clearTimeout(streamFlushTimer.current);
+    };
   }, []);
 
   /**
@@ -337,6 +370,9 @@ export const App: React.FC = () => {
                   <ToastView toast={toast} onDismiss={() => setToast(null)} />
                 </div>
               )}
+              {/* Araç onayı ve sorular mesaj yazma alanının hemen üstünde sabit
+                  durur; kullanıcı kaydırıp adım kartı aramadan burada onaylar. */}
+              <PendingActionNotice state={taskState} />
               <ComposerDock state={taskState} />
               {isChatConfigured(settings) && (
                 <ChatMetaBar
@@ -456,6 +492,14 @@ export const App: React.FC = () => {
 
           {activeTab === 'mcp' && (
             <McpView
+              onBack={goBack}
+              onSelectMenu={openView}
+              changedFileCount={taskState.stats.filesModified.length}
+            />
+          )}
+
+          {activeTab === 'callgraph' && (
+            <CallGraphView
               onBack={goBack}
               onSelectMenu={openView}
               changedFileCount={taskState.stats.filesModified.length}

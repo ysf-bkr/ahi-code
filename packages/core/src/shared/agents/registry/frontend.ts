@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const frontend: AgentDefinition = {
   name: 'frontend',
-  displayName: 'Frontend Specialist',
+  displayName: 'Frontend Uzmanı',
   role: 'Frontend Development',
   description:
     'UI/UX, Styling, and State Management specialist. ' +

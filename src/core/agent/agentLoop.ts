@@ -16,6 +16,12 @@ import { skipsApprovalGates } from '@ahicode/core/core/agent/autonomy';
 import { buildProviderMessages, mapModelToolCalls } from '@ahicode/core/core/agent/turnAssembly';
 import { detectLintCommand, detectTestCommand } from '@ahicode/core/tools';
 import { errorMessage } from '@ahicode/core/shared/errors';
+import {
+  collapseRepetition,
+  findRepetitionCollapse,
+  RepetitionCollapse,
+  StreamRepetitionGuard
+} from '@ahicode/core/shared/repetition';
 import { logWarning } from '@ahicode/core/shared/logging';
 import { describeWorkflow, formatWorkflowForPrompt } from '@ahicode/core/core/workflow/TaskWorkflow';
 import type { AgentHost } from './agentHost';
@@ -289,8 +295,21 @@ export class AgentLoop {
       // Harcanmış araç çıktılarını önce sıkıştır: eski adımlar için bir işaret
       // yeterlidir ve tüm geçmiş her yinelemede yeniden gönderilir.
       const compacted = this.host.contextManager.compactHistory(providerMessages);
-      const prunedMessages = this.host.contextManager.pruneMessages(compacted);
+      // Sıkıştırma eski araç çıktılarını özetlediği an "sonuç hâlâ sohbette"
+      // notu yalan söyler; deduper hafızası o anda sıfırlanmalı (denetim bulgusu).
+      if (compacted !== providerMessages) {
+        this.host.readDeduper.reset();
+      }
+      // Araç tanımları da pencereye sığar ve çoğu sağlayıcıya her turda
+      // yeniden gönderilir; budama bütçesi onları da saymalıdır (denetim m.7).
+      const prunedMessages = this.host.contextManager.pruneMessages(compacted, tools);
       this.host.activeAbortController = new AbortController();
+
+      // DejaGENERATIVE tekrar koruması: model uzun raporlarda tek satıra
+      // kilitlenebilir (Mutabakat vakası: aynı kanal adı yüzlerce kez). Akışta
+      // erken yakala, üretimin fişini çek, temiz öneki koru.
+      const repetitionGuard = new StreamRepetitionGuard();
+      let repetitionCollapse: RepetitionCollapse | undefined;
 
       let response;
       try {
@@ -298,7 +317,15 @@ export class AgentLoop {
           prunedMessages,
           tools,
           (chunk) => {
+            if (repetitionCollapse) {
+              return; // çökme bulundu: kuyruk arayüze ve sayaca ulaşmasın
+            }
             streamingAssistantMsg.content += chunk;
+            repetitionCollapse = repetitionGuard.check(streamingAssistantMsg.content);
+            if (repetitionCollapse) {
+              this.host.activeAbortController?.abort();
+              return;
+            }
             if (this.host.onStreamChunk) {
               this.host.onStreamChunk(assistantMsgId, chunk);
             } else {
@@ -308,39 +335,45 @@ export class AgentLoop {
           this.host.activeAbortController.signal
         );
       } catch (err) {
-        const message = errorMessage(err, 'Model request failed.');
-        // İstek iptal edildiyse akış göstergesini temizle.
-        if (
-          this.host.isCancelled ||
-          (err instanceof Error && err.name === 'AbortError') ||
-          /cancelled|stopped/i.test(message)
-        ) {
+        if (repetitionCollapse) {
+          // Bu iptal kaza değil, korumalı kesintidir: iptal sayılmaz; çökmüş
+          // kuyruk atılır, temiz ön ek yanıt kabul edilir.
+          response = { text: collapseRepetition(streamingAssistantMsg.content) };
+        } else {
+          const message = errorMessage(err, 'Model request failed.');
+          // İstek iptal edildiyse akış göstergesini temizle.
+          if (
+            this.host.isCancelled ||
+            (err instanceof Error && err.name === 'AbortError') ||
+            /cancelled|stopped/i.test(message)
+          ) {
+            // Eski döngü yeni oturumun durumunun üzerine yazmamalı.
+            if (generation !== this.host.runGeneration) return;
+            streamingAssistantMsg.isStreaming = false;
+            this.host.state.status = 'cancelled';
+            await this.host.saveCurrentState();
+            this.host.emitState();
+            return;
+          }
           // Eski döngü yeni oturumun durumunun üzerine yazmamalı.
-          if (generation !== this.host.runGeneration) return;
+          if (generation !== this.host.runGeneration) {
+            return;
+          }
+          this.host.state.status = 'failed';
           streamingAssistantMsg.isStreaming = false;
-          this.host.state.status = 'cancelled';
+          streamingAssistantMsg.error = message;
+          await this.host.recordProjectMemory(
+            `${this.host.state.id}:${turnId}`,
+            userPrompt,
+            'failed',
+            message,
+            workspaceRoot
+          );
+          this.host.notify({ level: 'error', message });
           await this.host.saveCurrentState();
           this.host.emitState();
           return;
         }
-        // Eski döngü yeni oturumun durumunun üzerine yazmamalı.
-        if (generation !== this.host.runGeneration) {
-          return;
-        }
-        this.host.state.status = 'failed';
-        streamingAssistantMsg.isStreaming = false;
-        streamingAssistantMsg.error = message;
-        await this.host.recordProjectMemory(
-          `${this.host.state.id}:${turnId}`,
-          userPrompt,
-          'failed',
-          message,
-          workspaceRoot
-        );
-        this.host.notify({ level: 'error', message });
-        await this.host.saveCurrentState();
-        this.host.emitState();
-        return;
       }
 
       // Model yanıt vermeden önce oturum değişmiş olabilir.
@@ -356,8 +389,23 @@ export class AgentLoop {
         return;
       }
 
+      // Akışsız sağlayıcılarda çökme ancak burada görünür.
+      if (!repetitionCollapse && response.text && findRepetitionCollapse(response.text)) {
+        response = { ...response, text: collapseRepetition(response.text) };
+        repetitionCollapse = { unit: '', repeats: 0, cleanPrefixLength: 0 };
+      }
+
       streamingAssistantMsg.isStreaming = false;
       streamingAssistantMsg.content = response.text;
+
+      if (repetitionCollapse) {
+        this.host.notify({
+          level: 'warning',
+          message:
+            'Model aynı satırı tekrarlayıp durduğu için yanıt otomatik kesildi; metnin temiz bölümü korundu. ' +
+            'Aynı mesajı yeniden göndererek kaldığı yerden devam ettirebilirsin.'
+        });
+      }
 
       // Kullanım bilgisi yalnızca sağlayıcı döndürüyorsa gelir; bütçe kontrolü
       // döngünün başında (bir sonraki model çağrısından önce) yapılır.
@@ -408,6 +456,29 @@ export class AgentLoop {
         }
 
         this.host.state.status = 'completed';
+
+        // Plan tüm adımlarıyla bitti: kalıcı izi sohbete bırak. Sabit plan
+        // şeridi tamamlanınca kalktığı için kullanıcı "neyin bittiğini"
+        // konuşmanın içinde görmeli (UX talebi).
+        const finishedPlan = this.host.state.plan;
+        if (
+          finishedPlan &&
+          finishedPlan.steps.length > 0 &&
+          finishedPlan.steps.every((s) => s.status === 'completed')
+        ) {
+          const summaryId = `plan-summary:${turnId}`;
+          if (!this.host.state.messages.some((m) => m.id === summaryId)) {
+            this.host.state.messages.push({
+              id: summaryId,
+              role: 'system',
+              timestamp: Date.now(),
+              content:
+                `🎯 Plan tamamlandı — ${finishedPlan.steps.length}/${finishedPlan.steps.length} adım:\n` +
+                finishedPlan.steps.map((s) => `• ${s.title}`).join('\n')
+            });
+          }
+        }
+
         await this.host.recordProjectMemory(
           `${this.host.state.id}:${turnId}`,
           userPrompt,
@@ -479,6 +550,28 @@ export class AgentLoop {
         // Oturum değiştiyse eski turun sonuçlarını yeni oturuma yazma.
         if (generation !== this.host.runGeneration) {
           return;
+        }
+
+        // Döngü koruması: aynı araç aynı argümanlarla art arda üçüncü kez
+        // patlarsa model büyük olasılıkla çıkmaz sokakta dönüyor; turu
+        // duraklat ve kullanıcıya nedenini söyle (denetim bulgusu).
+        if (tc.status === 'error') {
+          const failureKey = `${tc.name}::${JSON.stringify(tc.args ?? {})}`;
+          const previous = this.host.lastToolFailure;
+          const count = previous && previous.key === failureKey ? previous.count + 1 : 1;
+          this.host.lastToolFailure = { key: failureKey, count };
+          if (count >= 3) {
+            this.host.lastToolFailure = undefined;
+            this.host.state.status = 'paused';
+            this.host.notify({
+              level: 'warning',
+              message: `“${tc.name}” aynı argümanlarla üst üste üç kez hata verdi; tur duraklatıldı. Yaklaşımı değiştirmeniz gerekebilir.`
+            });
+            this.host.emitState();
+            return;
+          }
+        } else {
+          this.host.lastToolFailure = undefined;
         }
 
         await this.host.auditTool(tc, workspaceRoot, tc.status);

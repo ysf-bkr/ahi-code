@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const mobile: AgentDefinition = {
   name: 'mobile',
-  displayName: 'Mobile Specialist',
+  displayName: 'Mobil Uzmanı',
   role: 'Mobile Development',
   description:
     'React Native, Expo, and Flutter mobile applications specialist. ' +

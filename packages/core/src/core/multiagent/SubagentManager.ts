@@ -18,7 +18,8 @@ import { policyFor } from '../permission/toolPolicy';
 import { CheckpointManager } from '../checkpoint/CheckpointManager';
 import { WorktreeManager } from '../worktree/WorktreeManager';
 import { SandboxConfig } from '../verification/CommandRunner';
-import { trimSmart } from '../context/ContextManager';
+import { ContextManager, trimSmart } from '../context/ContextManager';
+import type { HookResult } from '../hooks/HookManager';
 import type { CallGraphManager } from '../callgraph/CallGraphManager';
 import type { GitManager } from '../git/GitManager';
 import {
@@ -94,6 +95,32 @@ export interface SubagentStatusDetails {
 
 export type SubagentStatusListener = (role: string, status: string, details?: SubagentStatusDetails) => void;
 
+/**
+ * Alt ajanın ana ajanla aynı güvenlik/sağlık çıpalarından pay alması için
+ * asgari liman arayüzü (denetim m.2/7/8): istek zaman aşımı, gerçek bağlam
+ * penceresi, workspace hook'ları ve kaydedilmemiş editör koruması.
+ */
+export interface SubagentPorts {
+  requestTimeoutSeconds?: () => number | undefined;
+  contextWindowTokens?: () => number | undefined;
+  hookRunner?: () => {
+    runPreToolUse(
+      toolName: string,
+      args: Record<string, unknown>,
+      workspaceRoot?: string
+    ): Promise<HookResult>;
+    runPostToolUse(
+      toolName: string,
+      args: Record<string, unknown>,
+      result?: string,
+      error?: string,
+      workspaceRoot?: string
+    ): Promise<HookResult>;
+  };
+  /** Dosya kaydedilmemiş editör değişiklikleri taşıyorsa engel gerekçesi. */
+  dirtyFileReason?: (absolutePath: string) => string | undefined;
+}
+
 export class SubagentManager {
   constructor(
     private provider: ModelProvider,
@@ -112,8 +139,22 @@ export class SubagentManager {
     /** Rol + görev için model kararı; yoksa tüm alt ajanlar ana modeli kullanır. */
     private agentModelRouter?: (role: string, task: string) => AgentModelChoice,
     /** Verilen model kimliğiyle sağlayıcı üretir; başarısız olursa undefined. */
-    private providerForModel?: (model: string) => ModelProvider | undefined
+    private providerForModel?: (model: string) => ModelProvider | undefined,
+    /** Zaman aşımı / bağlam penceresi / hook / kirli editör limanları. */
+    private ports?: SubagentPorts
   ) {}
+
+  /**
+   * Kullanıcının istek zaman aşımı alt ajanlara da uygulanır (denetim m.2):
+   * takılan bir HTTP isteği tüm görevi süresiz bekletmesin.
+   */
+  private withRequestTimeout(signal?: AbortSignal): AbortSignal | undefined {
+    const seconds = this.ports?.requestTimeoutSeconds?.();
+    if (!seconds || seconds <= 0 || typeof AbortSignal.timeout !== 'function') return signal;
+    const timeout = AbortSignal.timeout(seconds * 1000);
+    if (!signal) return timeout;
+    return typeof AbortSignal.any === 'function' ? AbortSignal.any([signal, timeout]) : signal;
+  }
 
   /**
    * Alt ajanlar arası salt-okunur dosya önbelleği: aynı dosyayı ikinci bir
@@ -123,8 +164,19 @@ export class SubagentManager {
    */
   private sharedFileReadCache = new Map<string, { mtimeMs: number; content: string }>();
 
-  private static readCacheKey(root: string | undefined, targetPath: string): string {
-    return `${root ?? ''}::${targetPath}`;
+  /**
+   * Anahtar satır aralığını da taşımalıdır: aynı dosyanın farklı offset/limit
+   * istekleri ilk aralığın içeriyle "cached" diye dönerse model yanlış içerik
+   * görür (denetim bulgusu).
+   */
+  private static readCacheKey(
+    root: string | undefined,
+    targetPath: string,
+    args?: Record<string, unknown>
+  ): string {
+    const offset = typeof args?.offset === 'number' ? args.offset : '';
+    const limit = typeof args?.limit === 'number' ? args.limit : '';
+    return `${root ?? ''}::${targetPath}::${offset}::${limit}`;
   }
 
   public setSkillManager(skillManager: SkillManager) {
@@ -175,8 +227,9 @@ export class SubagentManager {
     choice: AgentModelChoice | undefined,
     onFallback?: (from: string, to: string, reason: string, provider: ModelProvider) => void
   ): Promise<ModelCompletionResponse> {
+    const timed = this.withRequestTimeout(signal);
     try {
-      return await provider.sendMessage(messages, tools, undefined, signal);
+      return await provider.sendMessage(messages, tools, undefined, timed);
     } catch (err) {
       if (signal?.aborted) throw err;
       let lastError: unknown = err;
@@ -201,7 +254,7 @@ export class SubagentManager {
           step.provider
         );
         try {
-          return await step.provider.sendMessage(messages, tools, undefined, signal);
+          return await step.provider.sendMessage(messages, tools, undefined, timed);
         } catch (stepErr) {
           if (signal?.aborted) throw stepErr;
           lastError = stepErr;
@@ -351,6 +404,14 @@ Complete your task and provide a clear report of the results to the main agent w
       { role: 'user', content: params.task }
     ];
 
+    // Uzun alt görevlerde istek taşmasın: ana ajanın kullandığı aynı bütçe
+    // motoru, kullanıcının bağlam penceresi ayarıyla burada da çalışır
+    // (denetim m.2/7). Geçmiş yerinde büyür; modele giden gövde sıkışır.
+    const budgetManager = new ContextManager({
+      contextWindowTokens: this.ports?.contextWindowTokens?.(),
+      tools
+    });
+
     // Adım bütçesi kaldırıldı: alt ajan, model görevi bitirene ya da kullanıcı
     // iptal edene kadar sürer. Kaçak döngü koruması model yanıtı ve iptal
     // sinyalidir; sayısal tur sınırı davranış sürprizi üretiyordu.
@@ -383,7 +444,7 @@ Complete your task and provide a clear report of the results to the main agent w
       try {
         response = await this.callModel(
           activeProvider,
-          messages,
+          budgetManager.pruneMessages(budgetManager.compactHistory(messages), tools),
           tools,
           signal,
           modelChoice,
@@ -508,6 +569,42 @@ Complete your task and provide a clear report of the results to the main agent w
             });
             continue;
           }
+
+          // Kirli editör koruması (denetim m.8): alt ajan da kaydedilmemiş
+          // kullanıcı değişikliklerinin üstüne sessizce yazamaz.
+          const dirtyTarget = tc.arguments?.path;
+          if (
+            (tc.name === 'write_file' || tc.name === 'edit_file') &&
+            typeof dirtyTarget === 'string' &&
+            dirtyTarget &&
+            this.ports?.dirtyFileReason
+          ) {
+            const absoluteTarget = path.isAbsolute(dirtyTarget)
+              ? dirtyTarget
+              : path.resolve(workspaceRoot || process.cwd(), dirtyTarget);
+            const dirtyReason = this.ports.dirtyFileReason(absoluteTarget);
+            if (dirtyReason) {
+              this.onAudit?.(auditTc, 'subagent_dirty_editor', workspaceRoot);
+              messages.push({ role: 'tool', toolCallId: tc.id, content: `[Blocked]: ${dirtyReason}` });
+              continue;
+            }
+          }
+
+          // Workspace hook'ları alt ajanlara da uygulanır (denetim m.8):
+          // PreToolUse herhangi bir aracı bloklayabilir.
+          const hookRunner = this.ports?.hookRunner?.();
+          if (hookRunner) {
+            const preHook = await hookRunner.runPreToolUse(tc.name, tc.arguments ?? {}, workspaceRoot);
+            if (!preHook.proceed) {
+              this.onAudit?.(auditTc, 'subagent_hook_blocked', workspaceRoot);
+              messages.push({
+                role: 'tool',
+                toolCallId: tc.id,
+                content: `[Blocked by hook]: ${preHook.message || 'The PreToolUse hook rejected this tool.'}`
+              });
+              continue;
+            }
+          }
           try {
             // Delege araçları araç yürütücüsünde kaybolmaz; derinlik artırılarak
             // gerçekten yürütülür (bkz. `runDelegatedCall`).
@@ -545,7 +642,7 @@ Complete your task and provide a clear report of the results to the main agent w
             // Salt-okunur paylaşımlı önbellek: aynı dosyayı ikinci alt ajan
             // yeniden okumaz; mtime değişmediyse içerik doğrudan döner.
             if (tc.name === 'read_file' && typeof subagentPath === 'string' && subagentPath) {
-              const cacheKey = SubagentManager.readCacheKey(workspaceRoot, subagentPath);
+              const cacheKey = SubagentManager.readCacheKey(workspaceRoot, subagentPath, tc.arguments);
               try {
                 const stat = await fs.stat(
                   path.isAbsolute(subagentPath)
@@ -604,6 +701,18 @@ Complete your task and provide a clear report of the results to the main agent w
               toolCallId: tc.id,
               content: trimSmart(result, 6000, `${tc.name} output`)
             });
+            if (hookRunner) {
+              // PostToolUse en iyi çabadır: hook başarısızlığı aracı geriye dönük kırmaz.
+              void hookRunner
+                .runPostToolUse(
+                  tc.name,
+                  tc.arguments ?? {},
+                  trimSmart(result, 2_000, 'hook result'),
+                  undefined,
+                  workspaceRoot
+                )
+                .catch((hookErr) => logWarning('Subagent PostToolUse hook failed', hookErr));
+            }
 
             // Okuma önbelleği: dosya içeride değişmeden tekrar sorulmasın.
             if (tc.name === 'read_file' && typeof subagentPath === 'string' && subagentPath) {
@@ -615,17 +724,24 @@ Complete your task and provide a clear report of the results to the main agent w
                 );
                 // Trim'li hâli sakla: önbellek isabetiyle normal okuma aynı
                 // boyut ve biçimde dönsün.
-                this.sharedFileReadCache.set(SubagentManager.readCacheKey(workspaceRoot, subagentPath), {
-                  mtimeMs: stat.mtimeMs,
-                  content: trimSmart(result, 6000, `${tc.name} output`)
-                });
+                this.sharedFileReadCache.set(
+                  SubagentManager.readCacheKey(workspaceRoot, subagentPath, tc.arguments),
+                  {
+                    mtimeMs: stat.mtimeMs,
+                    content: trimSmart(result, 6000, `${tc.name} output`)
+                  }
+                );
               } catch {
                 // Okunamayan dosya zaten hata döndürmüştür; önbelleğe yazılmaz.
               }
             }
-            // Yazma: ilgili anahtarı düşür; bayat içerik bir daha dönmesin.
+            // Yazma: dosyanın TÜM satır aralığı anahtarlarını düşür; bayat
+            // içerik hangi aralıkla istenirse istensin bir daha dönmesin.
             if ((tc.name === 'write_file' || tc.name === 'edit_file') && typeof subagentPath === 'string') {
-              this.sharedFileReadCache.delete(SubagentManager.readCacheKey(workspaceRoot, subagentPath));
+              const invalidated = `${workspaceRoot ?? ''}::${subagentPath}::`;
+              for (const key of this.sharedFileReadCache.keys()) {
+                if (key.startsWith(invalidated)) this.sharedFileReadCache.delete(key);
+              }
             }
           } catch (err) {
             this.onAudit?.(auditTc, 'subagent_error', workspaceRoot);

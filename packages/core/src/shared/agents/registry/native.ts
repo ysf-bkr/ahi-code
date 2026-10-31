@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const native: AgentDefinition = {
   name: 'native',
-  displayName: 'Native Division',
+  displayName: 'Sistem / Native Uzmanı',
   role: 'Native Integration',
   description:
     'Platform layer specialist. ' + 'Owns OS-level, FFI, and performance-critical code in Rust, Go, C/C++.',

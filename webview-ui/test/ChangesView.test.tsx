@@ -89,6 +89,45 @@ describe('ChangesView: görev ve Git değişiklikleri', () => {
     assert.deepEqual(showCommit?.payload, { commitHash: 'abc1234' });
   });
 
+  it('değişim tarihi, saati ve boyut gösterilir; commit tarihi görünür', async () => {
+    const stamp = new Date(2026, 5, 12, 14, 32).getTime();
+    vscode.postMessage = (message: unknown) => {
+      const typed = message as { type: string };
+      if (typed.type !== 'GET_GIT_CHANGES') return;
+      setTimeout(() => {
+        window.postMessage(
+          {
+            type: 'GIT_CHANGES_LOADED',
+            payload: {
+              isRepository: true,
+              branch: 'main',
+              files: [
+                {
+                  path: 'src/timed.ts',
+                  indexStatus: 'M',
+                  workTreeStatus: ' ',
+                  modifiedAt: stamp,
+                  sizeBytes: 2048
+                }
+              ],
+              commits: [
+                { hash: 'def5678', subject: 'Tarihli', date: new Date(2026, 5, 11, 9, 5).toISOString() }
+              ]
+            }
+          },
+          '*'
+        );
+      }, 0);
+    };
+
+    render(<ChangesView state={TASK_STATE} onBack={() => {}} />);
+    await waitFor(() => assert.ok(screen.getByText('src/timed.ts')));
+    // 12 Haziran 2026 → "12 Haz 2026 14:32" biçimi beklenir.
+    assert.ok(screen.getByText(/12 Haz 2026 14:32/), 'dosya değişim zamanı gösterilmeli');
+    assert.ok(screen.getByText(/2,0 KB/), 'dosya boyutu gösterilmeli');
+    assert.ok(screen.getByText(/11 Haz 2026 09:05/), 'commit tarihi gösterilmeli');
+  });
+
   it('Git deposu yoksa açıklayıcı durum gösterir', async () => {
     vscode.postMessage = (message: unknown) => {
       const typed = message as { type: string };

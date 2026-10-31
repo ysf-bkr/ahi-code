@@ -144,8 +144,27 @@ const RISKY_RULES: Rule[] = [
   // Güvenli listedeki komutların argümanlarıyla ek kod çalıştırma ya da
   // çalışma alanı dışına okuma/yazma (denetim bulgusu F01).
   {
-    pattern: /(^|\s)(rg|ripgrep)\b[^;&|\n]*\s--pre(-glob)?\b/,
-    reason: 'ripgrep --pre executes an external preprocessor program'
+    pattern: /(^|\s)(rg|ripgrep)\b[^;&|\n]*\s--(pre(-glob)?|hostname-bin)\b/,
+    reason: 'ripgrep --pre/--hostname-bin executes an external program'
+  },
+  // git fetch --upload-pack / --receive-pack uzak ya da yerel bir programı
+  // transport olarak çalıştırır; `git -c` keyfi config enjekte eder
+  // (core.sshCommand, pager) ve git dışı ortama sızan GIT_*/EDITOR
+  // atamaları alt komutların davranışını kaçırır.
+  {
+    pattern: /\bgit\s+fetch\b[^\n]*(--upload-pack|--receive-pack|(^|\s)-u(?=[\s=]))/,
+    reason: 'git fetch --upload-pack runs an arbitrary transport program'
+  },
+  { pattern: /\bgit\s+-c\b/, reason: 'git -c injects configuration that can run programs' },
+  {
+    pattern:
+      /\b(GIT_SSH|GIT_SSH_COMMAND|GIT_CONFIG|GIT_DIR|GIT_WORK_TREE|GIT_INDEX_FILE|GIT_EXTERNAL_DIFF|GIT_PROXY_COMMAND|EDITOR|VISUAL)\s*=/,
+    reason: 'environment override can redirect git/editor execution to an arbitrary program'
+  },
+  { pattern: /\bfind\b[^\n]*\s-ok(dir)?\b/, reason: 'find -ok/-okdir prompts then runs a command per file' },
+  {
+    pattern: /\bgit\b[^\n]*--exec-path\b/,
+    reason: 'git --exec-path redirects built-in subcommands to another directory'
   },
   {
     pattern: /\bgit\s+(diff|log|show|shortlog)\b[^;&|\n]*\s--output(=|\s)/,
@@ -158,7 +177,7 @@ const RISKY_RULES: Rule[] = [
   },
   {
     pattern:
-      /(^|\s)(\/(etc|var|usr|bin|sbin|root|opt|lib|sys|proc|private\/etc)($|[\s/\\])|~[/\\]|\$HOME[/\\]|[A-Za-z]:[/\\](Windows|Program Files))/i,
+      /(^|\s)(\/(etc|var|usr|bin|sbin|root|opt|lib|sys|proc|private\/etc)($|[\s/\\])|~([A-Za-z0-9._-]*[/\\]|$)|\$HOME[/\\]|[A-Za-z]:[/\\](Windows|Program Files|Users|Documents and Settings))/i,
     reason: 'the command references an absolute or home path outside the workspace'
   }
 ];
@@ -202,8 +221,8 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   // (yalnızca `git branch -d/-D` riskli kurala yakalanır).
   // `sed` için salt-okunur kullanım serbesttir (`sed -i` zaten RISKY_RULES ile engellenir).
   /^(ls|ll|la|pwd|cd|echo|printf|date|cal|whoami|id|uname|hostname|which|type|whatis|file|wc|head|tail|stat|du|df|tree|basename|dirname|realpath|readlink|cat|less|more|grep|egrep|fgrep|rg|ag|diff|cmp|sort|uniq|cut|column|rev|nl|sleep|true|false|test|mkdir|touch|dir|where|ver|sed)(\s|$)/,
-  // Güvenli dosya arama (yıkıcı -delete/-exec veya yazıcı -fprint* parametreleri hariç)
-  /^find\s+(?![^\n]*\s(-exec|-execdir|-delete|-fprint0?|-fls|-fprintf)\b)/,
+  // Güvenli dosya arama (yıkıcı -delete/-exec/-ok* veya yazıcı -fprint* parametreleri hariç)
+  /^find\s+(?![^\n]*\s(-exec|-execdir|-delete|-fprint0?|-fls|-fprintf|-ok(dir)?)\b)/,
   // Standart test/build/lint/typecheck akışları. `start`/`dev`/`watch`
   // bilinçli olarak yok: bunlar package.json'da tanımlı keyfi betiklerdir ve
   // doğrulama değil, sürekli çalışan geliştirme sunucusu akışlarıdır.
@@ -371,6 +390,84 @@ export function splitPipeline(clause: string): string[] {
 }
 
 /**
+ * Tırnak dışındaki tek `&` (arka plan çalıştırma) ve satır sonu karakterlerini
+ * bulur. Bölücüler `;`, `&&`, `||` ve `|` üzerinde duruyordu; `ls & curl
+ * evil.test` ve `cat README.md\nnode evil.js` allow listesindeki İLK komutun
+ * kalıbına uyduğu için safe geçiyordu (denetim bulgusu). `2>&1` ve `&>` gibi
+ * tanımlayıcı kopyalama biçimleri & sayılmaz; onların hükmü yönlendirme
+ * kurallarındadır.
+ */
+function findBackgroundOrMultiline(value: string): string[] {
+  const reasons: string[] = [];
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let escapeNext = false;
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i];
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
+    }
+    if (char === '\\' && !inSingleQuote) {
+      escapeNext = true;
+      continue;
+    }
+    if (char === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote;
+      continue;
+    }
+    if (char === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote;
+      continue;
+    }
+    if (inSingleQuote || inDoubleQuote) continue;
+
+    if ((char === '\n' || char === '\r') && !reasons.some((r) => r.startsWith('multiline'))) {
+      reasons.push('multiline command hides additional statements from the clause splitter');
+      continue;
+    }
+    if (char === '&') {
+      const prev = value[i - 1];
+      const next = value[i + 1];
+      if (prev === '&' || next === '&') continue; // && mantıksal operatörü: bölücü ilgilenir
+      if (prev === '>' || next === '>') continue; // fd kopyalama (2>&1, &>): yönlendirme kuralı
+      if (!reasons.some((r) => r.startsWith('background'))) {
+        reasons.push('background operator (&) runs a second statement outside the allowlist check');
+      }
+    }
+  }
+  return reasons;
+}
+
+/**
+ * Yol argümanlarındaki `ara/../` parçalarını sözel olarak çökertir. Regex
+ * denetimleri `/tmp/../etc/passwd` gibi dolambaçlı yolları hassas desenle
+ * göremiyordu; çözülmüş biçim üzerinden ikinci bir tarama yapılır.
+ */
+function collapseParentSegments(command: string): string {
+  return command
+    .split(/\s+/)
+    .map((raw) => {
+      const token = raw.replace(/^['"]+|['"]+$/g, '');
+      if (!token.includes('..') || /\w+:\/\//.test(token)) return token;
+      let collapsed = token;
+      let previous = '';
+      while (collapsed !== previous) {
+        previous = collapsed;
+        collapsed = collapsed.replace(
+          /(^|[/\\])[^/\\]+[/\\]\.\.(?=$|[/\\])/g,
+          // Sonraki parça bölücüyle başlıyorsa bölücüyü yutmuş sayılır; iki
+          // slash'lık sahte kök (`//etc`) üretmemek için grup düşürülür.
+          (match, group: string, offset: number, source: string) =>
+            source[offset + match.length] === '/' || source[offset + match.length] === '\\' ? '' : group
+        );
+      }
+      return collapsed;
+    })
+    .join(' ');
+}
+
+/**
  * Tekil bir komut veya boru hattı filtresi aşamasını değerlendirir.
  */
 function assessSingleStage(stage: string, isPipelineFilter: boolean): CommandAssessment {
@@ -384,7 +481,11 @@ function assessSingleStage(stage: string, isPipelineFilter: boolean): CommandAss
     return { risk: 'blocked', reasons: blocked };
   }
 
-  const risky = matchingReasons(cleaned, RISKY_RULES);
+  // Hassas/harici yol ve bayrak denetimleri ham metnin yanısıra çökertilmiş
+  // yol biçimleri üzerinden de koşulur (`/tmp/../etc/passwd` kaçamasın).
+  const scan = `${cleaned}\n${collapseParentSegments(cleaned)}`;
+
+  const risky = matchingReasons(scan, RISKY_RULES);
   if (risky.length > 0) {
     return { risk: 'risky', reasons: risky };
   }
@@ -398,7 +499,7 @@ function assessSingleStage(stage: string, isPipelineFilter: boolean): CommandAss
     };
   }
 
-  if (SENSITIVE_FILE_PATTERN.test(cleaned)) {
+  if (SENSITIVE_FILE_PATTERN.test(scan)) {
     return {
       risk: 'risky',
       reasons: ['the command references sensitive files such as keys or environment secrets']
@@ -438,6 +539,13 @@ export function assessCommand(command: string, _workspaceRoot?: string): Command
   const rootBlocked = matchingReasons(value, BLOCKED_RULES);
   if (rootBlocked.length > 0) {
     return { risk: 'blocked', reasons: rootBlocked };
+  }
+
+  // 1b. Tek `&` ve satır sonu: bölücüler bunları göremezdi; ikinci ifade
+  // allow listeyi atlatırdı. Tırnak içindekiler masumdur (`echo "a & b"`).
+  const metaReasons = findBackgroundOrMultiline(value);
+  if (metaReasons.length > 0) {
+    return { risk: 'risky', reasons: metaReasons };
   }
 
   // 2. Tırnakları koruyarak `;`, `&&`, `||` ile ayrılmış mantıksal ifadelere böl

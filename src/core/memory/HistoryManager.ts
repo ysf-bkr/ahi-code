@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { TaskState, TaskSummary } from '@ahicode/core/shared/types';
+import { logWarning } from '@ahicode/core/shared/logging';
 import {
   parseSessionArchive,
   serializeSessionArchive,
@@ -14,9 +15,65 @@ export class HistoryManager {
 
   constructor(private context: vscode.ExtensionContext) {}
 
+  /**
+   * Uzun turlar araç başına durum kaydediyor; her kayıt tüm oturumu
+   * serileştiriyordu. Çağrılar kısa bir pencerede tek yazıma indirgenir ve
+   * çağırana dönen söz gerçek yazım bittiğinde çözülür — son durum asla
+   * kaybolmaz, disk/kayıt trafiği ise onda bire iner.
+   */
+  private static readonly COALESCE_WINDOW_MS = 120;
+  private latestTask = new Map<string, TaskState>();
+  private flushTimer = new Map<string, ReturnType<typeof setTimeout>>();
+  private writeChain = new Map<string, Promise<void>>();
+  private waiters = new Map<string, Array<() => void>>();
+
   public async saveTask(task: TaskState): Promise<void> {
     if (!task.id || task.messages.length === 0) return;
+    this.latestTask.set(task.id, task);
+    return new Promise<void>((resolve) => {
+      const pending = this.waiters.get(task.id) ?? [];
+      pending.push(resolve);
+      this.waiters.set(task.id, pending);
+      if (!this.flushTimer.has(task.id)) {
+        this.flushTimer.set(
+          task.id,
+          setTimeout(() => {
+            void this.flushTask(task.id);
+          }, HistoryManager.COALESCE_WINDOW_MS)
+        );
+      }
+    });
+  }
 
+  private async flushTask(taskId: string): Promise<void> {
+    this.flushTimer.delete(taskId);
+    const task = this.latestTask.get(taskId);
+    this.latestTask.delete(taskId);
+    const previous = this.writeChain.get(taskId) ?? Promise.resolve();
+    const next = previous.then(async () => {
+      if (task) await this.writeTask(task);
+    });
+    this.writeChain.set(
+      taskId,
+      next.then(
+        () => undefined,
+        () => undefined
+      )
+    );
+    try {
+      await next;
+    } catch (err) {
+      // Depolama hatası döngüyü kırmaz; çağıran eski sözleşmede olduğu gibi
+      // uyarıyla yaşar (AgentCore.saveCurrentState loglar, burada da izi kalsın).
+      logWarning('Session persistence failed', err);
+    } finally {
+      const waiting = this.waiters.get(taskId) ?? [];
+      this.waiters.delete(taskId);
+      for (const resolve of waiting) resolve();
+    }
+  }
+
+  private async writeTask(task: TaskState): Promise<void> {
     // Görevin tamamını kaydet
     await this.context.workspaceState.update(`ahi_task_${task.id}`, task);
 

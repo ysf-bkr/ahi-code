@@ -11,6 +11,7 @@
  */
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { assertSafeUrl } from '../../tools/web';
 
 const EMBEDDINGS_FILE = 'embeddings.jsonl';
 /** Tek çağrı kümesinde gömülecek metinler için üst sınır. */
@@ -82,6 +83,27 @@ export class EmbeddingIndex {
         const style = this.options.style ?? 'ollama';
         const root = this.options.baseUrl.replace(/\/+$/, '');
         const url = style === 'openai' ? `${root}/embeddings` : `${root}/api/embed`;
+        // OpenAI tarzı uç nokta gizli anahtar ve bilgi tabanı metni taşır:
+        // yerel sunucu (loopback) istisna; gerisi HTTPS + genel adres denetimi.
+        // Kötü niyetli bir ayar değişikliği anahtarı uzak sunucuya taşıyamaz.
+        if (style === 'openai') {
+          let target: URL;
+          try {
+            target = new URL(url);
+          } catch {
+            return undefined;
+          }
+          const host = target.hostname.toLowerCase().replace(/^\[|\]$/g, '');
+          const loopback = host === 'localhost' || host === '::1' || host.startsWith('127.');
+          if (!loopback) {
+            if (target.protocol !== 'https:') return undefined;
+            try {
+              await assertSafeUrl(url);
+            } catch {
+              return undefined;
+            }
+          }
+        }
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (style === 'openai' && this.options.apiKey) {
           headers.Authorization = `Bearer ${this.options.apiKey}`;

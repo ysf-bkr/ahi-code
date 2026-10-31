@@ -29,7 +29,10 @@ export interface CallGraphLanguageService {
  * satırdaki tanıma genişletir. Bu bir yaklaşımdır ve sınırları `docs`
  * yerine kod yorumunda belirtilmiştir.
  */
-export function createLspLanguageService(lsp: LspClientPort, workspaceRoot: string): CallGraphLanguageService {
+export function createLspLanguageService(
+  lsp: LspClientPort,
+  workspaceRoot: string
+): CallGraphLanguageService {
   return {
     async documentSymbols(relativePath: string): Promise<RawSymbol[] | undefined> {
       try {

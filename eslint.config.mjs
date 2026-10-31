@@ -10,6 +10,8 @@ export default tseslint.config(
       'node_modules/**',
       'webview-ui/**',
       'resources/**',
+      // Paketlerin derleme çıktıları inceleme malzemesi değildir (AGENTS.md).
+      'packages/**/dist/**',
       '**/*.js.map'
     ]
   },

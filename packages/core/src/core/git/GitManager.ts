@@ -154,10 +154,26 @@ export class GitManager {
     return parseGitStatusShort(output);
   }
 
-  /** Değişiklikler ekranı için yapılandırılmış son commit listesi. */
+  /** Değişiklikler ekranı için yapılandırılmış son commit listesi (yazar tarihiyle). */
   public async listRecentCommits(workspaceRoot: string, count = 10): Promise<GitCommitSummary[]> {
-    const output = await git(['log', `-${Math.max(1, Math.min(count, 30))}`, '--oneline'], workspaceRoot);
-    return parseGitLogOneline(output);
+    const range = `-${Math.max(1, Math.min(count, 30))}`;
+    // \x1f ayracı subject'teki boşluk/uzunluk sorunlarını bitirir.
+    const output = await git(
+      ['log', range, '--date=iso-strict', '--pretty=format:%h\x1f%ad\x1f%s'],
+      workspaceRoot
+    );
+    const commits: GitCommitSummary[] = [];
+    for (const line of output.split('\n')) {
+      const parts = line.split('\x1f');
+      if (parts.length >= 3 && parts[0] && parts[1]) {
+        commits.push({ hash: parts[0], date: parts[1], subject: parts.slice(2).join('\x1f').trim() });
+      }
+    }
+    // Eski Git veya beklenmedik çıktı: hiç değilse oneline'ı deneme.
+    if (commits.length === 0 && output.trim()) {
+      return parseGitLogOneline(output);
+    }
+    return commits;
   }
 
   /** Tek bir commit'in tam yaması; diff belgesinde gösterilir. */
@@ -333,13 +349,21 @@ export class GitManager {
     // Kullanıcına ait değişiklikleri belirle: komut bittikten sonra değişmiş
     // her dosya korunur. Checkpoint'te bitiş zamanı yoksa (eski kayıt) ayırt
     // edilemez; önceki davranışla uyum için her şey geri alınır.
-    const status = await git(['status', '--porcelain'], root, { raw: true });
+    // `-z --untracked-files=all`: NUL ayracıyla ham yollar gelir; dizinler
+    // `newdir/` diye daralmaz (dosya sanılıp okunamaz hâle gelirdi) ve Türkçe
+    // karakterli yollar octal kaçışa dönmeden okunur (denetim bulgusu).
+    const status = await git(['status', '--porcelain', '-z', '--untracked-files=all'], root, { raw: true });
+    const statusTokens = status.split('\0').filter((token) => token.length >= 4);
     const changedPaths: string[] = [];
-    for (const line of status.split('\n')) {
-      if (line.length < 4) continue;
-      let rawPath = line.slice(3);
-      if (rawPath.includes(' -> ')) rawPath = rawPath.split(' -> ').pop() || rawPath;
-      if (rawPath.startsWith('"') && rawPath.endsWith('"')) rawPath = rawPath.slice(1, -1);
+    for (let i = 0; i < statusTokens.length; i++) {
+      const line = statusTokens[i];
+      if (!line) continue;
+      const statusCode = line.slice(0, 2);
+      const rawPath = line.slice(3);
+      if (statusCode.startsWith('R') || statusCode.startsWith('C')) {
+        // -z biçiminde adlandırma/kopya kaynağı bir sonraki tek başına tokendir.
+        i++;
+      }
       if (rawPath) changedPaths.push(rawPath);
     }
 
@@ -364,7 +388,24 @@ export class GitManager {
     }
 
     // Komutun yaptığı commit'leri de geri al ki HEAD checkpoint ile eşleşsin.
+    // HEAD komuttan sonra hareket ettiyse (kullanıcı ya da ajan commit attı)
+    // düz reset --hard O commit'lerin işini de silerdi: önce `stash push -u`
+    // ile güvenlik ağı kurulur ve ağın adresi kullanıcıya bildirilir
+    // (denetim bulgusu).
+    let stashNote = '';
     if (currentCheck.head !== head) {
+      try {
+        await git(
+          ['stash', 'push', '-u', '-m', `AhiCode undo safety net (${new Date().toISOString()})`],
+          root
+        );
+        stashNote =
+          '\nGüvenlik ağı: HEAD komuttan sonra hareket etmişti; geri alınan her şey `git stash list` içinde "AhiCode undo safety net" mesajıyla duruyor.';
+      } catch {
+        // Stash kurulamazsa (ör. kirli merge durumu) eski davranış sürer ama
+        // risk kullanıcıya söylenir.
+        stashNote = "\nUyarı: güvenlik ağı stash'i kurulamadı; hareketli HEAD üzerindeki iş kaybolabilir.";
+      }
       await git(['reset', '--hard', head], root);
     } else {
       await git(['checkout', '--', '.'], root);
@@ -390,9 +431,9 @@ export class GitManager {
         : '';
 
     if (finalStatus.trim()) {
-      return `Command changes were partially reverted; remaining changes:\n${finalStatus}${keptNote}`;
+      return `Command changes were partially reverted; remaining changes:\n${finalStatus}${keptNote}${stashNote}`;
     }
-    return `Command changes were reverted (working tree matches the checkpoint).${keptNote}`;
+    return `Command changes were reverted (working tree matches the checkpoint).${keptNote}${stashNote}`;
   }
 
   public static describeError(error: unknown): string {

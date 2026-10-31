@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const database: AgentDefinition = {
   name: 'database',
-  displayName: 'Database Specialist',
+  displayName: 'Veritabanı Uzmanı',
   role: 'Data Management',
   description:
     'SQL Schema design, migration, and query optimization specialist. ' +

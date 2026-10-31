@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const backend: AgentDefinition = {
   name: 'backend',
-  displayName: 'Backend Specialist',
+  displayName: 'Backend Uzmanı',
   role: 'Backend Development',
   description:
     'Server logic and API implementation specialist. ' +

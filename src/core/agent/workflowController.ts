@@ -132,16 +132,24 @@ export class WorkflowController {
   /**
    * Bitti kapısı için doğrulama yeterli mi?
    *
-   * "Atlandı" tek başına yeterli değildir: projede test/lint komutu bulunamadıysa
-   * görev sessizce "tamamlandı" sayılmamalı. Yalnızca çalışma alanının
-   * bulunmadığı (komut çalıştırmanın imkânsız olduğu) durum kabul edilir.
+   * `passed` her zaman yeterlidir. Atlanmış doğrulamada kabul edilen nedenler:
+   * - `no-workspace`: komut çalıştırmanın imkânı yok.
+   * - `no-commands`: projede test/lint komutu yok; doğrulama yapılamaz olduğu
+   *   için kapıyı süresiz bloke edemez (denetim bulgusu: görev asla done
+   *   olmuyordu, verify→build→review→verify döngüsü sonsuzlanıyordu).
+   * `aborted` ve `failed` kabul edilmez. Kullanıcı autoVerify'i kapattıysa
+   * doğrulama onun tercihen atladığı bir adımdır; kapı bunu soru saymaz.
    */
   public verificationPassed(): boolean {
     const verification = this.host.state.stats.verification;
-    if (!verification) return false;
+    if (!verification) {
+      // Doğrulama hiç çalışmamış: kullanıcı autoVerify'i kapattıysa bu bir
+      // tercih, değilse (autoVerify=true ama adım atlanmış) kapalı kalır.
+      return this.host.settings.autoVerify === false;
+    }
     if (verification.status === 'passed') return true;
     if (verification.status === 'skipped') {
-      return verification.skippedReason === 'no-workspace';
+      return verification.skippedReason === 'no-workspace' || verification.skippedReason === 'no-commands';
     }
     return false;
   }

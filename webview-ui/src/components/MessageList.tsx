@@ -13,8 +13,7 @@ import {
   Pencil,
   Settings,
   Undo2,
-  RotateCcw,
-  ChevronRight
+  RotateCcw
 } from 'lucide-react';
 import { ChatMessage, CheckpointSummary, ToolCall } from '@shared/types';
 import { stripInjectedContext } from '@shared/editorContext';
@@ -419,7 +418,7 @@ const ToolSteps: React.FC<{ toolCalls: ToolCall[]; pendingToolCall?: ToolCall }>
 
 interface TurnBlockProps {
   turn: ChatTurn;
-  /** Tur şu anda çalışıyorsa akordeon açık kalır. */
+  /** Tur şu anda çalışıyor; hata olsa bile "tekrar dene" gösterilmez. */
   active: boolean;
   pendingToolCall?: ToolCall;
   /**
@@ -431,18 +430,13 @@ interface TurnBlockProps {
 }
 
 /**
- * Asistan yanıtlarını tek akordeonda toplar.
+ * Bir asistan turu: yanıt metni HER ZAMAN görünürdür.
  *
- * Her tur ayrı bir "AhiCode" balonu gibi görünmek yerine tek bir başlık altında
- * katlanır; çalışırken açık, bittiğinde kendiliğinden kapanır ve başlıkta
- * yanıtın kısa özetini gösterir.
+ * Kullanıcı isteği: sohbet akordeon olmaz — okunacak şey metnin kendisidir.
+ * Katlanabilir tek bölüm araç adımlarıdır (ToolSteps); böylece gürültü
+ * daralırken anlatım hiç saklanmaz.
  */
 const TurnBlock: React.FC<TurnBlockProps> = ({ turn, active, pendingToolCall, onRetry }) => {
-  // Kapanma zinciri kaldırıldı: eskiden tur bitince akordeon kendiliğinden
-  // kapanıyor, akış sırasında isStreaming her gidip geldiğinde açılıp
-  // kapanıyordu. Yanıt artık görünür doğar; yalnızca kullanıcı başlıktan
-  // kendisi daraltır.
-  const [open, setOpen] = useState(true);
   const last = turn.assistant[turn.assistant.length - 1];
   const toolCalls = turn.assistant.flatMap((message) => message.toolCalls ?? []);
   const hasError = turn.assistant.some((message) => message.error);
@@ -463,33 +457,16 @@ const TurnBlock: React.FC<TurnBlockProps> = ({ turn, active, pendingToolCall, on
   return (
     <div className="ahi-turn-card rounded-lg border ahi-border-surface ahi-bg-surface">
       <div className="ahi-turn-card__header flex items-center gap-2 px-2.5 py-1.5">
-        <button
-          type="button"
-          onClick={() => setOpen((value) => !value)}
-          aria-expanded={open}
-          aria-controls={`turn-${turn.id}`}
-          className="flex min-w-0 flex-1 items-center gap-2 text-left"
-          title={open ? 'Yanıtı daralt' : 'Yanıtı genişlet'}
-        >
-          <ChevronRight
-            className={`ahi-icon-xs shrink-0 ahi-text-muted transition-transform ${open ? 'rotate-90' : ''}`}
-          />
-          <span className="ahi-avatar ahi-avatar-soft ahi-avatar--sm ahi-text-brand">
-            <Logo className="ahi-icon-xs" />
+        <span className="ahi-avatar ahi-avatar-soft ahi-avatar--sm ahi-text-brand">
+          <Logo className="ahi-icon-xs" />
+        </span>
+        <span className="flex min-w-0 flex-1 items-center gap-2">
+          <span className="text-xs font-semibold ahi-text-fg">AhiCode</span>
+          {last && <MessageStatus message={last} />}
+          <span className="font-mono text-2xs ahi-text-muted opacity-70">
+            {formatTime(turn.assistant[0].timestamp)}
           </span>
-          <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-2">
-              <span className="text-xs font-semibold ahi-text-fg">AhiCode</span>
-              {last && <MessageStatus message={last} />}
-              <span className="font-mono text-2xs ahi-text-muted opacity-70">
-                {formatTime(turn.assistant[0].timestamp)}
-              </span>
-              {!open && (
-                <span className="min-w-0 flex-1 truncate text-2xs ahi-text-muted">{summarizeTurn(turn)}</span>
-              )}
-            </span>
-          </span>
-        </button>
+        </span>
         {onRetry && hasError && !active && (
           <Button
             variant="secondary"
@@ -505,11 +482,7 @@ const TurnBlock: React.FC<TurnBlockProps> = ({ turn, active, pendingToolCall, on
         {content && <CopyMessageButton content={content} />}
       </div>
 
-      <div
-        id={`turn-${turn.id}`}
-        hidden={!open}
-        className="space-y-2 border-t ahi-border-surface px-2.5 py-2"
-      >
+      <div className="space-y-2 border-t ahi-border-surface px-2.5 py-2">
         {turn.assistant.map((message, index) => {
           const isNarration = Boolean(message.content) && index !== lastContentIndex && !message.isStreaming;
           return (

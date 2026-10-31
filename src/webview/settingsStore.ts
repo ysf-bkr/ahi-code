@@ -18,6 +18,18 @@ function readAutonomy(value: string | undefined): UserSettings['autonomy'] {
   return value === 'guided' || value === 'auto' ? value : 'manual';
 }
 
+/**
+ * Bağlam penceresi ayarını makul aralığa indirger; geçersiz değer varsayılana
+ * düşer ki yanlışlıkla tüm geçmiş tek seferde budanmasın.
+ */
+function readContextWindowTokens(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return undefined;
+  const rounded = Math.floor(value);
+  if (rounded < 8_000) return 8_000;
+  if (rounded > 4_000_000) return 4_000_000;
+  return rounded;
+}
+
 /** `agentModels` ayarını okur; yalnızca bilinen roller ve dolu model adları geçerlidir. */
 function readAgentModels(config: vscode.WorkspaceConfiguration): UserSettings['agentModels'] {
   const raw = config.get<Record<string, unknown>>('agentModels');
@@ -47,7 +59,8 @@ export function loadDefaultSettings(): UserSettings {
       : DEFAULT_USER_SETTINGS.selectedProvider) as UserSettings['selectedProvider'],
     selectedModel: config.get<string>('selectedModel') || DEFAULT_USER_SETTINGS.selectedModel,
     autoVerify: config.get<boolean>('autoVerify') ?? true,
-    autonomy: readAutonomy(config.get<string>('autonomy')),
+    autonomy: readAutonomy(readExplicitSetting<string>(config, 'autonomy')),
+    contextWindowTokens: readContextWindowTokens(config.get<number>('contextWindowTokens')),
     captureBaseline: config.get<boolean>('captureBaseline') ?? false,
     modelRouting: {
       enabled: config.get<boolean>('modelRoutingEnabled') ?? false,
@@ -56,25 +69,47 @@ export function loadDefaultSettings(): UserSettings {
       reviewModel: config.get<string>('reviewModel') || undefined
     },
     agentModels: readAgentModels(config),
-    autoAcceptTerms: config.get<boolean>('autoAcceptTerms') ?? false,
+    autoAcceptTerms: readExplicitSetting<boolean>(config, 'autoAcceptTerms') ?? false,
     promptCaching: config.get<boolean>('promptCaching') ?? true,
     useIntegratedTerminal: config.get<boolean>('useIntegratedTerminal') ?? true,
     showDiffBeforeWrite: config.get<boolean>('showDiffBeforeWrite') ?? true,
     knowledgeEmbeddings: {
-      enabled: config.get<boolean>('knowledgeEmbeddings') ?? false,
-      model: config.get<string>('embeddingModel') || 'nomic-embed-text',
-      baseUrl: config.get<string>('embeddingBaseUrl') || undefined
+      enabled: readExplicitSetting<boolean>(config, 'knowledgeEmbeddings') ?? false,
+      model: readExplicitSetting<string>(config, 'embeddingModel') || 'nomic-embed-text',
+      baseUrl: readExplicitSetting<string>(config, 'embeddingBaseUrl') || undefined
     },
     callGraph: {
       enabled: config.get<boolean>('callGraphEnabled') ?? true
     },
     sandbox: {
-      mode: config.get<string>('sandboxMode') === 'docker' ? 'docker' : 'none',
-      image: config.get<string>('sandboxImage') || 'node:20-bookworm',
-      network: config.get<boolean>('sandboxNetwork') ?? false
+      mode: readExplicitSetting<string>(config, 'sandboxMode') === 'docker' ? 'docker' : 'none',
+      image: readExplicitSetting<string>(config, 'sandboxImage') || 'node:20-bookworm',
+      network: readExplicitSetting<boolean>(config, 'sandboxNetwork') ?? false
     }
   };
 }
+
+/**
+ * Güvenlik açısından hassas ayarlar: yalnızca kullanıcı (global) ayarlarından
+ * okunur, çalışma alanı (`.vscode/settings.json`) değerleri YOK SAYILIR.
+ * Kötü niyetli bir repo bu anahtarlarla kullanıcının yalıtım kararını
+ * kapanamaz, sağlayıcısını değiştiremez ve gizli anahtarların gideceği
+ * uç noktayı (embeddingBaseUrl) kendi sunucusuna çeviremez. package.json
+ * tarafında da "scope": "application" ile editör bunları workspace'te
+ * zaten kabul etmez; buradaki filtre, eski/elle yazılmış dosyalara karşı
+ * ikinci katmandır.
+ */
+export const APPLICATION_SCOPED_SETTINGS: ReadonlySet<string> = new Set([
+  'selectedProvider',
+  'autonomy',
+  'autoAcceptTerms',
+  'knowledgeEmbeddings',
+  'embeddingModel',
+  'embeddingBaseUrl',
+  'sandboxMode',
+  'sandboxImage',
+  'sandboxNetwork'
+]);
 
 /**
  * Bir ayarı yalnızca kullanıcı (ya da çalışma alanı) açıkça ayarladıysa okur.
@@ -86,6 +121,7 @@ export function loadDefaultSettings(): UserSettings {
 export function readExplicitSetting<T>(config: vscode.WorkspaceConfiguration, key: string): T | undefined {
   const info = config.inspect<T>(key);
   if (!info) return undefined;
+  if (APPLICATION_SCOPED_SETTINGS.has(key)) return info.globalValue;
   return info.workspaceFolderValue ?? info.workspaceValue ?? info.globalValue;
 }
 
@@ -111,6 +147,9 @@ export function mergeExplicitConfiguration(
     selectedModel: pick('selectedModel', current.selectedModel),
     autoVerify: pick('autoVerify', current.autoVerify ?? true),
     autonomy: readAutonomy(pick('autonomy', current.autonomy ?? 'manual')),
+    contextWindowTokens:
+      readContextWindowTokens(pick<number | undefined>('contextWindowTokens', undefined)) ??
+      current.contextWindowTokens,
     captureBaseline: pick('captureBaseline', current.captureBaseline ?? false),
     modelRouting: {
       enabled: pick('modelRoutingEnabled', current.modelRouting?.enabled ?? false),
@@ -119,7 +158,10 @@ export function mergeExplicitConfiguration(
       reviewModel: pick('reviewModel', '') || current.modelRouting?.reviewModel
     },
     agentModels: readAgentModels(config) ?? current.agentModels,
-    autoAcceptTerms: pick('autoAcceptTerms', current.autoAcceptTerms ?? false),
+    // Güvenlik kapsamlı anahtar workspace'ten gelemeyeceği için tek kaynak
+    // oturumdaki değerin kendisidir; varsayılana indirmek yerine olduğu gibi
+    // taşınır (types'taki varsayılan bu alanı tanımsız bırakabilir).
+    autoAcceptTerms: pick('autoAcceptTerms', current.autoAcceptTerms),
     promptCaching: pick('promptCaching', current.promptCaching ?? true),
     useIntegratedTerminal: pick('useIntegratedTerminal', current.useIntegratedTerminal ?? true),
     showDiffBeforeWrite: pick('showDiffBeforeWrite', current.showDiffBeforeWrite ?? true),
@@ -147,6 +189,7 @@ export function settingsDiffer(a: UserSettings, b: UserSettings): boolean {
     a.selectedModel !== b.selectedModel ||
     a.autoVerify !== b.autoVerify ||
     a.autonomy !== b.autonomy ||
+    a.contextWindowTokens !== b.contextWindowTokens ||
     a.captureBaseline !== b.captureBaseline ||
     a.autoAcceptTerms !== b.autoAcceptTerms ||
     a.promptCaching !== b.promptCaching ||
@@ -258,6 +301,7 @@ export async function persistSettings(
     ollamaBaseUrl: next.ollamaBaseUrl,
     autoVerify: next.autoVerify,
     autonomy: next.autonomy ?? 'manual',
+    contextWindowTokens: next.contextWindowTokens,
     captureBaseline: next.captureBaseline,
     autoAcceptTerms: next.autoAcceptTerms ?? false,
     requestTimeoutSeconds: next.requestTimeoutSeconds ?? 180,

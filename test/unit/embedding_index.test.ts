@@ -109,3 +109,79 @@ describe('EmbeddingIndex: local ranking and persistence', () => {
     assert.strictEqual(ranked, undefined);
   });
 });
+
+describe('EmbeddingIndex: uç nokta güvenlik bekçisi', () => {
+  const originalFetch = globalThis.fetch;
+
+  after(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  /** fetch'i sayar ve sahte embedding döndürür. */
+  function stubFetch(): { calls: string[] } {
+    const calls: string[] = [];
+    globalThis.fetch = (async (input: unknown) => {
+      calls.push(String(input));
+      return new Response(JSON.stringify({ data: [{ embedding: [1, 2, 3] }] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }) as typeof fetch;
+    return { calls };
+  }
+
+  const corpus = [{ key: 'a', text: 'ödeme akışı', hash: 'h1' }];
+
+  it('gizli anahtar giden açık HTTP uç noktasına istek atmaz', async () => {
+    const { calls } = stubFetch();
+    const index = new EmbeddingIndex({
+      baseUrl: 'http://attacker.example/v1',
+      model: 'qwen3-embedding-8b',
+      style: 'openai',
+      apiKey: 'sk-secret'
+    });
+    const ranked = await index.rank('ödeme', corpus);
+    assert.strictEqual(ranked, undefined, 'güvensiz uç nokta sessizce devre dışı kalmalı');
+    assert.deepStrictEqual(calls, [], 'anahtar asla düz HTTP ile gönderilmemeli');
+  });
+
+  it('hassas olmayan (link-local/meta) adresleri de reddeder', async () => {
+    const { calls } = stubFetch();
+    const index = new EmbeddingIndex({
+      baseUrl: 'https://169.254.169.254/latest',
+      model: 'qwen3-embedding-8b',
+      style: 'openai',
+      apiKey: 'sk-secret'
+    });
+    const ranked = await index.rank('ödeme', corpus);
+    assert.strictEqual(ranked, undefined);
+    assert.deepStrictEqual(calls, []);
+  });
+
+  it('yerel loopback HTTP sunucusuna izin verir (LM Studio gibi)', async () => {
+    const { calls } = stubFetch();
+    const index = new EmbeddingIndex({
+      baseUrl: 'http://127.0.0.1:1234/v1',
+      model: 'local-embed',
+      style: 'openai',
+      apiKey: 'local'
+    });
+    const ranked = await index.rank('ödeme', corpus);
+    assert.ok(ranked, 'loopback uç nokta çalışmalı');
+    assert.match(calls[0] ?? '', /^http:\/\/127\.0\.0\.1:1234\/v1\/embeddings$/);
+  });
+
+  it('genel HTTPS adresine DNS denetiminden sonra gider', async () => {
+    const { calls } = stubFetch();
+    const index = new EmbeddingIndex({
+      baseUrl: 'https://8.8.8.8/v1',
+      model: 'remote-embed',
+      style: 'openai',
+      apiKey: 'sk-secret'
+    });
+    const ranked = await index.rank('ödeme', corpus);
+    assert.ok(ranked, 'genel IP + HTTPS engellenmemeli');
+    // İki istek doğaldır: bir kayıt kümesi gömülür, sonra sorgu gömülür.
+    assert.strictEqual(calls.length, 2);
+  });
+});

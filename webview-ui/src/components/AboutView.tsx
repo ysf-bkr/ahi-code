@@ -153,7 +153,8 @@ export const AboutView: React.FC<AboutViewProps> = ({ onBack, onSelectMenu, chan
           </div>
           <p className="mt-2 max-w-[280px] text-xs leading-relaxed ahi-text-muted">
             Ahilik zanaat disiplini ve mühendislik titizliğiyle projenizi anlayan, mimariyi kavrayan, kod
-            yazan ve testlerle doğrulayan yapay zekâ yazılım ajanı.
+            yazan ve testlerle doğrulayan yapay zekâ yazılım ajanı. Eline, beline, diline sahip olur: izin
+            sizden almadan yazmaz, yanlışını gizlemez, "oldu" demeden önce kanıt arar.
           </p>
           <div className="mt-2 text-2xs ahi-text-muted">
             Geliştirici: <span className="font-medium ahi-text-fg">{DEVELOPER_NAME}</span>

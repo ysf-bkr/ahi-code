@@ -2,7 +2,7 @@ import { AgentDefinition } from '../types';
 
 export const architect: AgentDefinition = {
   name: 'architect',
-  displayName: 'Lead Architect',
+  displayName: 'Mimar',
   role: 'System Design',
   description:
     'System Design, Contracts, and Core Architecture specialist. ' +

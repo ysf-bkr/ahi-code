@@ -45,6 +45,8 @@ export interface McpServerConfig {
   env?: Record<string, string>;
   url?: string; // uzak MCP sunucuları için HTTP/SSE uç noktası
   type?: 'stdio' | 'sse' | 'http';
+  /** Uzak uç noktaya gönderilecek ek HTTP başlıkları (örn. Authorization). */
+  headers?: Record<string, string>;
   disabled?: boolean;
 }
 
@@ -162,11 +164,11 @@ export class McpClient {
         this.killProcess();
       }
 
+      // Windows'ta PATHEXT'i kabuk çözer (shell: isWindows zaten true); eski
+      // "uzantısız her komuta .cmd ekle" kuralı node/python/uvx/docker'ı
+      // çalışmaz hâle getiriyordu (denetim bulgusu).
+      const command = this.config.command!;
       const isWindows = process.platform === 'win32';
-      const command =
-        isWindows && !/\.(cmd|exe|bat)$/i.test(this.config.command!)
-          ? `${this.config.command}.cmd`
-          : this.config.command!;
 
       this.process = spawn(command, this.config.args || [], {
         cwd: this.workspaceRoot,
@@ -201,6 +203,11 @@ export class McpClient {
 
       this.process.on('exit', (code) => {
         if (this.disposed) return;
+        // Süreç öldüyse yanıt asla gelmeyecek: bekleyen istekler zaman
+        // aşımını (60 sn) beklemek yerine hemen reddedilir (denetim bulgusu).
+        this.rejectPendingRequests(
+          new Error(`MCP server process exited (code: ${code ?? 'signal'}). Pending requests were dropped.`)
+        );
         if (code !== 0 && code !== null) {
           this.status = 'error';
           this.lastError = `Server exited unexpectedly (exit code: ${code})`;
@@ -361,6 +368,9 @@ export class McpClient {
       'Content-Type': 'application/json',
       Accept: 'application/json, text/event-stream'
     };
+    // Authorization isteyen uzak sunucular için kullanıcı tanımlı başlıklar
+    // (denetim bulgusu: config'de headers alanı yoktu).
+    Object.assign(headers, this.config.headers ?? {});
     if (this.sessionId) {
       headers['Mcp-Session-Id'] = this.sessionId;
     }
@@ -424,7 +434,9 @@ export class McpClient {
     } while (cursor);
 
     this.tools = discovered.map((tool) => ({
-      name: `mcp_${this.name}_${tool.name}` as ToolName,
+      // OpenAI uyumlu API'ler araç adında ^[a-zA-Z0-9_-]{1,64}$ bekler; tek
+      // bozuk ad tüm istekleri 400'e düşürürdü (denetim bulgusu).
+      name: `mcp_${this.name}_${tool.name}`.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 64) as ToolName,
       description: `[MCP: ${this.name}] ${tool.description || ''}`,
       parameters: tool.inputSchema || { type: 'object', properties: {}, required: [] },
       execute: async (args: Record<string, unknown>) => {
@@ -610,6 +622,23 @@ export class McpClient {
     this.buffer = rest;
 
     for (const json of messages) {
+      // `method` taşıyan mesaj sunucudan GELEN istek/bildiridir. İdi bekleyen
+      // bir istemci id'siyle çakışsa bile yanıt sanılıp çözülemez (denetim
+      // bulgusu): yöntem denetimi her zaman önce gelir.
+      if (json.method) {
+        if (json.id !== undefined) {
+          this.handleServerRequest(json.id, json.method);
+          continue;
+        }
+        try {
+          this.onNotification?.(json.method, json.params);
+        } catch {
+          // Bir bildirim tüketicisi hata fırlatsa bile okumaya devam et.
+        }
+        logInfo(`[MCP ${this.name}] notification: ${json.method}`);
+        continue;
+      }
+
       if (json.id !== undefined && this.pendingRequests.has(Number(json.id))) {
         const pending = this.pendingRequests.get(Number(json.id))!;
         const { resolve, reject } = pending;
@@ -621,21 +650,6 @@ export class McpClient {
         } else {
           resolve(json.result);
         }
-        continue;
-      }
-
-      if (json.id !== undefined && json.method) {
-        this.handleServerRequest(json.id, json.method);
-        continue;
-      }
-
-      if (json.method) {
-        try {
-          this.onNotification?.(json.method, json.params);
-        } catch {
-          // Bir bildirim tüketicisi hata fırlatsa bile okumaya devam et.
-        }
-        logInfo(`[MCP ${this.name}] notification: ${json.method}`);
       }
     }
   }
