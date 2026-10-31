@@ -39,7 +39,7 @@ describe('trimSmart: smart output truncation', () => {
 });
 
 describe('ContextManager: per-tool limits', () => {
-  const manager = new ContextManager({ contextWindowTokens: 64000 });
+  const manager = new ContextManager({ contextWindowTokens: 64000, compactionTokenRatio: 0 });
 
   it('truncates search_files output more aggressively than read_file', () => {
     const big = 'x'.repeat(30_000);
@@ -81,13 +81,13 @@ describe('ContextManager: early history summarization', () => {
   }
 
   it('does not modify short conversation', () => {
-    const manager = new ContextManager({ contextWindowTokens: 64000 });
+    const manager = new ContextManager({ contextWindowTokens: 64000, compactionTokenRatio: 0 });
     const history = buildHistory(3, 900);
     assert.deepStrictEqual(manager.compactHistory(history), history);
   });
 
   it('compresses old tool outputs when threshold exceeded', () => {
-    const manager = new ContextManager({ contextWindowTokens: 64000 });
+    const manager = new ContextManager({ contextWindowTokens: 64000, compactionTokenRatio: 0 });
     const history = buildHistory(15, 4000);
     const before = manager.estimateMessagesTokens(history);
     const compacted = manager.compactHistory(history);
@@ -100,7 +100,7 @@ describe('ContextManager: early history summarization', () => {
   });
 
   it('leaves recent steps as-is', () => {
-    const manager = new ContextManager({ contextWindowTokens: 64000 });
+    const manager = new ContextManager({ contextWindowTokens: 64000, compactionTokenRatio: 0 });
     const history = buildHistory(15, 4000);
     const compacted = manager.compactHistory(history, { keepRecent: 4 });
     const toolMessages = compacted.filter((m) => m.role === 'tool');
@@ -111,14 +111,14 @@ describe('ContextManager: early history summarization', () => {
   });
 
   it('does not compress short outputs', () => {
-    const manager = new ContextManager({ contextWindowTokens: 64000 });
+    const manager = new ContextManager({ contextWindowTokens: 64000, compactionTokenRatio: 0 });
     const history = buildHistory(12, 100);
     const compacted = manager.compactHistory(history);
     assert.ok(!compacted.some((m) => m.content.includes('compacted')));
   });
 
   it('does not break tool_call and tool_result matching', () => {
-    const manager = new ContextManager({ contextWindowTokens: 64000 });
+    const manager = new ContextManager({ contextWindowTokens: 64000, compactionTokenRatio: 0 });
     const compacted = manager.compactHistory(buildHistory(15, 4000));
     for (let i = 0; i < compacted.length; i++) {
       const message = compacted[i];
@@ -130,5 +130,21 @@ describe('ContextManager: early history summarization', () => {
         );
       assert.ok(hasCall, `orphan tool message: ${message.toolCallId}`);
     }
+  });
+
+  it('does not compact while token pressure stays under the ratio', () => {
+    // Oran varsayılanı 0,5: 64k pencerede eşik 32k token; bu geçmiş ~16k token.
+    const manager = new ContextManager({ contextWindowTokens: 64000 });
+    const history = buildHistory(15, 4000);
+    assert.ok(manager.estimateMessagesTokens(history) < 32000, 'test önkoşulu: baskı eşiğin altında');
+    assert.deepStrictEqual(manager.compactHistory(history), history, 'baskı yokken sıkıştırma çalışmamalı');
+  });
+
+  it('compacts once token pressure exceeds the ratio', () => {
+    // Küçük pencere: ~16k token, 8k×0,5 = 4k eşeği aşar → sıkıştırma devrede.
+    const manager = new ContextManager({ contextWindowTokens: 8000 });
+    const compacted = manager.compactHistory(buildHistory(15, 4000));
+    const count = compacted.filter((m) => m.role === 'tool' && m.content.includes('compacted')).length;
+    assert.ok(count >= 5, `baskıda eski çıktılar sıkışmalı, görülen: ${count}`);
   });
 });

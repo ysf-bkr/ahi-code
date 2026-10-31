@@ -20,6 +20,7 @@ import { coerceToolArguments, validateToolArguments, ToolDefinition } from '../.
 import { parseModulePlanInput, parsePlanUpdateInput, parseSubagentTaskParams } from '../../tools/parsers';
 import { logWarning } from '../../shared/logging';
 import type { AgentHost } from './agentHost';
+import { ReadDeduper } from './readDeduper';
 import type { SubagentTaskParams } from '../multiagent/SubagentManager';
 import { runTaskGraph, formatTaskGraphResults, type TaskNode } from '../multiagent/parallelScheduler';
 import type { CommandCheckpoint } from '../git/GitManager';
@@ -341,6 +342,28 @@ export class ToolPipelineController {
   }
 
   /**
+   * read_file hedefini istatistikler: tekrar-okuma bekçisinin anahtarı için
+   * çözümlenmiş mutlak yol ve değişiklik zamanı gerekir. İstatistik
+   * alınamıyorsa (silinmiş dosya, geçersiz yol) koruma sessizce devre dışı
+   * kalır ve okuma normal şekilde çalışır — asla aracı engellemez.
+   */
+  private async inspectReadTarget(
+    args: Record<string, unknown>,
+    workspaceRoot: string | undefined
+  ): Promise<{ path: string; mtimeMs: number } | undefined> {
+    const raw = toolArgString(args, 'path');
+    if (!raw) return undefined;
+    try {
+      const resolved = resolveWorkspacePath(raw, workspaceRoot);
+      const stat = await fs.stat(resolved);
+      if (!stat.isFile()) return undefined;
+      return { path: resolved, mtimeMs: stat.mtimeMs };
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Hazırlanmış tek bir araç çağrısını yürütür: özel araçlar (paralel alt
    * ajanlar, worktree birleştirme, plan ve spec yakalama, alt ajan delege
    * etme) ve komut checkpoint'li genel araç yolu.
@@ -574,6 +597,23 @@ export class ToolPipelineController {
         }
       }
 
+      // Tekrar-okuma koruması: ölçülen asıl israf "aynı dosyayı oku → düşün →
+      // yine oku" döngüsü. Birebir aynı okuma son birkaç adımın çıktısı
+      // arasında zaten varsa VE dosya o arada değişmemişse içerik yeniden
+      // üretilmez, model yönlendirilir. offset/limit farkı her zaman çalışır.
+      let readStamp: { path: string; mtimeMs: number } | undefined;
+      if (tc.name === 'read_file') {
+        readStamp = await this.inspectReadTarget(tc.args, workspaceRoot);
+        if (
+          readStamp &&
+          this.host.readDeduper.isRedundant(readStamp.path, tc.args.offset, tc.args.limit, readStamp.mtimeMs)
+        ) {
+          tc.status = 'completed';
+          tc.result = ReadDeduper.duplicateNote(readStamp.path, tc.args.offset, tc.args.limit);
+          return { paused: false, filesChanged: false };
+        }
+      }
+
       const toolResult = await toolDef.execute(tc.args, {
         workspaceRoot,
         terminal:
@@ -597,6 +637,10 @@ export class ToolPipelineController {
       });
       tc.status = 'completed';
       tc.result = this.host.contextManager.truncateToolOutput(toolResult, tc.name);
+      // Okuma gerçekten çalıştı: pencereye yaz ki sonraki birebir tekrar stub'lanabilsin.
+      if (tc.name === 'read_file' && readStamp) {
+        this.host.readDeduper.record(readStamp.path, tc.args.offset, tc.args.limit, readStamp.mtimeMs);
+      }
       // Komut bitti: geri alma bu andan SONRA gelen değişiklikleri kullanıcının
       // işi sayar ve onları silmez (denetim bulgusu F07).
       if (commandCheckpoint) commandCheckpoint.completedAt = Date.now();
@@ -627,6 +671,13 @@ export class ToolPipelineController {
         // Çağrı haritası aynı görev içinde bayat kalmasın: yalnızca bu dosya
         // yeniden taranır. Hata olsa bile görev akışı bozulmaz.
         if (targetPath && workspaceRoot) {
+          // Dosyanın eski okuma kayıtları artık bayat: içerik değişti,
+          // bir sonraki okuma ne olursa olsun gerçekten çalışmalı.
+          try {
+            this.host.readDeduper.invalidate(resolveWorkspacePath(targetPath, workspaceRoot));
+          } catch {
+            /* geçersiz yol zaten yazma sırasında raporlandı */
+          }
           void this.host.callGraphManager.onFileChanged(workspaceRoot, targetPath);
           // Değiştirilen dosyayı doğrudan VS Code editöründe aç ve göster
           void this.host.openFileInEditor(targetPath, workspaceRoot);

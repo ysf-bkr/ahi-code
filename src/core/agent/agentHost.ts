@@ -21,6 +21,7 @@ import type { SnapshotManager } from '../snapshot/SnapshotManager';
 import type { HookManager } from '../hooks/HookManager';
 import type { CheckpointManager } from '../checkpoint/CheckpointManager';
 import type { ContextManager } from '../context/ContextManager';
+import type { ReadDeduper } from './readDeduper';
 import type { ProjectMemoryManager, ProjectMemoryStatus } from '../memory/ProjectMemoryManager';
 import type { TaskPlanner } from '../plan/TaskPlanner';
 import type { ModulePlanner } from '../plan/ModulePlanner';
@@ -60,6 +61,8 @@ export interface AgentHost {
   lspClient: LspClient;
   hookManager: HookManager;
   contextManager: ContextManager;
+  /** "Aynı dosyayı tekrar okuma" döngüsünü engelleyen bekçi. */
+  readDeduper: ReadDeduper;
   projectMemory: ProjectMemoryManager;
   planner: TaskPlanner;
   /** Kod yazmadan önce çıkarılan katmanlı modül haritası. */

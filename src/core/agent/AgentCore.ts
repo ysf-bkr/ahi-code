@@ -16,6 +16,7 @@ import { SnapshotManager } from '../snapshot/SnapshotManager';
 import { HookManager } from '../hooks/HookManager';
 import { CheckpointManager } from '../checkpoint/CheckpointManager';
 import { ContextManager } from '../context/ContextManager';
+import { ReadDeduper } from './readDeduper';
 import { ProjectMemoryManager, ProjectMemoryStatus } from '../memory/ProjectMemoryManager';
 import { VectorMemory } from '../memory/VectorMemory';
 import { resolveWorkspacePath } from '../../tools/pathSafety';
@@ -150,6 +151,8 @@ export class AgentCore implements AgentHost {
   public lspClient: LspClient;
   public hookManager: HookManager;
   public contextManager: ContextManager;
+  /** "Aynı dosyayı tekrar okuma" döngüsünü engelleyen bekçi (araç hattında çalışır). */
+  public readDeduper = new ReadDeduper();
   public projectMemory = new ProjectMemoryManager();
   public planner = new TaskPlanner();
   public modulePlanner = new ModulePlanner();

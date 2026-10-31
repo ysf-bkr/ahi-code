@@ -1,6 +1,7 @@
 import { ModelProvider, ProviderMessage, ModelCompletionResponse } from './base';
 import type { ToolDefinition } from '../tools/base';
 import { isRecord } from '../shared/errors';
+import { logWarning } from '../shared/logging';
 import { buildRequestBody } from './openaiRequest';
 
 interface OpenAIToolCall {
@@ -78,6 +79,32 @@ function summarizeErrorBody(text: string): string {
   if (!value) return '(empty response body)';
   if (value.length <= MAX_ERROR_BODY_CHARS) return value;
   return `${value.slice(0, MAX_ERROR_BODY_CHARS)}… [${value.length - MAX_ERROR_BODY_CHARS} chars omitted]`;
+}
+
+/**
+ * OpenAI tarzı hata gövdesinden "model kimliği bulunamadı" durumunu çözümler
+ * ve sunucunun önerdiği doğru kimliği döndürür (EVREN bu bilgiyi
+ * `evren.suggested_models` alanında taşır). Öneri yoksa undefined.
+ */
+export function suggestedModelError(bodyText: string): string | undefined {
+  try {
+    const parsed = JSON.parse(bodyText) as unknown;
+    if (!isRecord(parsed) || !isRecord(parsed.error)) return undefined;
+    const error = parsed.error;
+    const isModelLookup =
+      error.code === 'model_not_found' ||
+      /model bulunamadı|model .* not found|does not exist|unknown model/i.test(String(error.message || ''));
+    if (!isModelLookup) return undefined;
+    const source = isRecord(error.evren) ? error.evren : error;
+    const list = source.suggested_models;
+    if (Array.isArray(list)) {
+      const first = list.find((item) => typeof item === 'string' && item.trim().length > 0);
+      if (typeof first === 'string') return first.trim();
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 export class OpenAICompatibleProvider implements ModelProvider {
@@ -195,6 +222,8 @@ export class OpenAICompatibleProvider implements ModelProvider {
       let response: Response | undefined;
       let attempts = 0;
       const maxAttempts = 3;
+      // "model bulunamadı" iyileştirmesi istek başına en fazla bir kez denenir.
+      let modelHealed = false;
 
       while (attempts < maxAttempts) {
         attempts++;
@@ -254,6 +283,23 @@ export class OpenAICompatibleProvider implements ModelProvider {
 
         // 400/401/403/404 gibi kalıcı hatalar yeniden denenmeden bildirilir.
         const errText = summarizeErrorBody(await response.text());
+
+        // 404 "model bulunamadı": sunucu tanıdığı doğru kimliği öneriyle
+        // döner (ör. "MiMo-V2.6-Pro" → "mimo-v2.6-pro"). Görevi öldürmek
+        // yerine önerilen kimliği kalıcı olarak benimsen ve isteği bir kez
+        // yinele; öneri yoksa eski davranış (hata) sürer.
+        const suggested = response.status === 404 ? suggestedModelError(errText) : undefined;
+        if (suggested && suggested !== body.model && !modelHealed) {
+          logWarning(
+            `Model "${String(body.model)}" rejected by server; switching to suggested "${suggested}"`
+          );
+          this.model = suggested;
+          body.model = suggested;
+          modelHealed = true;
+          attempts--; // iyileştirme yeniden deneme bütçesinden yemesin
+          continue;
+        }
+
         throw new Error(`API error [${response.status}]: ${errText}`);
       }
 

@@ -6,6 +6,13 @@ export interface ContextWindowOptions {
   maxToolOutputChars?: number;
   /** Konuşma bu adım sayısına ulaşınca eski araç çıktılarını sıkıştır. */
   summarizeAfterSteps?: number;
+  /**
+   * Sıkıştırmanın devreye girmesi için bağlam penceresinin aşması gereken oran
+   * (varsayılan 0,5). Erken sıkıştırma modele "dosyayı yeniden oku" sinyali
+   * verip tekrar okuma döngüleri üretiyordu; artık yalnızca gerçek token
+   * baskısında sıkıştırılır. 0 verilirse eşik devre dışı kalır (testler).
+   */
+  compactionTokenRatio?: number;
 }
 
 /**
@@ -128,11 +135,13 @@ export class ContextManager {
   private contextWindowTokens: number;
   private maxToolOutputChars: number;
   private summarizeAfterSteps: number;
+  private compactionTokenRatio: number;
 
   constructor(options: ContextWindowOptions = {}) {
     this.contextWindowTokens = options.contextWindowTokens || DEFAULT_CONTEXT_WINDOW_TOKENS;
     this.maxToolOutputChars = options.maxToolOutputChars || 12000;
     this.summarizeAfterSteps = options.summarizeAfterSteps ?? 8;
+    this.compactionTokenRatio = options.compactionTokenRatio ?? 0.5;
   }
 
   /**
@@ -187,6 +196,13 @@ export class ContextManager {
     const stepCount = messages.filter((m) => m.role === 'assistant' && (m.toolCalls?.length || 0) > 0).length;
     if (stepCount < threshold) return messages;
 
+    // Token baskısı yoksa sıkıştırma: içerik tam kalır, model "yeniden oku"
+    // sinyaline ihtiyaç duymaz. Oran 0 ise eşik devre dışıdır.
+    if (this.compactionTokenRatio > 0) {
+      const pressure = this.estimateMessagesTokens(messages);
+      if (pressure < this.contextWindowTokens * this.compactionTokenRatio) return messages;
+    }
+
     const toolIndexes = messages
       .map((message, index) => ({ message, index }))
       .filter(({ message }) => message.role === 'tool');
@@ -205,7 +221,7 @@ export class ContextManager {
         ...message,
         content:
           `${firstLine.slice(0, 160)}\n[... earlier step output compacted: ${message.content.length} chars; ` +
-          `re-read the file or re-run the command if you need it again ...]`
+          `the file has most likely NOT changed — reuse what you already know and re-read only if the content you need is gone ...]`
       };
     }
     return result;
