@@ -148,8 +148,8 @@
         },
         "ahiCode.reportErrors": {
           "type": "boolean",
-          "default": true,
-          "description": "Eklenti kendi hatalarını GitHub deposunda (ysf-bkr/ahi-code) otomatik sorun olarak bildirir. Aynı hatanın mükerrer kaydı açılmaz; dosya yolları, anahtarlar ve kimlikler maskelenerek temizlenir. Gönderim için GitHub CLI (gh) kurulu ve oturumu açık olmalıdır; değilse bildirim sessizce atlanır."
+          "default": false,
+          "description": "Varsayılan kapalı (opt-in). Etkinleştirilirse eklenti kendi hatalarını GitHub deposunda (ysf-bkr/ahi-code) herkese açık sorun olarak bildirir; bildirim, gh oturumu açık olan GitHub hesabın adına açılır. Aynı hatanın mükerrer kaydı açılmaz; dosya yolları, anahtarlar, e-postalar ve URL sorgu dizileri maskelenir. GitHub CLI (gh) kurulu ve oturumu açık değilse bildirim sessizce atlanır."
         },
         "ahiCode.sandboxMode": {
           "type": "string",

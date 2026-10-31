@@ -85,23 +85,26 @@ hata bildirimleri**. Eklenti, kullanıcıya gösterdiği bir hatayla karşılaş
 bakım sorumlusunun düzeltebilmesi için AhiCode'ün herkese açık GitHub
 deposunda (`ysf-bkr/ahi-code`) bir sorun (issue) açabilir.
 
-- Denetim: `ahiCode.reportErrors` (varsayılan açık). Kapatınca bu özelliğin
-  tüm dış çağrıları durur.
-- Taşıma: bildirimler kendi makinenizde kendi `gh` (GitHub CLI) oturumunuzla
-  oluşturulur. `gh` kurulu veya giriş yapmış değilse hiçbir şey gönderilmez;
-  eklenti bu özellik için kendi üstünde hiçbir GitHub kimliği tutmaz.
+- Denetim: `ahiCode.reportErrors` (varsayılan kapalı — etkinleştirme sizden).
+  Siz açıkça açmadıkça bu özellik hiçbir şey göndermez; kapatınca tüm dış
+  çağrıları durur.
+- Taşıma: bildirimler kendi makinenizde kendi `gh` (GitHub CLI) oturumunuzla,
+  o oturuma ait GitHub hesabı adına ve herkese açık olarak oluşturulur. `gh`
+  kurulu veya giriş yapmış değilse hiçbir şey gönderilmez; eklenti bu özellik
+  için kendi üstünde hiçbir GitHub kimliği tutmaz.
 - İçerik: yalnızca hata mesajının kendisi ve kaba ortam bilgisi (eklenti
   sürümü, uygulama adı, platform, zaman). Gönderimden önce dosya yolları,
-  API anahtarı benzeri diziler, UUID'ler, uzun hex kimlikleri ve büyük
-  sayılar maskelenir; metin kısaltılır. Sohbet dökümü, dosya içeriği ve kod
-  asla eklenmez.
+  API anahtarı benzeri diziler (`sk-`, `ghp_`, `xox`, `AIza…`, `Bearer …`
+  jetonları), e-posta adresleri, URL sorgu dizileri, UUID'ler, uzun hex
+  kimlikleri ve büyük sayılar maskelenir; metin kısaltılır. Sohbet dökümü,
+  dosya içeriği ve kod asla eklenmez.
 - Mükerrer koruması: her hata, yerelde saklanan ve issue gövdesine gömülen
   bir içerik parmak izi alır; aynı hata ikinci bir sorun açmaz.
 - Bütçe: eklenti oturumu başına en fazla beş yeni sorun, aralarında bekleme
   süresiyle açılır.
 
-Maskelenmiş bir hata metnini bile hassas sayıyorsanız
-`ahiCode.reportErrors` ayarını `false` yapın.
+Özellik varsayılan olarak kapalı geldiği için, `ahiCode.reportErrors`
+ayarını kendiniz etkinleştirmedikçe hiçbir bildirim gönderilmez.
 
 VS Code, model sağlayıcıları, web arama hizmetleri, MCP sunucuları veya
 yapılandırdığınız başka hizmetlerin kendi veri uygulamaları bu bildirimin

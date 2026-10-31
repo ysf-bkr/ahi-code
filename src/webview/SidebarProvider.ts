@@ -66,7 +66,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
           appHost: vscode.env.appName,
           platform: process.platform
         },
-        isEnabled: () => vscode.workspace.getConfiguration('ahiCode').get<boolean>('reportErrors') !== false,
+        isEnabled: () => vscode.workspace.getConfiguration('ahiCode').get<boolean>('reportErrors') === true,
         onReported: (issueUrl) => {
           if (!issueUrl) return;
           this.postMessage({

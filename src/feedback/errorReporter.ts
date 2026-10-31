@@ -1,12 +1,14 @@
 /**
  * Otomatik hata bildirimi (GitHub Issues).
  *
- * Kullanıcı açıksa (`ahiCode.reportErrors`) eklenti kendi hatalarını
- * `ysf-bkr/ahi-code` deposunda issue olarak bildirir. Üç söz verilir:
+ * Kullanıcı etkinleştirmişse (`ahiCode.reportErrors`, varsayılan kapalı)
+ * eklenti kendi hatalarını `ysf-bkr/ahi-code` deposunda issue olarak bildirir.
+ * Üç söz verilir:
  * 1. Mükerrer yok: hata mesajı normalize edilip parmak izine çevrilir; aynı
  *    parmak izi hem yerel kayıtta hem GitHub'da aranır, ikisi de yoksa açılır.
  * 2. Gizlilik: gövde yazılmadan önce mutlak yollar, API anahtarı benzeri
- *    diziler, uzun hex/UUID ve sayısal zaman damgaları maskelenir.
+ *    diziler (sk-/ghp_/xox/AIza/Bearer), e-postalar, URL sorgu dizileri,
+ *    uzun hex/UUID ve sayısal zaman damgaları maskelenir.
  * 3. Gürültü yok: oturum başına üst sınır ve iki bildirim arası bekleme.
  *
  * VS Code API'sine bağımlılık yoktur; taşıyıcı olarak `gh` CLI argüman
@@ -86,7 +88,13 @@ export function normalizeErrorMessage(message: string): string {
     String(message || '')
       // Aynı hata arka plan bildiriminde önekle gelir; imza ayrışmasın.
       .replace(/^arka plan:\s*/i, '')
-      .replace(/sk-[A-Za-z0-9_-]{8,}|gh[pousr]_[A-Za-z0-9]{8,}|xox[bap]-[A-Za-z0-9-]+/g, '<anahtar>')
+      // URL sorgu dizisi kullanıcı/anahtar taşır; yalnızca kök korunur.
+      .replace(/https?:\/\/[^\s'"]+/gi, (urlText) => urlText.replace(/\?.*$/, '?<sorgu>'))
+      .replace(
+        /\bsk-[A-Za-z0-9_-]{8,}|\bgh[pousr]_[A-Za-z0-9]{8,}|xox[bap]-[A-Za-z0-9-]+|\bAIza[0-9A-Za-z_-]{20,}|\bbearer\s+[A-Za-z0-9._~+/-]{8,}=*/gi,
+        '<anahtar>'
+      )
+      .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, '<e-posta>')
       .replace(/(?:\/[\w.@ -]+){2,}|(?:[A-Za-z]:\\[\w.@ \\-]+)+/g, '<yol>')
       .replace(/\b[0-9a-f]{8}-[0-9a-f-]{27,}\b/gi, '<uuid>')
       .replace(/\b[0-9a-f]{16,}\b/gi, '<hex>')
@@ -120,7 +128,9 @@ export function sanitizeForReport(message: string, maxChars = 2000): string {
 export function buildIssueBody(message: string, fingerprint: string, context: ErrorReporterContext): string {
   const sanitized = sanitizeForReport(message);
   return [
-    'AhiCode eklentisi bu hatayı kendi çalışma sırasında algıladı ve kullanıcı onaylı otomatik bildirimle raporluyor.',
+    'AhiCode bu hatayı kendi çalışma sırasında algıladı. Kullanıcının etkinleştirdiği',
+    '`ahiCode.reportErrors` ayarı kapsamında, oturumu açık GitHub hesabı üzerinden',
+    'otomatik olarak bildirilmiştir.',
     '',
     `Hata imzası: \`${FINGERPRINT_MARKER}-${fingerprint}\``,
     '',

@@ -76,6 +76,28 @@ describe('errorReporter: normalizasyon ve parmak izi', () => {
   it('farklı hatalar farklı imza üretir', () => {
     assert.notStrictEqual(fingerprintOf('hata A'), fingerprintOf('hata B'));
   });
+
+  it('e-posta, Bearer jetonu, AIza anahtarı ve URL sorgusunu maskeler', () => {
+    const normalized = normalizeErrorMessage(
+      'auth failed for ybekar@example.com with Bearer ya29.a0AfH6SMBx-key_abc AIzaSyD3nDummyKeyLongEnough12345 see https://api.example.com/v1/x?user=alice&token=s3cr3t'
+    );
+    assert.ok(normalized.includes('<e-posta>'), normalized);
+    assert.ok(normalized.includes('<anahtar>'), normalized);
+    assert.ok(normalized.includes('?<sorgu>'), normalized);
+    assert.ok(
+      !normalized.includes('example.com@') && !normalized.includes('ybekar@example'),
+      'e-posta kalmamalı'
+    );
+    assert.ok(!normalized.includes('ya29'), 'Bearer jetonu kalmamalı');
+    assert.ok(!normalized.includes('AIzaSy'), 'Google anahtarı kalmamalı');
+    assert.ok(!normalized.includes('s3cr3t') && !normalized.includes('alice'), 'URL sorgusu kalmamalı');
+  });
+
+  it('sorgusuz URL sorgu maskesi almaz', () => {
+    const normalized = normalizeErrorMessage('timeout at GET https://api.example.com/models');
+    assert.ok(normalized.startsWith('timeout at get '), normalized);
+    assert.ok(!normalized.includes('<sorgu>'), normalized);
+  });
 });
 
 describe('errorReporter: içerik üretimi', () => {

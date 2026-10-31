@@ -81,23 +81,26 @@ error reports**. When the extension hits an error it shows the user, it can
 open a GitHub issue in the public AhiCode repository
 (`ysf-bkr/ahi-code`) so the maintainer can fix it.
 
-- Control: `ahiCode.reportErrors` (on by default). Turning it off disables
-  every outbound call of this feature.
+- Control: `ahiCode.reportErrors` (off by default — opt-in). The feature is
+  silent unless you explicitly turn it on; turning it off disables every
+  outbound call of this feature.
 - Transport: reports are created with your own `gh` (GitHub CLI) session on
-  your machine. If `gh` is not installed or not signed in, nothing is sent.
+  your machine, under the GitHub account that session belongs to, and the
+  issue is public. If `gh` is not installed or not signed in, nothing is sent.
   The extension holds no GitHub credentials of its own for this feature.
 - Content: only the error message itself plus coarse environment facts
   (extension version, app name, platform, timestamp). Before sending, file
-  paths, API-key-like strings, UUIDs, long hex ids and large numbers are
-  masked, and the text is truncated. Chat transcripts, file contents and
-  code are never included.
+  paths, API-key-like strings (`sk-`, `ghp_`, `xox`, `AIza…`, `Bearer …`
+  tokens), e-mail addresses, URL query strings, UUIDs, long hex ids and large
+  numbers are masked, and the text is truncated. Chat transcripts, file
+  contents and code are never included.
 - Deduplication: each error gets a content fingerprint stored locally and
   embedded in the issue body; the same error never creates a second issue.
 - Budget: at most five new issues per extension session, with a cooldown
   between them.
 
-If you consider even a masked error text sensitive, set
-`ahiCode.reportErrors` to `false`.
+Because the feature ships disabled, nothing is ever reported unless you
+enable `ahiCode.reportErrors` yourself.
 
 The data practices of VS Code, model providers, web search services, MCP
 servers, or any other service you configure are outside the scope of this
