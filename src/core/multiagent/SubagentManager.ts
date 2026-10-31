@@ -351,10 +351,12 @@ Complete your task and provide a clear report of the results to the main agent w
       { role: 'user', content: params.task }
     ];
 
-    let maxSteps = 8;
+    // Adım bütçesi kaldırıldı: alt ajan, model görevi bitirene ya da kullanıcı
+    // iptal edene kadar sürer. Kaçak döngü koruması model yanıtı ve iptal
+    // sinyalidir; sayısal tur sınırı davranış sürprizi üretiyordu.
+    let stepCount = 0;
     this.onSubagentStatus?.(params.role, 'Started...', {
       state: 'starting',
-      maxSteps: 8,
       isolate: isolated,
       worktreePath: isolated ? workspaceRoot : undefined
     });
@@ -366,7 +368,7 @@ Complete your task and provide a clear report of the results to the main agent w
       );
     }
 
-    while (maxSteps > 0) {
+    for (;;) {
       if (signal?.aborted) {
         this.onSubagentStatus?.(params.role, 'Cancelled', {
           state: 'cancelled',
@@ -376,7 +378,7 @@ Complete your task and provide a clear report of the results to the main agent w
         return `[Subagent (${params.role})]: Task cancelled by the user.`;
       }
 
-      maxSteps--;
+      stepCount++;
       let response: ModelCompletionResponse;
       try {
         response = await this.callModel(
@@ -430,8 +432,7 @@ Complete your task and provide a clear report of the results to the main agent w
       for (const tc of response.toolCalls) {
         this.onSubagentStatus?.(params.role, `Running ${tc.name}...`, {
           tool: tc.name,
-          step: 8 - maxSteps,
-          maxSteps: 8,
+          step: stepCount,
           state: 'running',
           isolate: isolated,
           worktreePath: isolated ? workspaceRoot : undefined
@@ -644,14 +645,6 @@ Complete your task and provide a clear report of the results to the main agent w
         }
       }
     }
-
-    this.onSubagentStatus?.(params.role, 'Completed', {
-      state: 'completed',
-      isolate: isolated,
-      worktreePath: isolated ? workspaceRoot : undefined
-    });
-
-    return `[Subagent (${params.role})]: Maximum step limit (8) reached. Partial results are included in the tool outputs above.`;
   }
 
   /**

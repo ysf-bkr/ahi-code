@@ -240,7 +240,9 @@ export const AgentsView: React.FC<AgentsViewProps> = ({ onBack, state, onSelectM
                     <span className="font-mono">
                       {state.activeSubagent.currentTool}
                       {state.activeSubagent.step
-                        ? ` (${state.activeSubagent.step}/${state.activeSubagent.maxSteps || 8})`
+                        ? state.activeSubagent.maxSteps
+                          ? ` (${state.activeSubagent.step}/${state.activeSubagent.maxSteps})`
+                          : ` (adım ${state.activeSubagent.step})`
                         : ''}
                     </span>
                   </>

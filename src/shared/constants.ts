@@ -97,7 +97,8 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   autoVerify: true,
   autonomy: 'manual',
   maxRepairAttempts: 2,
-  maxStepsPerTask: 25,
+  // 0 = sınırsız: turlar yalnızca kullanıcı opt-in bir sınır verirse duraklatılır.
+  maxStepsPerTask: 0,
   maxTokensPerTask: 0,
   maxContinuations: 12,
   useIntegratedTerminal: true

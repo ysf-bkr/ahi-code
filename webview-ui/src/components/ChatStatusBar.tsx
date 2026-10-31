@@ -50,7 +50,11 @@ export function resolveChatStatus(state: TaskState): ChatStatus {
     const location = sub.isolate ? ' · İzole Worktree' : '';
     let action = 'çalışıyor…';
     if (sub.currentTool) {
-      const stepStr = sub.step ? ` (${sub.step}/${sub.maxSteps || 8})` : '';
+      const stepStr = sub.step
+        ? sub.maxSteps
+          ? ` (${sub.step}/${sub.maxSteps})`
+          : ` (adım ${sub.step})`
+        : '';
       action = `araç çalışıyor: ${sub.currentTool}${stepStr}`;
     }
     return {

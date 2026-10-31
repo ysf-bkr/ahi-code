@@ -229,16 +229,14 @@ export class AgentLoop {
     };
     let tools: ToolDefinition[];
 
-    const stepsPerSegment =
+    // Adım bütçesi varsayılan olarak sınırsız: görev, model yanıtı bitirene
+    // veya kullanıcı durdurana kadar sürer. Ayarlar'da pozitif bir değer
+    // verildiğinde tur o kadar adımda duraklatılır (bilinçli opt-in sınır).
+    const stepBudget =
       this.host.settings.maxStepsPerTask && this.host.settings.maxStepsPerTask > 0
         ? this.host.settings.maxStepsPerTask
-        : 25;
-    // Büyük bir görevin meşru olarak tek bölümden fazla adıma ihtiyacı olur.
-    // Durup kullanıcıyı beklemek yerine, görev yine de sonlansın diye sınırlı
-    // sayıda bölüme kadar otomatik devam edilir.
-    const maxSegments = 8;
-    let segments = 0;
-    let maxSteps = stepsPerSegment;
+        : Number.POSITIVE_INFINITY;
+    let maxSteps = stepBudget;
     let changedDuringTurn = false;
 
     while (!this.host.isCancelled && this.host.state.status === 'running') {
@@ -259,15 +257,7 @@ export class AgentLoop {
       }
 
       if (maxSteps <= 0) {
-        if (segments + 1 >= maxSegments) break;
-        segments++;
-        maxSteps = stepsPerSegment;
-        this.host.notify({
-          level: 'info',
-          message: `Adım sınırına ulaşıldı; görev otomatik devam ediyor (${segments + 1}/${maxSegments}).`
-        });
-        await this.host.saveCurrentState();
-        this.host.emitState();
+        break;
       }
 
       maxSteps--;
@@ -531,7 +521,7 @@ export class AgentLoop {
       );
       this.host.notify({
         level: 'warning',
-        message: `Görev ${segments + 1} bölümde tamamlanamadı (adım sınırı). Devam etmek için "devam" yazın veya adım bütçesini artırın.`
+        message: `Görev adım sınırına ulaşıldı (${stepBudget} adım). Devam etmek için "devam" yazın veya Ayarlar'daki adım bütçesini yükseltin (0 = sınırsız).`
       });
       await this.host.saveCurrentState();
       this.host.emitState();

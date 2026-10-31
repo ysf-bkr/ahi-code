@@ -43,6 +43,28 @@ describe('SubagentManager: role and depth limits', () => {
     assert.ok(result.includes('maxDepth'));
   });
 
+  it('alt ajan 8 adımla sınırlı değil: görev bitene kadar sürer', async () => {
+    let calls = 0;
+    const loopingProvider: ModelProvider = {
+      id: 'loop',
+      name: 'Loop',
+      sendMessage: async () => {
+        calls += 1;
+        if (calls < 12) {
+          return {
+            text: '',
+            toolCalls: [{ id: `c${calls}`, name: 'loop_probe', arguments: {} }]
+          };
+        }
+        return { text: '12 tur sonra tamamlandı' };
+      }
+    };
+    const manager = new SubagentManager(loopingProvider);
+    const result = await manager.runSubagent({ role: 'security', task: 'x' }, undefined, 1);
+    assert.strictEqual(calls, 12, 'eski 8 adım sınırı geri gelmemeli');
+    assert.ok(result.includes('12 tur sonra tamamlandı'));
+  });
+
   it('runs built-in reviewer role (aliased to quality)', async () => {
     const manager = new SubagentManager(provider);
     const result = await manager.runSubagent({ role: 'reviewer', task: 'Kodu incele' }, undefined, 1);
