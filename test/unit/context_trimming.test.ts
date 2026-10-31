@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { ContextManager, trimSmart } from '../../src/core/context/ContextManager';
-import { ProviderMessage } from '../../src/providers/base';
+import { ContextManager, trimSmart } from '@ahicode/core/core/context/ContextManager';
+import { ProviderMessage } from '@ahicode/core/providers/base';
 
 describe('trimSmart: smart output truncation', () => {
   it('does not modify text below limit', () => {

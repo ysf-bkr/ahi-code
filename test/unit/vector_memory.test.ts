@@ -3,9 +3,9 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { ProjectMemoryManager } from '../../src/core/memory/ProjectMemoryManager';
-import { KnowledgeStore } from '../../src/core/knowledge/KnowledgeStore';
-import { VectorMemory } from '../../src/core/memory/VectorMemory';
+import { ProjectMemoryManager } from '@ahicode/core/core/memory/ProjectMemoryManager';
+import { KnowledgeStore } from '@ahicode/core/core/knowledge/KnowledgeStore';
+import { VectorMemory } from '@ahicode/core/core/memory/VectorMemory';
 
 describe('VectorMemory: Vektörel Hafıza ve Asla Unutmama', () => {
   let tmpDir: string;

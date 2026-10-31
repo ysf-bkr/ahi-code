@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { assessCommand, isDangerousCommand } from '../../src/shared/commandPolicy';
-import { PermissionManager } from '../../src/core/permission/PermissionManager';
-import { UserSettings } from '../../src/shared/types';
+import { assessCommand, isDangerousCommand } from '@ahicode/core/shared/commandPolicy';
+import { PermissionManager } from '@ahicode/core/core/permission/PermissionManager';
+import { UserSettings } from '@ahicode/core/shared/types';
 
 const settings: UserSettings = {
   selectedProvider: 'ollama',

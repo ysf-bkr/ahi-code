@@ -1,8 +1,8 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import * as assert from 'node:assert';
-import { normalizeBaseUrl, OpenAICompatibleProvider } from '../../src/providers/openai';
-import { createModelProvider } from '../../src/providers';
-import { UserSettings } from '../../src/shared/types';
+import { normalizeBaseUrl, OpenAICompatibleProvider } from '@ahicode/core/providers/openai';
+import { createModelProvider } from '@ahicode/core/providers';
+import { UserSettings } from '@ahicode/core/shared/types';
 
 const originalFetch = globalThis.fetch;
 let calls = 0;

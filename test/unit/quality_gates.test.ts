@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { filterToolsForMode, isDelegationTool, isToolAllowed } from '../../src/core/agent/modeTools';
-import { criteriaCoverage, checkSpecCoverage } from '../../src/core/spec/SpecStore';
-import type { TaskSpec } from '../../src/core/spec/SpecStore';
+import { filterToolsForMode, isDelegationTool, isToolAllowed } from '@ahicode/core/core/agent/modeTools';
+import { criteriaCoverage, checkSpecCoverage } from '@ahicode/core/core/spec/SpecStore';
+import type { TaskSpec } from '@ahicode/core/core/spec/SpecStore';
 
 /**
  * Endüstriyel kalite kapıları:

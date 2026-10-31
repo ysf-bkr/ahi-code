@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { AuditLog, auditFilePath, GENESIS_HASH, AUDIT_FILE_NAME } from '../../src/core/audit/AuditLog';
+import { AuditLog, auditFilePath, GENESIS_HASH, AUDIT_FILE_NAME } from '@ahicode/core/core/audit/AuditLog';
 
 describe('AuditLog: hash chain', () => {
   let root: string;

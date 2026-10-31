@@ -3,6 +3,7 @@
 .vscode-test/**
 src/**
 test/**
+packages/**
 .agents/**
 .ahi/**
 docs/**

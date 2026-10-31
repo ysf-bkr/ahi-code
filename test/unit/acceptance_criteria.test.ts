@@ -3,9 +3,9 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { updateAcceptanceCriteriaTool } from '../../src/tools';
-import { SpecStore } from '../../src/core/spec/SpecStore';
-import { createWorkflowState } from '../../src/core/workflow/TaskWorkflow';
+import { updateAcceptanceCriteriaTool } from '@ahicode/core/tools';
+import { SpecStore } from '@ahicode/core/core/spec/SpecStore';
+import { createWorkflowState } from '@ahicode/core/core/workflow/TaskWorkflow';
 
 describe('update_acceptance_criteria: tool that opens the done gate', () => {
   let root: string;

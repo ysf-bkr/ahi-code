@@ -3,9 +3,9 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { SnapshotManager } from '../../src/core/snapshot/SnapshotManager';
-import { PermissionManager } from '../../src/core/permission/PermissionManager';
-import { UserSettings } from '../../src/shared/types';
+import { SnapshotManager } from '@ahicode/core/core/snapshot/SnapshotManager';
+import { PermissionManager } from '@ahicode/core/core/permission/PermissionManager';
+import { UserSettings } from '@ahicode/core/shared/types';
 import {
   readFileTool,
   writeFileTool,
@@ -13,8 +13,8 @@ import {
   listDirectoryTool,
   searchFilesTool,
   executeCommandTool
-} from '../../src/tools';
-import { ToolExecutionContext } from '../../src/tools/base';
+} from '@ahicode/core/tools';
+import { ToolExecutionContext } from '@ahicode/core/tools/base';
 
 let tmpDir: string;
 

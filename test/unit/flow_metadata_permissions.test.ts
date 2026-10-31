@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { PermissionManager } from '../../src/core/permission/PermissionManager';
-import { UserSettings } from '../../src/shared/types';
+import { PermissionManager } from '@ahicode/core/core/permission/PermissionManager';
+import { UserSettings } from '@ahicode/core/shared/types';
 
 /**
  * Akış üst verisi araçları (`write_spec`, `update_acceptance_criteria`)

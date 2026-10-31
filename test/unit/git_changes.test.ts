@@ -6,7 +6,7 @@ import * as fs from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { collectGitChanges } from '../../src/webview/gitChanges';
-import { GitManager } from '../../src/core/git/GitManager';
+import { GitManager } from '@ahicode/core/core/git/GitManager';
 
 const execFileAsync = promisify(execFile);
 

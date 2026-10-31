@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { PermissionManager } from '../../src/core/permission/PermissionManager';
-import { UserSettings } from '../../src/shared/types';
+import { PermissionManager } from '@ahicode/core/core/permission/PermissionManager';
+import { UserSettings } from '@ahicode/core/shared/types';
 
 function settings(overrides: Partial<UserSettings> = {}): UserSettings {
   return {
@@ -66,7 +66,7 @@ describe('PermissionManager.explainApproval: approval reason visible', () => {
 describe('MCP initialize timeout', () => {
   it('uses long initialize timeout constant', async () => {
     const source = await import('node:fs').then((fs) =>
-      fs.readFileSync('src/core/mcp/McpClient.ts', 'utf-8')
+      fs.readFileSync('packages/core/src/core/mcp/McpClient.ts', 'utf-8')
     );
     // İlk `npx -y <pkg>` çalışması paketi indirir; 15s yeterli olmadı.
     assert.match(source, /INITIALIZE_TIMEOUT_MS = 120_000/);

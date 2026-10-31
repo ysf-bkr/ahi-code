@@ -6,7 +6,7 @@ import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { createSharedServices } from '../../src/core/agent/AgentCore';
 import { SessionRegistry } from '../../src/core/agent/SessionRegistry';
-import { UserSettings } from '../../src/shared/types';
+import { UserSettings } from '@ahicode/core/shared/types';
 
 /**
  * Arka plan oturumları sözleşmesi.

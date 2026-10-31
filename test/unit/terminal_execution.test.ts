@@ -6,8 +6,8 @@ import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { AgentCore } from '../../src/core/agent/AgentCore';
 import { runInIntegratedTerminal } from '../../src/core/agent/terminalExecution';
-import { ModelProvider } from '../../src/providers/base';
-import { UserSettings } from '../../src/shared/types';
+import { ModelProvider } from '@ahicode/core/providers/base';
+import { UserSettings } from '@ahicode/core/shared/types';
 
 /**
  * Tümleşik terminal yürütücüsü.

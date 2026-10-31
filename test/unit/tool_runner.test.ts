@@ -3,11 +3,11 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { runToolCall } from '../../src/core/toolRunner';
-import { PermissionManager } from '../../src/core/permission/PermissionManager';
-import { SnapshotManager } from '../../src/core/snapshot/SnapshotManager';
-import { TaskPlanner } from '../../src/core/plan/TaskPlanner';
-import { ToolCall, ToolName, UserSettings } from '../../src/shared/types';
+import { runToolCall } from '@ahicode/core/core/toolRunner';
+import { PermissionManager } from '@ahicode/core/core/permission/PermissionManager';
+import { SnapshotManager } from '@ahicode/core/core/snapshot/SnapshotManager';
+import { TaskPlanner } from '@ahicode/core/core/plan/TaskPlanner';
+import { ToolCall, ToolName, UserSettings } from '@ahicode/core/shared/types';
 
 /**
  * VS Code'dan bağımsız araç yürütücüsü. CLI ve testler aynı kapı zincirini

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { CLIENT_NAME, COMMAND_TIMEOUT_MS, MAX_TOOL_OUTPUT_CHARS } from '../../shared/constants';
-import { limitWithMarker, stripAnsi } from '../../shared/text';
+import { CLIENT_NAME, COMMAND_TIMEOUT_MS, MAX_TOOL_OUTPUT_CHARS } from '@ahicode/core/shared/constants';
+import { limitWithMarker, stripAnsi } from '@ahicode/core/shared/text';
 
 export interface TerminalRunOptions {
   signal?: AbortSignal;

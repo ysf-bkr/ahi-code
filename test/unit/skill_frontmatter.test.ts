@@ -3,8 +3,8 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { frontmatterList, frontmatterScalar, parseFrontmatter } from '../../src/shared/frontmatter';
-import { SkillManager } from '../../src/core/skills/SkillManager';
+import { frontmatterList, frontmatterScalar, parseFrontmatter } from '@ahicode/core/shared/frontmatter';
+import { SkillManager } from '@ahicode/core/core/skills/SkillManager';
 
 describe('frontmatter: AGENT.md / SKILL.md parsing', () => {
   it('reads plain and quoted scalar values', () => {

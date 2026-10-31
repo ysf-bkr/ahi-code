@@ -3,9 +3,9 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { extractSymbols, KnowledgeStore, KNOWLEDGE_DIR } from '../../src/core/knowledge/KnowledgeStore';
-import { ALL_TOOLS } from '../../src/tools';
-import { validateToolArguments } from '../../src/tools/base';
+import { extractSymbols, KnowledgeStore, KNOWLEDGE_DIR } from '@ahicode/core/core/knowledge/KnowledgeStore';
+import { ALL_TOOLS } from '@ahicode/core/tools';
+import { validateToolArguments } from '@ahicode/core/tools/base';
 
 describe('KnowledgeStore: symbol ranges and repo map', () => {
   let root: string;

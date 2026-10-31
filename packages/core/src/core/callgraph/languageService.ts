@@ -4,7 +4,7 @@
  * Harita mantığı `vscode` modülünü tanımaz; yalnızca bu arayüzü kullanır.
  * Böylece birim testlerinde sahte bir dil servisi enjekte edilebilir.
  */
-import type { LspClient } from '../lsp/LspClient';
+import type { LspClientPort } from '../lsp/port';
 import type { RawSymbol } from './extractor';
 
 export interface ReferenceLocation {
@@ -29,7 +29,7 @@ export interface CallGraphLanguageService {
  * satırdaki tanıma genişletir. Bu bir yaklaşımdır ve sınırları `docs`
  * yerine kod yorumunda belirtilmiştir.
  */
-export function createLspLanguageService(lsp: LspClient, workspaceRoot: string): CallGraphLanguageService {
+export function createLspLanguageService(lsp: LspClientPort, workspaceRoot: string): CallGraphLanguageService {
   return {
     async documentSymbols(relativePath: string): Promise<RawSymbol[] | undefined> {
       try {

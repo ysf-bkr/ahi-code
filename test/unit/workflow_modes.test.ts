@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { stripInjectedContext } from '../../src/shared/editorContext';
+import { stripInjectedContext } from '@ahicode/core/shared/editorContext';
 import {
   PLAN_MODE_STAGE_ORDER,
   STAGE_ORDER,
@@ -9,7 +9,7 @@ import {
   normalizeStageForMode,
   stageOrderForMode,
   createWorkflowState
-} from '../../src/core/workflow/TaskWorkflow';
+} from '@ahicode/core/core/workflow/TaskWorkflow';
 
 describe('editorContext: prompt cleanup for resend', () => {
   it('preserves user own text', () => {

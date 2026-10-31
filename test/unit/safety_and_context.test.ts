@@ -1,9 +1,9 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
 import * as path from 'node:path';
-import { resolveWorkspacePath } from '../../src/tools/pathSafety';
-import { ContextManager } from '../../src/core/context/ContextManager';
-import { ProviderMessage } from '../../src/providers/base';
+import { resolveWorkspacePath } from '@ahicode/core/tools/pathSafety';
+import { ContextManager } from '@ahicode/core/core/context/ContextManager';
+import { ProviderMessage } from '@ahicode/core/providers/base';
 
 describe('P0-02: Path Jail & Safety', () => {
   const fakeRoot = '/Users/test/workspace/project';

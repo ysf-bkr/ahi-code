@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { ModulePlanner, ModulePlanValidationError } from '../../src/core/plan/ModulePlanner';
+import { ModulePlanner, ModulePlanValidationError } from '@ahicode/core/core/plan/ModulePlanner';
 
 /**
  * Endüstriyel modül haritası sözleşmeleri:

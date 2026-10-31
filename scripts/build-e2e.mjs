@@ -1,4 +1,5 @@
 import * as esbuild from 'esbuild';
+import { resolve } from 'node:path';
 
 /**
  * Extension host için VS Code entegrasyon test paketini paketler.
@@ -7,6 +8,7 @@ import * as esbuild from 'esbuild';
 await esbuild.build({
   entryPoints: ['test/e2e/suite/index.ts'],
   bundle: true,
+  alias: { '@ahicode/core': resolve('packages/core/src') },
   platform: 'node',
   format: 'cjs',
   target: 'node22',

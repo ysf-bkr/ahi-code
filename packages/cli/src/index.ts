@@ -5,20 +5,20 @@ import * as path from 'path';
 // gerçek process nesnesini verir.
 import process from 'process';
 import { createInterface } from 'readline/promises';
-import { createModelProvider } from './providers';
-import { ALL_TOOLS } from './tools';
-import { ToolExecutionContext } from './tools/base';
-import { runToolCall } from './core/toolRunner';
-import { generateSystemPrompt } from './core/prompts/systemPrompt';
-import { PermissionManager } from './core/permission/PermissionManager';
-import { SnapshotManager } from './core/snapshot/SnapshotManager';
-import { VerificationManager } from './core/verification/VerificationManager';
-import { GitManager } from './core/git/GitManager';
-import { ProjectMemoryManager } from './core/memory/ProjectMemoryManager';
-import { TaskPlanner } from './core/plan/TaskPlanner';
-import { ProviderMessage } from './providers/base';
-import { ModelProviderType, ToolName, UserSettings } from './shared/types';
-import { errorMessage } from './shared/errors';
+import { createModelProvider } from '@ahicode/core/providers';
+import { ALL_TOOLS } from '@ahicode/core/tools';
+import { ToolExecutionContext } from '@ahicode/core/tools/base';
+import { runToolCall } from '@ahicode/core/core/toolRunner';
+import { generateSystemPrompt } from '@ahicode/core/core/prompts/systemPrompt';
+import { PermissionManager } from '@ahicode/core/core/permission/PermissionManager';
+import { SnapshotManager } from '@ahicode/core/core/snapshot/SnapshotManager';
+import { VerificationManager } from '@ahicode/core/core/verification/VerificationManager';
+import { GitManager } from '@ahicode/core/core/git/GitManager';
+import { ProjectMemoryManager } from '@ahicode/core/core/memory/ProjectMemoryManager';
+import { TaskPlanner } from '@ahicode/core/core/plan/TaskPlanner';
+import { ProviderMessage } from '@ahicode/core/providers/base';
+import { ModelProviderType, ToolName, UserSettings } from '@ahicode/core/shared/types';
+import { errorMessage } from '@ahicode/core/shared/errors';
 
 const CLI_TOOLS = new Set<ToolName>([
   'read_file',

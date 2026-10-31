@@ -2,6 +2,16 @@
 
 Bu dosya kullanıcıları etkileyen önemli değişiklikleri kaydeder.
 
+## [Unreleased]
+
+### Eklendi
+
+- **Monorepo: çekirdek ayrıldı, terminal ajanı geldi:** Proje tek depolu bir npm workspaces monorepo'suna dönüştürüldü. `@ahicode/core` paketi sağlayıcıları, araçları, izin/bağlam/bilgi/callgraph/multiagent motorunu taşır ve `vscode` modülünü **hiç** import etmez; motor, dil sunucusuna `LspClientPort` arayüzü üzerinden ulaşır (gerçek `LspClient` eklenti konağında kalır ve bu arayüzü yapısal olarak karşılar). `@ahicode/cli` paketi yalnızca çekirdek üzerine kurulu `ahi` terminal ajanıdır. `src/` artık yalnızca `vscode` API'sine değen konak katmanıdır (aktivasyon, webview, AgentCore çalışma zamanı). Bu sözleşme `test/unit/architecture.test.ts` ile kilitli: core ne `vscode` ne eklenti `src/`'ini; CLI eklenti `src/`'ini import edemez.
+
+### Düzeltilen
+
+- **Sohbette ara anlatım balonları arasındaki boşluklar giderildi:** Modelin araç adımları arasında ürettiği kısa ara metinler, turların uzunluğuna bakılmaksızın her biri tam bir balon boşluğu kaplayarak sohbeti seyrekleştiriyordu. Artık yalnızca turun son yanıtı balon olarak çiziliyor; ondan önceki ara metinler tek satırlık, soluk bir izleme çizgisine indirgeniyor.
+
 ## [0.0.2] - 2026-10-30
 
 > Bu sürüm henüz Marketplace'e yayımlanmadı.

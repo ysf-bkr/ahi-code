@@ -36,7 +36,15 @@ const WEAK_ENGLISH_WORDS = /\b(this|for|from)\b/gi;
 const DIRECTIVE_PREFIXES = /^(eslint|prettier|@ts|biome|istanbul|c8|node:|nolint|v8|sourceURL|ts-expect)/i;
 
 /** Yorum denetimi kapsamındaki kod dizinleri. */
-const CODE_DIRS = ['src', 'test', 'scripts', 'webview-ui/src', 'webview-ui/test'];
+const CODE_DIRS = [
+  'src',
+  'test',
+  'scripts',
+  'webview-ui/src',
+  'webview-ui/test',
+  'packages/core/src',
+  'packages/cli/src'
+];
 
 /** Tarama dışı bırakılan yollar: fixture, bir kullanıcı projesini simüle eder. */
 const EXCLUDED = [/^test[\\/]e2e[\\/]fixture([\\/]|$)/];

@@ -16,7 +16,7 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['src/**/*.ts', 'test/**/*.ts'],
+    files: ['src/**/*.ts', 'test/**/*.ts', 'packages/**/src/**/*.ts'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -59,7 +59,7 @@ export default tseslint.config(
   },
   {
     // CLI terminale yazmak zorundadır
-    files: ['src/cli.ts'],
+    files: ['packages/cli/src/**/*.ts'],
     rules: {
       'no-console': 'off'
     }

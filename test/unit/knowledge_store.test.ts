@@ -12,7 +12,7 @@ import {
   extractSymbols,
   isSensitivePath,
   KNOWLEDGE_DIR
-} from '../../src/core/knowledge/KnowledgeStore';
+} from '@ahicode/core/core/knowledge/KnowledgeStore';
 
 const execFileAsync = promisify(execFile);
 

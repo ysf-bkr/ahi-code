@@ -1,7 +1,17 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { isSensitivePath, isSupportedSource, isTestFile, nodeId } from '../../src/core/callgraph/identity';
-import { buildFileNodes, enclosingNode, looksExported, toNodeKind } from '../../src/core/callgraph/extractor';
+import {
+  isSensitivePath,
+  isSupportedSource,
+  isTestFile,
+  nodeId
+} from '@ahicode/core/core/callgraph/identity';
+import {
+  buildFileNodes,
+  enclosingNode,
+  looksExported,
+  toNodeKind
+} from '@ahicode/core/core/callgraph/extractor';
 
 describe('callgraph identity: kararlı kimlik ve yol kuralları', () => {
   it('satır numarası olmadan kimlik üretir', () => {

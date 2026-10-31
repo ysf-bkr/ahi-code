@@ -223,7 +223,7 @@
     "dev": "npm run build && code --extensionDevelopmentPath=. .",
     "typecheck": "tsc --noEmit",
     "typecheck:test": "tsc --noEmit --project tsconfig.test.json",
-    "lint": "eslint src test scripts esbuild.js",
+    "lint": "eslint src test scripts packages esbuild.js",
     "test": "tsx --import ./test/support/register-vscode.mjs --test test/unit/**/*.test.ts && npm run test:ui",
     "test:coverage": "node --experimental-test-coverage --import tsx --import ./test/support/register-vscode.mjs --test test/unit/**/*.test.ts",
     "check:coverage": "node scripts/check-coverage.mjs",
@@ -231,7 +231,7 @@
     "build:e2e": "node scripts/build-e2e.mjs",
     "test:e2e": "npm run build && npm run build:e2e && tsx test/e2e/runTest.ts",
     "test:e2e:only": "npm run build:e2e && tsx test/e2e/runTest.ts",
-    "cli": "tsx src/cli.ts",
+    "cli": "tsx packages/cli/src/index.ts",
     "check:version": "node scripts/check-version.mjs",
     "clean": "node scripts/clean.mjs",
     "clean:cache": "node scripts/clean.mjs --cache",
@@ -283,5 +283,9 @@
     "turkish",
     "turkce",
     "yapay-zeka"
+  ],
+  "workspaces": [
+    "packages/core",
+    "packages/cli"
   ]
 }

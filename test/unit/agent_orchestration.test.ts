@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { SubagentManager } from '../../src/core/multiagent/SubagentManager';
-import { PermissionManager } from '../../src/core/permission/PermissionManager';
-import { ModelCompletionResponse, ModelProvider, ProviderMessage } from '../../src/providers/base';
+import { SubagentManager } from '@ahicode/core/core/multiagent/SubagentManager';
+import { PermissionManager } from '@ahicode/core/core/permission/PermissionManager';
+import { ModelCompletionResponse, ModelProvider, ProviderMessage } from '@ahicode/core/providers/base';
 
 /**
  * Yönetici ajanın gerçekten delege ettiğini doğrular.
@@ -180,7 +180,7 @@ describe('SubagentManager: orchestration', () => {
   });
 
   it('exposes every built-in role with a real tool list', async () => {
-    const { ALL_AGENT_DEFINITIONS } = await import('../../src/shared/agents');
+    const { ALL_AGENT_DEFINITIONS } = await import('@ahicode/core/shared/agents');
     for (const agent of ALL_AGENT_DEFINITIONS) {
       assert.ok(agent.tools.length > 0, `${agent.name} araçsız kalmamalı`);
       // Manager dışındaki roller delege edemez.

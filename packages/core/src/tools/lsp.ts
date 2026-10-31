@@ -3,8 +3,8 @@
  *
  * Eski tek parça tools/index.ts'ten ayrıldı; davranış değişmedi.
  */
-import { ToolDefinition } from './base';
-import { argString } from './args';
+import { ToolDefinition } from '@ahicode/core/tools/base';
+import { argString } from '@ahicode/core/tools/args';
 
 export const getDiagnosticsTool: ToolDefinition = {
   name: 'get_diagnostics',

@@ -15,12 +15,15 @@ const expected = (label, actual) => {
 };
 
 // Başlık dosyasındaki sürüm de manifest ile eşleşmeli.
-const versionSource = read('src/shared/version.ts');
+const versionSource = read('packages/core/src/shared/version.ts');
 const headerVersion = versionSource.match(/EXTENSION_VERSION\s*=\s*'([^']+)'/)?.[1];
-expected('src/shared/version.ts', headerVersion);
+expected('packages/core/src/shared/version.ts', headerVersion);
 
 expected('package-lock.json version', lock.version);
 expected('package-lock.json packages[""].version', lock.packages?.['']?.version);
+for (const ws of ['packages/core', 'packages/cli']) {
+  expected(`package-lock.json ${ws} version`, lock.packages?.[ws]?.version);
+}
 expected('webview-ui/package.json version', uiPkg.version);
 
 const vsix = `out/ahi-code-${version}.vsix`;

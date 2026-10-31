@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { SubagentManager } from '../../src/core/multiagent/SubagentManager';
-import { ModelProvider } from '../../src/providers/base';
+import { SubagentManager } from '@ahicode/core/core/multiagent/SubagentManager';
+import { ModelProvider } from '@ahicode/core/providers/base';
 
 /**
  * Alt ajan hiyerarşisi.

@@ -11,23 +11,31 @@
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import * as vscode from 'vscode';
-import { ToolCall, ToolName } from '../../shared/types';
-import { isRecord } from '../../shared/errors';
-import { errorMessage } from '../../shared/errors';
-import { AHI_DIR, AHI_SUBDIRS } from '../../shared/constants';
-import { resolveWorkspacePath } from '../../tools/pathSafety';
-import { coerceToolArguments, validateToolArguments, ToolDefinition } from '../../tools/base';
-import { parseModulePlanInput, parsePlanUpdateInput, parseSubagentTaskParams } from '../../tools/parsers';
-import { logWarning } from '../../shared/logging';
+import { ToolCall, ToolName } from '@ahicode/core/shared/types';
+import { isRecord } from '@ahicode/core/shared/errors';
+import { errorMessage } from '@ahicode/core/shared/errors';
+import { AHI_DIR, AHI_SUBDIRS } from '@ahicode/core/shared/constants';
+import { resolveWorkspacePath } from '@ahicode/core/tools/pathSafety';
+import { coerceToolArguments, validateToolArguments, ToolDefinition } from '@ahicode/core/tools/base';
+import {
+  parseModulePlanInput,
+  parsePlanUpdateInput,
+  parseSubagentTaskParams
+} from '@ahicode/core/tools/parsers';
+import { logWarning } from '@ahicode/core/shared/logging';
 import type { AgentHost } from './agentHost';
-import { ReadDeduper } from './readDeduper';
-import type { SubagentTaskParams } from '../multiagent/SubagentManager';
-import { runTaskGraph, formatTaskGraphResults, type TaskNode } from '../multiagent/parallelScheduler';
-import type { CommandCheckpoint } from '../git/GitManager';
-import { ROLE_ALIASES, getAgentDefinition } from '../../shared/agents';
-import { skipsApprovalGates } from './autonomy';
-import { MAX_INTAKE_QUESTIONS } from '../workflow/TaskWorkflow';
-import { describeWorkflow } from '../workflow/TaskWorkflow';
+import { ReadDeduper } from '@ahicode/core/core/agent/readDeduper';
+import type { SubagentTaskParams } from '@ahicode/core/core/multiagent/SubagentManager';
+import {
+  runTaskGraph,
+  formatTaskGraphResults,
+  type TaskNode
+} from '@ahicode/core/core/multiagent/parallelScheduler';
+import type { CommandCheckpoint } from '@ahicode/core/core/git/GitManager';
+import { ROLE_ALIASES, getAgentDefinition } from '@ahicode/core/shared/agents';
+import { skipsApprovalGates } from '@ahicode/core/core/agent/autonomy';
+import { MAX_INTAKE_QUESTIONS } from '@ahicode/core/core/workflow/TaskWorkflow';
+import { describeWorkflow } from '@ahicode/core/core/workflow/TaskWorkflow';
 
 /** Araç argümanından metin okur. */
 function toolArgString(args: Record<string, unknown>, key: string, fallback = ''): string {

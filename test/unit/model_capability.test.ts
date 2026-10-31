@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { classifyModelCapability, isConversationModel } from '../../src/shared/modelCapability';
+import { classifyModelCapability, isConversationModel } from '@ahicode/core/shared/modelCapability';
 
 describe('modelCapability: model kimliğinden yetenek sınıflandırma', () => {
   it('boş ve tanımsız girdiyi sohbet modeli sayar', () => {

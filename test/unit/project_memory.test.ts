@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { ProjectMemoryManager } from '../../src/core/memory/ProjectMemoryManager';
+import { ProjectMemoryManager } from '@ahicode/core/core/memory/ProjectMemoryManager';
 
 let tmpDir: string;
 

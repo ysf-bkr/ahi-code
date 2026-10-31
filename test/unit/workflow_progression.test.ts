@@ -5,8 +5,8 @@ import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { AgentCore } from '../../src/core/agent/AgentCore';
-import { ModelCompletionResponse, ModelProvider, ProviderMessage } from '../../src/providers/base';
-import { TaskState, UserSettings } from '../../src/shared/types';
+import { ModelCompletionResponse, ModelProvider, ProviderMessage } from '@ahicode/core/providers/base';
+import { TaskState, UserSettings } from '@ahicode/core/shared/types';
 
 /**
  * Aşama ilerlemesinin regresyon testleri.
@@ -225,7 +225,7 @@ describe('AgentCore: aşama ilerlemesi', () => {
 
 describe('modeTools: çağrı haritası her aşamada açık', () => {
   it('plan modu salt-okunur harita araçlarını içerir', async () => {
-    const { PLAN_MODE_TOOLS, INTAKE_MODE_TOOLS } = await import('../../src/core/agent/modeTools');
+    const { PLAN_MODE_TOOLS, INTAKE_MODE_TOOLS } = await import('@ahicode/core/core/agent/modeTools');
     const tools = [
       'get_callers',
       'get_callees',
@@ -241,7 +241,7 @@ describe('modeTools: çağrı haritası her aşamada açık', () => {
   });
 
   it('plan modu yazma ve komut araçlarını içermez', async () => {
-    const { PLAN_MODE_TOOLS } = await import('../../src/core/agent/modeTools');
+    const { PLAN_MODE_TOOLS } = await import('@ahicode/core/core/agent/modeTools');
     for (const tool of ['write_file', 'edit_file', 'execute_command', 'git_commit']) {
       assert.strictEqual(PLAN_MODE_TOOLS.has(tool as never), false, tool);
     }

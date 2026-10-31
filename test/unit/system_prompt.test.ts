@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { generateSystemPrompt } from '../../src/core/prompts/systemPrompt';
+import { generateSystemPrompt } from '@ahicode/core/core/prompts/systemPrompt';
 
 /**
  * Sistem prompt'u akışın gerçek davranışıyla çelişmemelidir.

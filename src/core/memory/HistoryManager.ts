@@ -1,6 +1,10 @@
 import * as vscode from 'vscode';
-import { TaskState, TaskSummary } from '../../shared/types';
-import { parseSessionArchive, serializeSessionArchive, serializeSessionMarkdown } from './sessionArchive';
+import { TaskState, TaskSummary } from '@ahicode/core/shared/types';
+import {
+  parseSessionArchive,
+  serializeSessionArchive,
+  serializeSessionMarkdown
+} from '@ahicode/core/core/memory/sessionArchive';
 
 export type SessionExportFormat = 'json' | 'markdown';
 

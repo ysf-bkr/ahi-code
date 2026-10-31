@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { ALL_TOOLS, executeCommandTool } from '../../src/tools';
-import { ToolExecutionContext } from '../../src/tools/base';
+import { ALL_TOOLS, executeCommandTool } from '@ahicode/core/tools';
+import { ToolExecutionContext } from '@ahicode/core/tools/base';
 
 describe('runShellCommand: integrated terminal routing', () => {
   it('delegates command to terminal runner when available', async () => {

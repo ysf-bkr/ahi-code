@@ -3,9 +3,9 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { TaskPlanner } from '../../src/core/plan/TaskPlanner';
-import { VerificationManager } from '../../src/core/verification/VerificationManager';
-import { buildSandboxInvocation, sanitizeEnv } from '../../src/core/verification/CommandRunner';
+import { TaskPlanner } from '@ahicode/core/core/plan/TaskPlanner';
+import { VerificationManager } from '@ahicode/core/core/verification/VerificationManager';
+import { buildSandboxInvocation, sanitizeEnv } from '@ahicode/core/core/verification/CommandRunner';
 
 describe('TaskPlanner: dependencies and status management', () => {
   it('identifies steps and resolves dependency order', () => {

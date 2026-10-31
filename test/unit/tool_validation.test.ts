@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { ALL_TOOLS } from '../../src/tools';
-import { coerceToolArguments, validateToolArguments } from '../../src/tools/base';
+import { ALL_TOOLS } from '@ahicode/core/tools';
+import { coerceToolArguments, validateToolArguments } from '@ahicode/core/tools/base';
 
 describe('Tool argument schema validation', () => {
   it('validates nested plan steps', () => {

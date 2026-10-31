@@ -6,10 +6,10 @@
  * hata durumunda istisna fırlar ve arayüz, sonradan 404 verecek uydurma bir
  * kimlik yazmak yerine serbest metin model alanını korur.
  */
-import { DEFAULT_PROVIDER_URLS, HTTP_TIMEOUT_MS } from '../shared/constants';
-import { normalizeBaseUrl } from '../providers/openai';
-import { isRecord } from '../shared/errors';
-import { classifyModelCapability } from '../shared/modelCapability';
+import { DEFAULT_PROVIDER_URLS, HTTP_TIMEOUT_MS } from '@ahicode/core/shared/constants';
+import { normalizeBaseUrl } from '@ahicode/core/providers/openai';
+import { isRecord } from '@ahicode/core/shared/errors';
+import { classifyModelCapability } from '@ahicode/core/shared/modelCapability';
 
 export interface ModelCatalogRequest {
   provider: string;

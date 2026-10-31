@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { ModelProvider } from '../../providers/base';
 import { KnowledgeStore } from '../knowledge/KnowledgeStore';
-import type { LspClient } from '../lsp/LspClient';
+import type { LspClientPort } from '../lsp/port';
 import { resolveWorkspacePath } from '../../tools/pathSafety';
 import { logWarning } from '../../shared/logging';
 
@@ -30,7 +30,7 @@ export class KnowledgeCurator {
   constructor(
     private readonly knowledgeStore: KnowledgeStore,
     private readonly provider: ModelProvider,
-    private readonly lspClient: LspClient
+    private readonly lspClient: LspClientPort
   ) {}
 
   public resetTurnBudget(): void {

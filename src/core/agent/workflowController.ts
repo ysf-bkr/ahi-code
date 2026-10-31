@@ -5,7 +5,7 @@
  * Kapılar `@core/workflow/TaskWorkflow` içindeki saf fonksiyonlardan gelir;
  * bu sınıf yalnızca yan etkileri (durum, kalıcılık, arayüz) uygular.
  */
-import { ToolCall } from '../../shared/types';
+import { ToolCall } from '@ahicode/core/shared/types';
 import {
   canTransition,
   createWorkflowState,
@@ -14,15 +14,15 @@ import {
   stageOrderForMode,
   WorkflowStage,
   WorkflowState
-} from '../workflow/TaskWorkflow';
-import { errorMessage } from '../../shared/errors';
-import { logWarning } from '../../shared/logging';
-import { rolesForChangedFiles } from '../../shared/agents/routing';
-import { skipsApprovalGates } from './autonomy';
+} from '@ahicode/core/core/workflow/TaskWorkflow';
+import { errorMessage } from '@ahicode/core/shared/errors';
+import { logWarning } from '@ahicode/core/shared/logging';
+import { rolesForChangedFiles } from '@ahicode/core/shared/agents/routing';
+import { skipsApprovalGates } from '@ahicode/core/core/agent/autonomy';
 import { getActiveWorkspaceRoot } from '../workspace/workspaceRoot';
-import type { TaskSpec } from '../spec/SpecStore';
-import { checkSpecCoverage } from '../spec/SpecStore';
-import type { TaskPlan } from '../../shared/types';
+import type { TaskSpec } from '@ahicode/core/core/spec/SpecStore';
+import { checkSpecCoverage } from '@ahicode/core/core/spec/SpecStore';
+import type { TaskPlan } from '@ahicode/core/shared/types';
 import type { AgentHost } from './agentHost';
 
 export class WorkflowController {

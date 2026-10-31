@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { ChatMessage, ToolCall, UserSettings } from '../../src/shared/types';
-import { PermissionManager } from '../../src/core/permission/PermissionManager';
-import { buildProviderMessages, mapModelToolCalls } from '../../src/core/agent/turnAssembly';
+import { ChatMessage, ToolCall, UserSettings } from '@ahicode/core/shared/types';
+import { PermissionManager } from '@ahicode/core/core/permission/PermissionManager';
+import { buildProviderMessages, mapModelToolCalls } from '@ahicode/core/core/agent/turnAssembly';
 
 const settings: UserSettings = {
   selectedProvider: 'ollama',

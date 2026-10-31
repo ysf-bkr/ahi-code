@@ -10,7 +10,7 @@ import {
   normalizeErrorMessage,
   sanitizeForReport,
   type GitHubRunner
-} from '../../src/feedback/errorReporter';
+} from '@ahicode/core/feedback/errorReporter';
 
 /** Basit bellek içi Memento karşılığı. */
 function memoryStore() {

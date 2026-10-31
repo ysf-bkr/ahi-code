@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { buildSettings, parseArgs } from '../../src/cli';
+import { buildSettings, parseArgs } from '../../packages/cli/src/index';
 
 describe('CLI argument parsing and provider configuration', () => {
   it('parses --provider evren correctly and sets default model to auto', () => {

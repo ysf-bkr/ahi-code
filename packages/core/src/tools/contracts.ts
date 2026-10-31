@@ -10,7 +10,7 @@
  * `import type` zorunludur: araç katmanı çekirdeğin çalışma zamanına bağlanmaz
  * (`architecture.test.ts` bunu doğrular).
  */
-import type { LspClient } from '../core/lsp/LspClient';
+import type { LspClientPort } from '../core/lsp/port';
 import type { PermissionManager } from '../core/permission/PermissionManager';
 import type { SnapshotManager } from '../core/snapshot/SnapshotManager';
 import type { VerificationManager } from '../core/verification/VerificationManager';
@@ -24,7 +24,7 @@ import type { CallGraphManager } from '../core/callgraph/CallGraphManager';
 
 /** Sembol ve tanı sorguları. */
 export type LspPort = Pick<
-  LspClient,
+  LspClientPort,
   'getDiagnostics' | 'getDefinition' | 'getHover' | 'getReferences' | 'getWorkspaceSymbols'
 >;
 

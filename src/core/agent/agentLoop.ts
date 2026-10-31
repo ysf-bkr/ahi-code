@@ -5,19 +5,19 @@
  * görev sonu doğrulaması ve onarım döngüsü.
  */
 import * as vscode from 'vscode';
-import { ChatMessage, ToolCall } from '../../shared/types';
-import { createModelProvider } from '../../providers';
-import { ALL_TOOLS } from '../../tools';
-import { ToolDefinition } from '../../tools/base';
-import { generateSystemPrompt } from '../prompts/systemPrompt';
+import { ChatMessage, ToolCall } from '@ahicode/core/shared/types';
+import { createModelProvider } from '@ahicode/core/providers';
+import { ALL_TOOLS } from '@ahicode/core/tools';
+import { ToolDefinition } from '@ahicode/core/tools/base';
+import { generateSystemPrompt } from '@ahicode/core/core/prompts/systemPrompt';
 import { getActiveWorkspaceRoot } from '../workspace/workspaceRoot';
-import { filterToolsForMode } from './modeTools';
-import { skipsApprovalGates } from './autonomy';
-import { buildProviderMessages, mapModelToolCalls } from './turnAssembly';
-import { detectLintCommand, detectTestCommand } from '../../tools';
-import { errorMessage } from '../../shared/errors';
-import { logWarning } from '../../shared/logging';
-import { describeWorkflow, formatWorkflowForPrompt } from '../workflow/TaskWorkflow';
+import { filterToolsForMode } from '@ahicode/core/core/agent/modeTools';
+import { skipsApprovalGates } from '@ahicode/core/core/agent/autonomy';
+import { buildProviderMessages, mapModelToolCalls } from '@ahicode/core/core/agent/turnAssembly';
+import { detectLintCommand, detectTestCommand } from '@ahicode/core/tools';
+import { errorMessage } from '@ahicode/core/shared/errors';
+import { logWarning } from '@ahicode/core/shared/logging';
+import { describeWorkflow, formatWorkflowForPrompt } from '@ahicode/core/core/workflow/TaskWorkflow';
 import type { AgentHost } from './agentHost';
 
 export class AgentLoop {

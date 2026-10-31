@@ -9,35 +9,38 @@
  * yalnızca bu sözleşmeye bağlıdır. Böylece her modül tek başına test edilebilir.
  */
 import type * as vscode from 'vscode';
-import type { AgentMode, TaskState, ToolCall, UserSettings } from '../../shared/types';
-import type { ModelProvider } from '../../providers/base';
-import type { PermissionManager } from '../permission/PermissionManager';
+import type { AgentMode, TaskState, ToolCall, UserSettings } from '@ahicode/core/shared/types';
+import type { ModelProvider } from '@ahicode/core/providers/base';
+import type { PermissionManager } from '@ahicode/core/core/permission/PermissionManager';
 import type { HistoryManager } from '../memory/HistoryManager';
 import type { McpHub } from '../mcp/McpHub';
-import type { SubagentManager } from '../multiagent/SubagentManager';
-import type { SkillManager } from '../skills/SkillManager';
+import type { SubagentManager } from '@ahicode/core/core/multiagent/SubagentManager';
+import type { SkillManager } from '@ahicode/core/core/skills/SkillManager';
 import type { LspClient } from '../lsp/LspClient';
-import type { SnapshotManager } from '../snapshot/SnapshotManager';
-import type { HookManager } from '../hooks/HookManager';
-import type { CheckpointManager } from '../checkpoint/CheckpointManager';
-import type { ContextManager } from '../context/ContextManager';
-import type { ReadDeduper } from './readDeduper';
-import type { ProjectMemoryManager, ProjectMemoryStatus } from '../memory/ProjectMemoryManager';
-import type { TaskPlanner } from '../plan/TaskPlanner';
-import type { ModulePlanner } from '../plan/ModulePlanner';
-import type { VerificationManager } from '../verification/VerificationManager';
-import type { ModelRouter } from '../routing/ModelRouter';
-import type { WorktreeManager } from '../worktree/WorktreeManager';
-import type { GitManager, CommandCheckpoint } from '../git/GitManager';
-import type { WorkspaceRuleManager } from '../rules/WorkspaceRuleManager';
-import type { KnowledgeStore } from '../knowledge/KnowledgeStore';
-import type { EmbeddingIndex } from '../knowledge/EmbeddingIndex';
-import type { VectorMemory } from '../memory/VectorMemory';
-import type { SpecStore } from '../spec/SpecStore';
-import type { CallGraphManager } from '../callgraph/CallGraphManager';
-import type { SessionPersistence } from './sessionPersistence';
-import type { SandboxConfig } from '../verification/CommandRunner';
-import type { WorkflowState, WorkflowStage } from '../workflow/TaskWorkflow';
+import type { SnapshotManager } from '@ahicode/core/core/snapshot/SnapshotManager';
+import type { HookManager } from '@ahicode/core/core/hooks/HookManager';
+import type { CheckpointManager } from '@ahicode/core/core/checkpoint/CheckpointManager';
+import type { ContextManager } from '@ahicode/core/core/context/ContextManager';
+import type { ReadDeduper } from '@ahicode/core/core/agent/readDeduper';
+import type {
+  ProjectMemoryManager,
+  ProjectMemoryStatus
+} from '@ahicode/core/core/memory/ProjectMemoryManager';
+import type { TaskPlanner } from '@ahicode/core/core/plan/TaskPlanner';
+import type { ModulePlanner } from '@ahicode/core/core/plan/ModulePlanner';
+import type { VerificationManager } from '@ahicode/core/core/verification/VerificationManager';
+import type { ModelRouter } from '@ahicode/core/core/routing/ModelRouter';
+import type { WorktreeManager } from '@ahicode/core/core/worktree/WorktreeManager';
+import type { GitManager, CommandCheckpoint } from '@ahicode/core/core/git/GitManager';
+import type { WorkspaceRuleManager } from '@ahicode/core/core/rules/WorkspaceRuleManager';
+import type { KnowledgeStore } from '@ahicode/core/core/knowledge/KnowledgeStore';
+import type { EmbeddingIndex } from '@ahicode/core/core/knowledge/EmbeddingIndex';
+import type { VectorMemory } from '@ahicode/core/core/memory/VectorMemory';
+import type { SpecStore } from '@ahicode/core/core/spec/SpecStore';
+import type { CallGraphManager } from '@ahicode/core/core/callgraph/CallGraphManager';
+import type { SessionPersistence } from '@ahicode/core/core/agent/sessionPersistence';
+import type { SandboxConfig } from '@ahicode/core/core/verification/CommandRunner';
+import type { WorkflowState, WorkflowStage } from '@ahicode/core/core/workflow/TaskWorkflow';
 
 export interface AgentNotification {
   level: 'info' | 'warning' | 'error';

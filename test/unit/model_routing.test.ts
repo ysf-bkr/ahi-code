@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { classifyTask, ModelRouter } from '../../src/core/routing/ModelRouter';
-import { ContextManager, DEFAULT_CONTEXT_WINDOW_TOKENS } from '../../src/core/context/ContextManager';
-import { UserSettings } from '../../src/shared/types';
+import { classifyTask, ModelRouter } from '@ahicode/core/core/routing/ModelRouter';
+import { ContextManager, DEFAULT_CONTEXT_WINDOW_TOKENS } from '@ahicode/core/core/context/ContextManager';
+import { UserSettings } from '@ahicode/core/shared/types';
 
 const baseSettings: UserSettings = {
   selectedProvider: 'ollama',

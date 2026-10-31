@@ -9,8 +9,8 @@ import {
   resolveNodes,
   suggestNodes,
   testNodes
-} from '../../src/core/callgraph/query';
-import type { CallGraphDocument, CallGraphNode } from '../../src/core/callgraph/types';
+} from '@ahicode/core/core/callgraph/query';
+import type { CallGraphDocument, CallGraphNode } from '@ahicode/core/core/callgraph/types';
 
 function node(id: string, overrides: Partial<CallGraphNode> = {}): CallGraphNode {
   const [file, name] = id.split('#');

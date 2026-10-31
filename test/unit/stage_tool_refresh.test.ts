@@ -5,8 +5,8 @@ import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { AgentCore } from '../../src/core/agent/AgentCore';
-import { ModelCompletionResponse, ModelProvider, ProviderMessage } from '../../src/providers/base';
-import { TaskState, UserSettings } from '../../src/shared/types';
+import { ModelCompletionResponse, ModelProvider, ProviderMessage } from '@ahicode/core/providers/base';
+import { TaskState, UserSettings } from '@ahicode/core/shared/types';
 
 /**
  * Tur içi aşama geçişlerinin araç listesine yansıması.

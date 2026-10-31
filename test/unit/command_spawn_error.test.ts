@@ -1,4 +1,4 @@
-import { runCommand } from '../../src/core/verification/CommandRunner';
+import { runCommand } from '@ahicode/core/core/verification/CommandRunner';
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
 

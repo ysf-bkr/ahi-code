@@ -1,11 +1,13 @@
 import { chmodSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { build } from 'esbuild';
 
 const outputFile = 'dist/cli.js';
 
 await build({
-  entryPoints: ['src/cli.ts'],
+  entryPoints: ['packages/cli/src/index.ts'],
   bundle: true,
+  alias: { '@ahicode/core': resolve('packages/core/src') },
   platform: 'node',
   format: 'cjs',
   minify: true,

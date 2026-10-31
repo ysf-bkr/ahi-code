@@ -1,0 +1,11 @@
+{
+  "name": "@ahicode/core",
+  "version": "0.0.2",
+  "private": true,
+  "description": "AhiCode motoru: sağlayıcılar, araçlar, izinler, bağlam, bilgi tabanı — VS Code'dan bağımsız.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

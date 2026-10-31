@@ -1,8 +1,8 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { resolveAgentModel } from '../../src/core/routing/agentModelPolicy';
-import { classifyModelCapability, isConversationModel } from '../../src/shared/modelCapability';
-import { UserSettings } from '../../src/shared/types';
+import { resolveAgentModel } from '@ahicode/core/core/routing/agentModelPolicy';
+import { classifyModelCapability, isConversationModel } from '@ahicode/core/shared/modelCapability';
+import { UserSettings } from '@ahicode/core/shared/types';
 
 const evrenBase: UserSettings = {
   selectedProvider: 'evren',

@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { McpClient } from '../../src/core/mcp/McpClient';
+import { McpClient } from '@ahicode/core/core/mcp/McpClient';
 
 describe('McpClient: basic status management', () => {
   it('does not start disabled server', async () => {

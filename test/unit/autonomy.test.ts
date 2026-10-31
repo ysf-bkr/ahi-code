@@ -5,8 +5,8 @@ import {
   decideContinuation,
   MAX_AUTO_CONTINUATIONS,
   skipsApprovalGates
-} from '../../src/core/agent/autonomy';
-import { UserSettings } from '../../src/shared/types';
+} from '@ahicode/core/core/agent/autonomy';
+import { UserSettings } from '@ahicode/core/shared/types';
 
 const base: UserSettings = {
   selectedProvider: 'ollama',

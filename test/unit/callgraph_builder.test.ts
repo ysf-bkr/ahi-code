@@ -8,9 +8,12 @@ import {
   collectSourceFiles,
   hashContent,
   updateCallGraph
-} from '../../src/core/callgraph/builder';
-import type { CallGraphLanguageService, ReferenceLocation } from '../../src/core/callgraph/languageService';
-import type { RawSymbol } from '../../src/core/callgraph/extractor';
+} from '@ahicode/core/core/callgraph/builder';
+import type {
+  CallGraphLanguageService,
+  ReferenceLocation
+} from '@ahicode/core/core/callgraph/languageService';
+import type { RawSymbol } from '@ahicode/core/core/callgraph/extractor';
 
 const roots: string[] = [];
 

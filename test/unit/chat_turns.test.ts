@@ -5,8 +5,8 @@ import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { AgentCore } from '../../src/core/agent/AgentCore';
-import { ModelCompletionResponse, ModelProvider, ProviderMessage } from '../../src/providers/base';
-import { UserSettings } from '../../src/shared/types';
+import { ModelCompletionResponse, ModelProvider, ProviderMessage } from '@ahicode/core/providers/base';
+import { UserSettings } from '@ahicode/core/shared/types';
 
 /**
  * Sohbet turu sözleşmeleri:

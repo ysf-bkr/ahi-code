@@ -5,8 +5,8 @@ import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { KnowledgeStore } from '../../src/core/knowledge/KnowledgeStore';
-import { GitManager } from '../../src/core/git/GitManager';
+import { KnowledgeStore } from '@ahicode/core/core/knowledge/KnowledgeStore';
+import { GitManager } from '@ahicode/core/core/git/GitManager';
 import {
   assertSafeUrl,
   extractDuckDuckGoHtml,
@@ -14,9 +14,9 @@ import {
   looksLikeDuckDuckGoResults,
   readLimitedBody,
   stripHtml
-} from '../../src/tools/web';
-import { ALL_TOOLS } from '../../src/tools';
-import { ToolExecutionContext } from '../../src/tools/base';
+} from '@ahicode/core/tools/web';
+import { ALL_TOOLS } from '@ahicode/core/tools';
+import { ToolExecutionContext } from '@ahicode/core/tools/base';
 import { Readable } from 'node:stream';
 
 const execFileAsync = promisify(execFile);

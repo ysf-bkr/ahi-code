@@ -6,9 +6,9 @@
  * Tek dosyanın side-by-side farkı SidebarProvider.showGitFileDiff içinde
  * HEAD içeriği üzerinden üretilir; burada ayrı bir diff yolu yoktur.
  */
-import { GitChangesPayload } from '../shared/types';
-import { GitManager } from '../core/git/GitManager';
-import { errorMessage } from '../shared/errors';
+import { GitChangesPayload } from '@ahicode/core/shared/types';
+import { GitManager } from '@ahicode/core/core/git/GitManager';
+import { errorMessage } from '@ahicode/core/shared/errors';
 
 /** Son commit listesinde gösterilecek kayıt sayısı. */
 const RECENT_COMMIT_LIMIT = 10;

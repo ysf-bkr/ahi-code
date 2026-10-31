@@ -3,12 +3,12 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { PermissionManager } from '../../src/core/permission/PermissionManager';
-import { CheckpointManager } from '../../src/core/checkpoint/CheckpointManager';
-import { ContextManager } from '../../src/core/context/ContextManager';
-import { TaskState, UserSettings } from '../../src/shared/types';
-import { ProviderMessage } from '../../src/providers/base';
-import { SnapshotManager } from '../../src/core/snapshot/SnapshotManager';
+import { PermissionManager } from '@ahicode/core/core/permission/PermissionManager';
+import { CheckpointManager } from '@ahicode/core/core/checkpoint/CheckpointManager';
+import { ContextManager } from '@ahicode/core/core/context/ContextManager';
+import { TaskState, UserSettings } from '@ahicode/core/shared/types';
+import { ProviderMessage } from '@ahicode/core/providers/base';
+import { SnapshotManager } from '@ahicode/core/core/snapshot/SnapshotManager';
 
 const baseSettings: UserSettings = {
   selectedProvider: 'ollama',

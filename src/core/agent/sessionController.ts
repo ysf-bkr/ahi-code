@@ -6,9 +6,9 @@
  */
 import * as path from 'path';
 import { getActiveWorkspaceRoot } from '../workspace/workspaceRoot';
-import { errorMessage } from '../../shared/errors';
-import { stripInjectedContext } from '../../shared/editorContext';
-import type { AgentMode, ToolCall } from '../../shared/types';
+import { errorMessage } from '@ahicode/core/shared/errors';
+import { stripInjectedContext } from '@ahicode/core/shared/editorContext';
+import type { AgentMode, ToolCall } from '@ahicode/core/shared/types';
 import type { AgentHost } from './agentHost';
 
 export class SessionController {

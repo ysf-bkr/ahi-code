@@ -1,5 +1,5 @@
-import { UserSettings } from '../shared/types';
-import { MASKED_KEY } from '../shared/constants';
+import { UserSettings } from '@ahicode/core/shared/types';
+import { MASKED_KEY } from '@ahicode/core/shared/constants';
 
 export { MASKED_KEY };
 

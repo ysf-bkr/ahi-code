@@ -5,7 +5,7 @@ import {
   validateToolArguments,
   type JsonSchema,
   type ToolDefinition
-} from '../../src/tools/base';
+} from '@ahicode/core/tools/base';
 
 /**
  * Derinlik koruması testleri.
@@ -109,7 +109,7 @@ describe('tools/base: derin şema yığın taşması yapmaz', () => {
 
 describe('TaskPlanner: uzun bağımlılık zinciri yığın taşması yapmaz', () => {
   it('10.000 adımlık zinciri doğrular', async () => {
-    const { TaskPlanner } = await import('../../src/core/plan/TaskPlanner');
+    const { TaskPlanner } = await import('@ahicode/core/core/plan/TaskPlanner');
     const planner = new TaskPlanner();
 
     const steps = Array.from({ length: 10_000 }, (_, index) => ({
@@ -123,7 +123,7 @@ describe('TaskPlanner: uzun bağımlılık zinciri yığın taşması yapmaz', (
   });
 
   it('döngüyü hâlâ yakalar', async () => {
-    const { TaskPlanner } = await import('../../src/core/plan/TaskPlanner');
+    const { TaskPlanner } = await import('@ahicode/core/core/plan/TaskPlanner');
     const planner = new TaskPlanner();
 
     assert.throws(

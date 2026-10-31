@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const rootPackage = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
-const sharedDir = fileURLToPath(new URL('../src/shared', import.meta.url));
+const sharedDir = fileURLToPath(new URL('../packages/core/src/shared', import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
@@ -13,8 +13,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      // Shared types/agents live in the extension's src/shared directory;
-      // the alias keeps the imports stable instead of relative climbs.
+      // Shared types/agents live in @ahicode/core; the alias keeps the
+      // imports stable instead of relative climbs.
       '@shared': sharedDir
     }
   },

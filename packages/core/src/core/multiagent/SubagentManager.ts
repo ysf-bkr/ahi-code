@@ -11,7 +11,7 @@ import { formatTaskGraphResults, runTaskGraph, type TaskNode } from './parallelS
 import type { AgentModelChoice } from '../routing/agentModelPolicy';
 
 import { SkillManager } from '../skills/SkillManager';
-import type { LspClient } from '../lsp/LspClient';
+import type { LspClientPort } from '../lsp/port';
 import { SnapshotManager } from '../snapshot/SnapshotManager';
 import { PermissionManager } from '../permission/PermissionManager';
 import { policyFor } from '../permission/toolPolicy';
@@ -99,7 +99,7 @@ export class SubagentManager {
     private provider: ModelProvider,
     private onSubagentStatus?: SubagentStatusListener,
     private skillManager?: SkillManager,
-    private lspClient?: LspClient,
+    private lspClient?: LspClientPort,
     private snapshotManager?: SnapshotManager,
     private permissionManager?: PermissionManager,
     private checkpointManager?: CheckpointManager,

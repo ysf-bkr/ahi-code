@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { ReadDeduper } from '../../src/core/agent/readDeduper';
-import { suggestedModelError } from '../../src/providers/openai';
+import { ReadDeduper } from '@ahicode/core/core/agent/readDeduper';
+import { suggestedModelError } from '@ahicode/core/providers/openai';
 
 describe('ReadDeduper: aynı dosyayı tekrar okuma döngüsünü keser', () => {
   const FILE = '/repo/src/main.ts';

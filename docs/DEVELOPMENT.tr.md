@@ -22,6 +22,25 @@ npm ci
 npm --prefix webview-ui ci
 ```
 
+### Monorepo Yapısı (npm workspaces)
+AhiCode, üç paket ve eklenti konağından oluşan tek depolu bir npm
+workspace'idir. Kökte çalıştırılan `npm ci` tüm workspace'leri tek seferde
+bağlar.
+
+| Yol | Paket | Görev |
+| --- | --- | --- |
+| `packages/core/` | `@ahicode/core` | vscode'dan bağımsız motor: sağlayıcılar, araçlar, izinler, bağlam, bilgi tabanı, çağrı grafiği, çoklu ajan. `vscode` modülünü asla import etmez. |
+| `packages/cli/` | `@ahicode/cli` | `ahi` terminal ajanı. Yalnızca `@ahicode/core` üzerine kurulu (VS Code yok). |
+| `src/` | eklenti konağı | `vscode` API'sine değen her dosya (aktivasyon, webview, AgentCore çalışma zamanı, gerçek LSP istemcisi). |
+| `webview-ui/` | React uygulaması | Sohbet webview'ı. |
+
+İçe aktarma sözleşmesi `test/unit/architecture.test.ts` ile kilitlenir:
+`@ahicode/core`, `vscode`'u veya eklentinin `src/` katmanını import edemez;
+`@ahicode/cli`, eklentinin `src/` katmanını import edemez. Motor, dil
+sunucusuna `LspClientPort` arayüzüyle ulaşır; konağın `LspClient` sınıfı bu
+biçimi yapısal olarak karşılar. Terminal ajanını kaynaktan
+`npm run cli -- --prompt "..."` ile çalıştırın.
+
 ### Derleme ve Doğrulama Komutları
 AhiCode, yüksek kod kalitesi ve test izolasyonu için kapsamlı kontrol scriptlerine sahiptir:
 
@@ -122,8 +141,8 @@ onaylanana kadar şeritte `kod öncesi` işareti görünür.
 
 AhiCode, harici geliştirici araçlarını ve veri kaynaklarını dinamik olarak
 bağlamak için Model Context Protocol standardını destekler. İstemci
-`src/core/mcp/` altında yer alır ve JSON-RPC'yi stdio ya da HTTP/SSE taşıyıcıları
-üzerinden konuşur.
+`packages/core/src/core/mcp/` altında (vscode'dan bağımsız motor tarafı) yer
+alır ve JSON-RPC'yi stdio ya da HTTP/SSE taşıyıcıları üzerinden konuşur.
 
 ### Yapılandırma
 

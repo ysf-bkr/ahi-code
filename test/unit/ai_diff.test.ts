@@ -5,10 +5,10 @@ import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { formatAiDiff, isLockfile, isAsset } from '../../src/shared/aiDiff';
-import { GitManager } from '../../src/core/git/GitManager';
-import { gitDiffTool } from '../../src/tools/git';
-import { ToolExecutionContext } from '../../src/tools/base';
+import { formatAiDiff, isLockfile, isAsset } from '@ahicode/core/shared/aiDiff';
+import { GitManager } from '@ahicode/core/core/git/GitManager';
+import { gitDiffTool } from '@ahicode/core/tools/git';
+import { ToolExecutionContext } from '@ahicode/core/tools/base';
 
 const execFileAsync = promisify(execFile);
 

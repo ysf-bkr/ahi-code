@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { filterToolsForMode, isToolAllowedInMode } from '../../src/core/agent/modeTools';
+import { filterToolsForMode, isToolAllowedInMode } from '@ahicode/core/core/agent/modeTools';
 
 const tools = [
   { name: 'read_file' },

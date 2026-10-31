@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
 import { buildFallbackHtml, buildWebviewHtml } from '../../src/webview/webviewHtml';
-import { VsCodeThemeConfig } from '../../src/shared/types';
+import { VsCodeThemeConfig } from '@ahicode/core/shared/types';
 
 const theme: VsCodeThemeConfig = {
   editorFontFamily: 'JetBrains Mono',

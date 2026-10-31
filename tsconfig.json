@@ -2,10 +2,8 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "ES2022",
-    "outDir": "out",
     "lib": ["ES2022"],
     "sourceMap": true,
-    "rootDir": "src",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noUnusedLocals": true,
@@ -14,8 +12,13 @@
     "noFallthroughCasesInSwitch": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@ahicode/core": ["packages/core/src/index.ts"],
+      "@ahicode/core/*": ["packages/core/src/*"]
+    }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "packages/**/src/**/*"],
   "exclude": ["node_modules", ".vscode-test", "webview-ui"]
 }

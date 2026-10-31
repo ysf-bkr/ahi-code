@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { resolveWorkspacePath } from '../../tools/pathSafety';
-import { errorMessage } from '../../shared/errors';
+import { resolveWorkspacePath } from '@ahicode/core/tools/pathSafety';
+import { errorMessage } from '@ahicode/core/shared/errors';
 
 export interface DiagnosticItem {
   file: string;

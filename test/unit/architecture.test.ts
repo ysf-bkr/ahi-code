@@ -11,8 +11,8 @@ import {
   MAX_TOOL_OUTPUT_CHARS,
   REPO_URL,
   USER_AGENT
-} from '../../src/shared/constants';
-import { EXTENSION_VERSION } from '../../src/shared/version';
+} from '@ahicode/core/shared/constants';
+import { EXTENSION_VERSION } from '@ahicode/core/shared/version';
 
 const root = process.cwd();
 
@@ -20,17 +20,25 @@ function read(relative: string): string {
   return fs.readFileSync(path.join(root, relative), 'utf-8');
 }
 
-/** src/ altındaki her TypeScript dosyası; sabitler modülünün kendisi hariç. */
-function sourceFiles(dir = 'src'): string[] {
+/** Motor paketi + CLI + eklenti konağındaki her TypeScript dosyası; sabitler
+ * modülünün kendisi hariç. */
+function sourceFiles(dir: string): string[] {
   const absolute = path.join(root, dir);
   const entries = fs.readdirSync(absolute, { withFileTypes: true });
   return entries.flatMap((entry) => {
     const relative = path.join(dir, entry.name);
     if (entry.isDirectory()) return sourceFiles(relative);
     if (!entry.name.endsWith('.ts')) return [];
-    if (relative === path.join('src', 'shared', 'constants.ts')) return [];
+    if (relative === path.join('packages', 'core', 'src', 'shared', 'constants.ts')) return [];
     return [relative];
   });
+}
+
+/** Depo genelindeki kaynak kökler: motor, CLI ve vscode konak katmanı. */
+const SOURCE_ROOTS = ['packages/core/src', 'packages/cli/src', 'src'];
+
+function everySourceFile(): string[] {
+  return SOURCE_ROOTS.flatMap((dir) => sourceFiles(dir));
 }
 
 function webviewSourceFiles(dir = 'webview-ui/src'): string[] {
@@ -64,17 +72,17 @@ describe('Shared constants: single source of truth', () => {
   });
 
   it('no module hardcodes .ahi path', () => {
-    const offenders = sourceFiles().filter((file) => /path\.join\([^)]*'\.ahi'/.test(read(file)));
+    const offenders = everySourceFile().filter((file) => /path\.join\([^)]*'\.ahi'/.test(read(file)));
     assert.deepEqual(offenders, [], `.ahi path hardcoded: ${offenders.join(', ')}`);
   });
 
   it('no module hardcodes a client version', () => {
-    const offenders = sourceFiles().filter((file) => /AhiCode\/\d+\.\d+/.test(read(file)));
+    const offenders = everySourceFile().filter((file) => /AhiCode\/\d+\.\d+/.test(read(file)));
     assert.deepEqual(offenders, [], `Hardcoded version: ${offenders.join(', ')}`);
   });
 
   it('provider addresses are not copied to modules', () => {
-    const offenders = sourceFiles().filter((file) => /localhost:(11434|1234)/.test(read(file)));
+    const offenders = everySourceFile().filter((file) => /localhost:(11434|1234)/.test(read(file)));
     assert.deepEqual(offenders, [], `Provider address hardcoded: ${offenders.join(', ')}`);
   });
 });
@@ -157,11 +165,19 @@ describe('Module graph: layering rules', () => {
     typeOnly: boolean;
   }
 
-  function allSourceFiles(dir = 'src'): string[] {
-    return sourceFiles(dir).map((file) => file.replace(/\\/g, '/'));
+  function allSourceFiles(dir?: string): string[] {
+    const roots = dir ? [dir] : SOURCE_ROOTS;
+    return roots.flatMap((sourceRoot) => sourceFiles(sourceRoot)).map((file) => file.replace(/\\/g, '/'));
   }
 
   function resolveRelative(from: string, specifier: string): string | undefined {
+    if (specifier.startsWith('@ahicode/core/')) {
+      const base = `packages/core/src/${specifier.slice('@ahicode/core/'.length)}`;
+      for (const candidate of [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`]) {
+        if (fs.existsSync(path.join(root, candidate))) return candidate;
+      }
+      return undefined;
+    }
     if (!specifier.startsWith('.')) return undefined;
     const base = path.posix.normalize(path.posix.join(path.posix.dirname(from), specifier));
     for (const candidate of [`${base}.ts`, `${base}.tsx`, `${base}/index.ts`]) {
@@ -251,7 +267,9 @@ describe('Module graph: layering rules', () => {
       return hits;
     };
 
-    const offenders = allSourceFiles('src/tools').filter((file) => reachesVscode(file).length > 0);
+    const offenders = allSourceFiles('packages/core/src/tools').filter(
+      (file) => reachesVscode(file).length > 0
+    );
     assert.deepEqual(offenders, [], `Tool module pulls in vscode: ${offenders.join(', ')}`);
   });
 
@@ -261,7 +279,7 @@ describe('Module graph: layering rules', () => {
     // derleme yakalamaz; burada yakalanır.
     const toolNames = new Set(
       [
-        ...read('src/shared/types.ts')
+        ...read('packages/core/src/shared/types.ts')
           .split('export type ToolName =')[1]!
           .split(';')[0]!
           .matchAll(/'([^']+)'/g)
@@ -269,7 +287,7 @@ describe('Module graph: layering rules', () => {
     );
 
     const offenders: string[] = [];
-    for (const file of allSourceFiles('src/shared/agents/registry')) {
+    for (const file of allSourceFiles('packages/core/src/shared/agents/registry')) {
       const toolsBlock = read(file).match(/tools: \[([\s\S]*?)\]/);
       if (!toolsBlock) continue;
       for (const match of toolsBlock[1]!.matchAll(/'([^']+)'/g)) {
@@ -283,7 +301,7 @@ describe('Module graph: layering rules', () => {
   it('the orchestrator can delegate', () => {
     // Yönetici ajanın işi devretmek; araç listesinde delege araçları yoksa
     // "manager" yalnızca kıdemli bir işçi olur.
-    const managerTools = read('src/shared/agents/registry/manager.ts');
+    const managerTools = read('packages/core/src/shared/agents/registry/manager.ts');
     assert.match(managerTools, /'invoke_subagent'/);
     assert.match(managerTools, /'run_parallel_tasks'/);
   });
@@ -293,13 +311,16 @@ describe('Module graph: layering rules', () => {
     // bağlanabilir. Yeni bir değer importu eklenirse burada bilinçli olarak
     // listelenmeli; aksi hâlde araç katmanı çekirdeğin içine sızar.
     const ALLOWED = new Set([
-      'src/core/callgraph/query.ts', // saf sorgu fonksiyonları
-      'src/core/verification/CommandRunner.ts' // süreç yürütme ilkelleri
+      'packages/core/src/core/callgraph/query.ts', // saf sorgu fonksiyonları
+      'packages/core/src/core/verification/CommandRunner.ts' // süreç yürütme ilkelleri
     ]);
 
     const offenders = edges()
       .filter((edge) => !edge.typeOnly)
-      .filter((edge) => edge.from.startsWith('src/tools/') && edge.to.startsWith('src/core/'))
+      .filter(
+        (edge) =>
+          edge.from.startsWith('packages/core/src/tools/') && edge.to.startsWith('packages/core/src/core/')
+      )
       .filter((edge) => !ALLOWED.has(edge.to))
       .map((edge) => `${edge.from} -> ${edge.to}`);
 
@@ -309,9 +330,39 @@ describe('Module graph: layering rules', () => {
   it('providers depend on tool types, not on the tool registry', () => {
     const offenders = edges()
       .filter((edge) => !edge.typeOnly)
-      .filter((edge) => edge.from.startsWith('src/providers/') && edge.to.startsWith('src/tools/'))
+      .filter(
+        (edge) =>
+          edge.from.startsWith('packages/core/src/providers/') &&
+          edge.to.startsWith('packages/core/src/tools/')
+      )
       .map((edge) => `${edge.from} -> ${edge.to}`);
 
     assert.deepEqual(offenders, [], `Provider layer value-imports tools: ${offenders.join(', ')}`);
+  });
+
+  it('core package stays free of vscode and the extension host', () => {
+    // Motor paketi terminalde de yaşayacak: vscode modülüne veya eklenti
+    // konağının (src/) herhangi bir dosyasına uzanan kenar bu sözleşmeyi kırar.
+    const coreFiles = allSourceFiles('packages/core/src');
+    const vscodeFiles = coreFiles.filter((file) => /from ['"]vscode['"]/.test(read(file)));
+    assert.deepEqual(vscodeFiles, [], `Core paket vscode import ediyor: ${vscodeFiles.join(', ')}`);
+
+    const escapees = edges()
+      .filter((edge) => edge.from.startsWith('packages/core/'))
+      .filter((edge) => edge.to.startsWith('src/') || edge.to.startsWith('packages/cli/'))
+      .map((edge) => `${edge.from} -> ${edge.to}`);
+    assert.deepEqual(escapees, [], `Core paket konağa/CLI'ya sızıyor: ${escapees.join(', ')}`);
+  });
+
+  it('cli package rides only on the core engine', () => {
+    const cliFiles = allSourceFiles('packages/cli/src');
+    const vscodeFiles = cliFiles.filter((file) => /from ['"]vscode['"]/.test(read(file)));
+    assert.deepEqual(vscodeFiles, [], `CLI vscode import ediyor: ${vscodeFiles.join(', ')}`);
+
+    const escapees = edges()
+      .filter((edge) => edge.from.startsWith('packages/cli/'))
+      .filter((edge) => edge.to.startsWith('src/'))
+      .map((edge) => `${edge.from} -> ${edge.to}`);
+    assert.deepEqual(escapees, [], `CLI eklenti konağına bağımlı: ${escapees.join(', ')}`);
   });
 });

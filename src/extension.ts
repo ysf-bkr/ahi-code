@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SidebarProvider } from './webview/SidebarProvider';
-import { setLogSink } from './shared/logging';
-import { errorMessage } from './shared/errors';
+import { setLogSink } from '@ahicode/core/shared/logging';
+import { errorMessage } from '@ahicode/core/shared/errors';
 
 export async function activate(context: vscode.ExtensionContext) {
   const output = vscode.window.createOutputChannel('AhiCode');

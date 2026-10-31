@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { WorkspaceRuleManager } from '../../src/core/rules/WorkspaceRuleManager';
+import { WorkspaceRuleManager } from '@ahicode/core/core/rules/WorkspaceRuleManager';
 
 describe('WorkspaceRuleManager: single source of truth', () => {
   let root: string;

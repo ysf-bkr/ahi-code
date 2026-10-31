@@ -7,16 +7,16 @@ import {
   WebviewToExtensionMessage,
   VsCodeThemeConfig,
   WorkspaceCustomizations
-} from '../shared/types';
-import { isChatConfigured } from '../shared/constants';
+} from '@ahicode/core/shared/types';
+import { isChatConfigured } from '@ahicode/core/shared/constants';
 import { AgentCore, createSharedServices, SharedServices } from '../core/agent/AgentCore';
 import { SessionRegistry } from '../core/agent/SessionRegistry';
-import { EvrenModelProvider } from '../providers/evren';
+import { EvrenModelProvider } from '@ahicode/core/providers/evren';
 import { getActiveWorkspaceRoot } from '../core/workspace/workspaceRoot';
-import { resolveWorkspacePath } from '../tools/pathSafety';
-import { errorMessage } from '../shared/errors';
-import { logWarning } from '../shared/logging';
-import { ErrorReporter, githubCliRunner } from '../feedback/errorReporter';
+import { resolveWorkspacePath } from '@ahicode/core/tools/pathSafety';
+import { errorMessage } from '@ahicode/core/shared/errors';
+import { logWarning } from '@ahicode/core/shared/logging';
+import { ErrorReporter, githubCliRunner } from '@ahicode/core/feedback/errorReporter';
 import { buildWebviewHtml } from './webviewHtml';
 import {
   loadDefaultSettings,
@@ -29,9 +29,9 @@ import {
 } from './settingsStore';
 import { fetchModelIds } from './modelCatalog';
 import { collectGitChanges } from './gitChanges';
-import { ROLE_ALIASES, getAgentDefinition } from '../shared/agents';
+import { ROLE_ALIASES, getAgentDefinition } from '@ahicode/core/shared/agents';
 import { AhiCodeDiffContentProvider } from '../shared/diffContentProvider';
-import { getLanguageIdForFile } from '../shared/languageMap';
+import { getLanguageIdForFile } from '@ahicode/core/shared/languageMap';
 
 type WebviewMessageHandlerMap = {
   [K in WebviewToExtensionMessage['type']]: (

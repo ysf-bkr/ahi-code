@@ -9,103 +9,59 @@ This document details the internal architecture, directory structure, data flow,
 ## 1. Directory Structure
 
 ```text
-ahi-code/
-├── src/
-│   ├── extension.ts                  # Activation, command registry, view container setup
-│   ├── shared/                       # Extension ↔ Webview contracts
-│   │   ├── types.ts                  # Typed postMessage protocol and domain models
-│   │   ├── constants.ts              # Shared constants (paths, timeouts, endpoints)
-│   │   ├── version.ts                # Versioning (validated against package.json)
-│   │   ├── commandPolicy.ts          # Command risk policy (blocked/risky/safe)
-│   │   ├── languageMap.ts            # VS Code language ID mapping for highlighting
-│   │   ├── redaction.ts              # Secret and credential masking
-│   │   ├── frontmatter.ts            # YAML frontmatter parser
-│   │   ├── editorContext.ts          # Editor context markers
-│   │   ├── text.ts                   # ANSI stripping and string utilities
-│   │   ├── diffContentProvider.ts    # Shared diff URI helpers
-│   │   ├── workflowLabels.ts         # Workflow stage labels
-│   │   └── agents/                   # Built-in agent definitions & role routing
-│   │       ├── index.ts              # Registry (13 roles, aliases)
-│   │       ├── routing.ts            # File/text → role (deterministic)
-│   │       ├── params.ts             # invoke_subagent argument validation
-│   │       └── registry/             # Per-role persona & tool allowlists
-│   ├── providers/                    # LLM adapters (Ollama, EVREN, OpenRouter, OpenAI)
-│   ├── tools/                        # Tool implementations
-│   │   ├── index.ts                  # Central tool registry (ALL_TOOLS)
-│   │   ├── file.ts                   # Read/write/edit/search/notebook tools
-│   │   ├── shell.ts                  # Command, test and lint execution
-│   │   ├── git.ts                    # Git tools (status, diff, log, commit)
-│   │   ├── lsp.ts                    # LSP tools (diagnostics, definitions, symbols)
-│   │   ├── knowledge.ts              # Knowledge base and specification tools
-│   │   ├── agent.ts                  # Subagent, planning and verification tools
-│   │   ├── web.ts                    # web_fetch / web_search (SSRF protection)
-│   │   ├── base.ts                   # Tool types and argument validation
-│   │   ├── args.ts                   # Argument extractors
-│   │   ├── parsers.ts                # Raw model output → typed objects
-│   │   └── pathSafety.ts             # Workspace path jail (traversal/symlink)
-│   ├── webview/                      # Webview management
-│   │   ├── SidebarProvider.ts        # Webview lifecycle & message routing
-│   │   ├── settingsStore.ts          # Settings persistence & OS SecretStorage
-│   │   ├── modelCatalog.ts           # Provider model cataloging
-│   │   ├── gitChanges.ts             # Git queries for the Changes view
-│   │   ├── apiKeys.ts                # Key masking
-│   │   └── webviewHtml.ts            # CSP-secured HTML generation
-│   └── core/
-│       ├── toolRunner.ts             # VS Code-free tool runner (shared with CLI)
-│       ├── agent/
-│       │   ├── AgentCore.ts          # Orchestration, approvals, cancellations
-│       │   ├── agentHost.ts          # Shared host contracts across controllers
-│       │   ├── agentLoop.ts          # Main ReAct loop and turn management
-│       │   ├── autonomy.ts           # Autonomy modes (manual, guided, auto)
-│       │   ├── fileMentions.ts       # @file prompt expansions
-│       │   ├── KnowledgeCurator.ts   # Lazy document and architecture curation
-│       │   ├── modeTools.ts          # Stage-based tool gating (code vs plan)
-│       │   ├── SessionRegistry.ts    # One live AgentCore per chat (background chats)
-│       │   ├── sessionController.ts  # Session hydration and history switches
-│       │   ├── sessionPersistence.ts # Multi-root snapshot/checkpoint state
-│       │   ├── terminalExecution.ts  # Integrated terminal runners
-│       │   ├── toolPipelineController.ts # Tool dispatch, safety gating, diff pacing
-│       │   ├── turnAssembly.ts       # Context and message assembly
-│       │   ├── verificationController.ts # Post-mutation auto-verification
-│       │   └── workflowController.ts # Workflow stage gates and approval pipeline
-│       ├── permission/               # PermissionManager, tool policy, fingerprinting
-│       ├── audit/                    # SHA-256 hash-chained audit ledger
-│       ├── snapshot/                 # SnapshotManager and file rollback engine
-│       ├── checkpoint/               # Turn-level state rewind
-│       ├── callgraph/                # Structural call graph index and queries
-│       ├── rules/                    # Workspace rules (AGENTS.md, .ahirules)
-│       ├── skills/                   # Skill discovery and loading
-│       ├── memory/                   # History, project memory, vector memory
-│       ├── knowledge/                # Knowledge store and embedding index
-│       ├── spec/                     # Contract-first specification store
-│       ├── context/                  # Context window protection and pruning
-│       ├── plan/                     # TaskPlanner + ModulePlanner (layered module map)
-│       ├── verification/             # Command runner and repair policies
-│       ├── routing/                  # ModelRouter + per-role agent model policy
-│       ├── worktree/                 # WorktreeManager for isolated branches
-│       ├── git/                      # Git operations and command checkpoints
-│       ├── lsp/                      # Language Server Client integration
-│       ├── multiagent/               # SubagentManager + DAG parallel scheduler
-│       ├── hooks/                    # Pre/Post/Stop hook manager
-│       ├── prompts/                  # System prompt construction
-│       ├── workflow/                 # Guided workflow state machine
-│       ├── workspace/                # Active workspace root
-│       └── mcp/                      # Model Context Protocol hub & client
-├── webview-ui/                       # React 18 + Tailwind CSS + Lucide webview
+ahi-code/                                 npm workspaces monorepo
+├── src/                                  VS Code host layer (every vscode-API touch lives here)
+│   ├── extension.ts                      Activation, command registry, view container setup
+│   ├── shared/diffContentProvider.ts     Diff content provider (vscode Uri/EventEmitter)
+│   ├── webview/                          Webview management
+│   │   ├── SidebarProvider.ts            Webview lifecycle & message routing
+│   │   ├── settingsStore.ts              Settings persistence & OS SecretStorage
+│   │   ├── modelCatalog.ts               Provider model cataloging
+│   │   ├── gitChanges.ts                 Git queries for the Changes view
+│   │   ├── apiKeys.ts                    Key masking
+│   │   └── webviewHtml.ts                CSP-secured HTML generation
+│   └── core/                             vscode-bound runtime pieces of the agent
+│       ├── agent/                        AgentCore, agentLoop, agentHost, toolPipeline
+│       │                                 controller, session/workflow/verification
+│       │                                 controllers, terminalExecution, SessionRegistry
+│       ├── lsp/LspClient.ts              Real language-server client; structurally
+│       │                                 satisfies @ahicode/core's LspClientPort
+│       ├── mcp/McpHub.ts                 MCP hub wiring webview messaging to clients
+│       ├── memory/HistoryManager.ts      Workspace persistence (vscode Memento)
+│       └── workspace/workspaceRoot.ts    Active editor / workspace folder lookup
+├── packages/
+│   ├── core/                             @ahicode/core — the vscode-free engine
+│   │   └── src/
+│   │       ├── index.ts                  Barrel entry
+│   │       ├── shared/                   Contracts (types, constants, version), command
+│   │       │                             policy, redaction, text utils, agent registry
+│   │       ├── providers/                LLM adapters (Ollama, EVREN, OpenRouter, OpenAI)
+│   │       ├── tools/                    Tool implementations (SSRF guard, path jail,
+│   │       │                             parsers, shell, git, knowledge, web)
+│   │       ├── feedback/                 Opt-in GitHub error reporter
+│   │       └── core/                     Engine services: toolRunner, prompts, permission,
+│   │                                     context, knowledge, memory, callgraph, multiagent,
+│   │                                     plan, verification, routing, audit, snapshot,
+│   │                                     checkpoint, worktree, rules, skills, workflow,
+│   │                                     hooks, git, spec, mcp client
+│   │       └── core/lsp/port.ts          LspClientPort: the engine never sees vscode
+│   └── cli/                              @ahicode/cli — terminal agent (`ahi`)
+│       └── src/index.ts                  ReAct loop on @ahicode/core + readline UI
+├── webview-ui/                           React 18 + Tailwind CSS + Lucide webview
 │   ├── src/
-│   │   ├── App.tsx                   # Main view routing and message dispatcher
-│   │   ├── index.css                 # Design system: tokens, components, layout
-│   │   ├── components/               # Screens, cards, composer, headers
-│   │   ├── components/ui/            # Button, IconButton, fields, Card, Toggle
-│   │   ├── components/Markdown.tsx   # Safe markdown renderer
-│   │   └── utils/                    # vscode postMessage bridge, plan progress
-│   └── test/                         # React component tests (JSDOM)
+│   │   ├── App.tsx                       Main view routing and message dispatcher
+│   │   ├── index.css                     Design system: tokens, components, layout
+│   │   ├── components/                   Screens, cards, composer, headers
+│   │   ├── components/ui/                Button, IconButton, fields, Card, Toggle
+│   │   ├── components/Markdown.tsx       Safe markdown renderer
+│   │   └── utils/                        vscode postMessage bridge, plan progress
+│   └── test/                             React component tests (JSDOM)
 ├── test/
-│   ├── unit/                         # Core unit tests
-│   ├── support/                      # VS Code API stubs and test runner hooks
-│   └── e2e/                          # Real VS Code integration tests
-├── resources/                        # Brand assets (logo, icon, favicon variants)
-└── scripts/                          # Lifecycle, verification, packaging scripts
+│   ├── unit/                             Core unit tests
+│   ├── support/                          VS Code API stubs and test runner hooks
+│   └── e2e/                              Real VS Code integration tests
+├── resources/                            Brand assets (logo, icon, favicon variants)
+└── scripts/                              Lifecycle, verification, packaging scripts
 ```
 
 ---

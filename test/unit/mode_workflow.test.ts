@@ -5,9 +5,9 @@ import {
   filterToolsForMode,
   isToolAllowed,
   isToolAllowedInMode
-} from '../../src/core/agent/modeTools';
-import { ALL_TOOLS } from '../../src/tools';
-import { ToolName } from '../../src/shared/types';
+} from '@ahicode/core/core/agent/modeTools';
+import { ALL_TOOLS } from '@ahicode/core/tools';
+import { ToolName } from '@ahicode/core/shared/types';
 
 describe('modeTools: plan mode lock', () => {
   it('plan mode blocks write and command tools', () => {

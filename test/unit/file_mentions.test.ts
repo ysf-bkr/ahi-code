@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { collectMentionSnippets, extractFileMentions } from '../../src/core/agent/fileMentions';
+import { collectMentionSnippets, extractFileMentions } from '@ahicode/core/core/agent/fileMentions';
 
 describe('fileMentions: @file context', () => {
   const roots: string[] = [];

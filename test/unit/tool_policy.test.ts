@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { ALL_TOOLS } from '../../src/tools';
-import { policyFor, targetPathFor } from '../../src/core/permission/toolPolicy';
+import { ALL_TOOLS } from '@ahicode/core/tools';
+import { policyFor, targetPathFor } from '@ahicode/core/core/permission/toolPolicy';
 
 /**
  * Politika girdisi olmayan bir araç `unknown`'a düşer; bu da her şey için

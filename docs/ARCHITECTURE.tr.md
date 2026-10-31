@@ -9,104 +9,59 @@ Bu belge, AhiCode eklentisinin iç mimarisini, dizin yapısını, veri akışın
 ## 1. Dizin Yapısı
 
 ```text
-ahi-code/
-├── src/
-│   ├── extension.ts                  # Aktivasyon, komutlar, view kaydı
-│   ├── shared/types.ts               # Extension ↔ webview sözleşmeleri
-│   ├── shared/constants.ts           # Paylaşılan sabitler (yollar, zaman aşımları, URL'ler)
-│   ├── shared/version.ts             # Sürüm (package.json ile doğrulanır)
-│   ├── shared/commandPolicy.ts       # Komut risk politikası (blocked/risky/safe)
-│   ├── shared/languageMap.ts         # VS Code dil kimliği eşlemesi (söz dizimi renklendirme)
-│   ├── shared/diffContentProvider.ts # Paylaşılan diff URI yardımcıları
-│   ├── shared/workflowLabels.ts      # Akış aşaması etiketleri
-│   ├── shared/redaction.ts           # Gizli bilgi maskeleme
-│   ├── shared/frontmatter.ts         # YAML frontmatter ayrıştırıcı
-│   ├── shared/agents/                # Yerleşik ajan tanımları + rol yönlendirmesi
-│   │   ├── index.ts                  # Kayıt defteri (13 rol, alias'lar)
-│   │   ├── routing.ts                # Dosya/metin → rol (deterministik)
-│   │   ├── params.ts                 # invoke_subagent argüman doğrulama
-│   │   └── registry/                 # Rol başına persona + araç listesi
-│   ├── shared/editorContext.ts       # Editör bağlamı işaretleri
-│   ├── shared/text.ts                # ANSI/temizleme yardımcıları
-│   ├── providers/                    # LLM adaptörleri (Ollama, EVREN, OpenRouter, OpenAI)
-│   ├── tools/
-│   │   ├── index.ts                  # Araç kayıt defteri (ALL_TOOLS)
-│   │   ├── file.ts                   # Dosya araçları (oku/yaz/düzenle/ara/notebook)
-│   │   ├── shell.ts                  # Komut, test ve lint çalıştırma
-│   │   ├── git.ts                    # Git araçları
-│   │   ├── lsp.ts                    # LSP araçları
-│   │   ├── knowledge.ts              # Bilgi tabanı ve spec araçları
-│   │   ├── agent.ts                  # Alt ajan, plan, doğrulama araçları
-│   │   ├── web.ts                    # web_fetch / web_search (SSRF korumalı)
-│   │   ├── base.ts                   # Araç tipleri ve argüman doğrulama
-│   │   ├── args.ts                   # Argüman yardımcıları
-│   │   ├── parsers.ts                # Model çıktısını tipli nesneye çevirme
-│   │   └── pathSafety.ts             # Yol hapsi (symlink/traversal koruması)
-│   ├── webview/
-│   │   ├── SidebarProvider.ts        # Webview yaşam döngüsü ve mesaj dağıtımı
-│   │   ├── settingsStore.ts          # Ayar kalıcılığı ve SecretStorage
-│   │   ├── modelCatalog.ts           # Sağlayıcı model listesi
-│   │   ├── gitChanges.ts             # Değişiklikler ekranı Git sorguları
-│   │   ├── apiKeys.ts                # Anahtar maskeleme
-│   │   └── webviewHtml.ts            # CSP'li HTML üretimi
-│   └── core/
-│       ├── agent/
-│       │   ├── AgentCore.ts          # Orkestrasyon, onay, iptal
-│       │   ├── agentHost.ts          # Denetleyicilerin ortak sözleşmesi
-│       │   ├── agentLoop.ts          # ReAct döngüsü ve tur yönetimi
-│       │   ├── autonomy.ts           # Otonomi seviyesi ve devam kararı (saf)
-│       │   ├── workflowController.ts # Aşama geçişleri ve onay kapıları
-│       │   ├── toolPipelineController.ts # Araç kapı zinciri ve yürütme
-│       │   ├── verificationController.ts # Doğrulama + onarım döngüsü
-│       │   ├── SessionRegistry.ts    # Her sohbet için bir canlı AgentCore (arka plan)
-│       │   ├── sessionController.ts  # Oturum, iptal, geri alma
-│       │   ├── modeTools.ts          # Plan/kod araç kilidi
-│       │   ├── turnAssembly.ts       # Sağlayıcı mesaj kurgusu
-│       │   ├── terminalExecution.ts  # Tümleşik terminal yürütme
-│       │   ├── fileMentions.ts       # @dosya bağlamı
-│       │   ├── sessionPersistence.ts # Çok köklü snapshot/checkpoint yönetimi
-│       │   └── KnowledgeCurator.ts   # Tembel özetler, LSP zenginleştirme
-│       ├── toolRunner.ts             # VS Code'suz araç yürütücü (CLI paylaşır)
-│       ├── permission/
-│       │   ├── PermissionManager.ts  # allow/deny/autoApprove
-│       │   ├── toolPolicy.ts         # Araç onay politikası tablosu
-│       │   └── fingerprintApproval.ts# Parmak izi kapsamlı onay (MCP/hook)
-│       ├── context/                  # Bağlam penceresi koruması ve pruning
-│       ├── memory/                   # Oturum geçmişi + proje hafızası
-│       ├── checkpoint/               # Tur checkpoint'leri
-│       ├── snapshot/                 # Dosya geri alma
-│       ├── mcp/                      # MCP hub + stdio/HTTP client
-│       ├── multiagent/               # Alt ajan orkestrasyonu + çizgeli paralel çizelgeleyici
-│       ├── skills/                   # Yetenek keşfi ve yükleme
-│       ├── rules/                    # Workspace kuralları (AGENTS.md/.ahirules)
-│       ├── lsp/                      # VS Code LSP köprüsü
-│       ├── hooks/                    # Pre/Post/Stop hook'ları
-│       ├── prompts/                  # Sistem prompt'u
-│       ├── routing/                  # ModelRouter + rol bazlı ajan modeli politikası
-│       ├── knowledge/                # Bilgi tabanı + embedding indeksi
-│       ├── callgraph/                # Fonksiyon çağrı haritası (LSP tabanlı)
-│       ├── spec/                     # Spec deposu (.ahi/specs)
-│       ├── plan/                     # TaskPlanner + ModulePlanner (katmanlı modül haritası)
-│       ├── workflow/                 # Yönlendirilmiş akış durum makinesi
-│       ├── verification/             # Doğrulama + onarım politikası
-│       ├── git/                      # Git işlemleri ve komut checkpoint'i
-│       ├── worktree/                 # Worktree yalıtımı
-│       ├── audit/                    # Hash zincirli denetim günlüğü
-│       └── workspace/                # Aktif workspace kökü
-├── webview-ui/
-│   └── src/
-│       ├── App.tsx                   # Ekran yönlendirme
-│       ├── index.css                 # Tasarım sistemi: tipografi token'ları, form, buton, yüzey
-│       ├── components/               # Sohbet, ayarlar, MCP, ajanlar...
-│       ├── components/ui/            # Button, IconButton, TextField, SelectField, Toggle, Card
-│       ├── components/Markdown.tsx   # Güvenli markdown renderer
-│       ├── utils/vscode.ts           # Webview mesajlaşma
-│       └── utils/planProgress.ts     # Plan adımı etiketleri ve renkleri
-├── test/unit/                        # Node test runner testleri
-├── test/support/                     # Sahte vscode modülü + test yükleme kancası
-├── test/e2e/                         # Gerçek VS Code entegrasyon testleri
-├── resources/                        # Marka varlıkları (logo, simge, favicon türevleri)
-└── esbuild.js                        # Extension bundler
+ahi-code/                                 npm workspaces monorepo
+├── src/                                  VS Code konak katmanı (vscode API'sine değen her şey)
+│   ├── extension.ts                      Aktivasyon, komut kaydı, view konteyner kurulumu
+│   ├── shared/diffContentProvider.ts     Fark içerik sağlayıcısı (vscode Uri/EventEmitter)
+│   ├── webview/                          Webview yönetimi
+│   │   ├── SidebarProvider.ts            Webview yaşam döngüsü ve mesaj yönlendirme
+│   │   ├── settingsStore.ts              Ayar kalıcılığı ve işletim sistemi SecretStorage
+│   │   ├── modelCatalog.ts               Sağlayıcı model kataloğu
+│   │   ├── gitChanges.ts                 Değişiklikler görünümü için Git sorguları
+│   │   ├── apiKeys.ts                    Anahtar maskeleme
+│   │   └── webviewHtml.ts                CSP'li HTML üretimi
+│   └── core/                             Ajanın vscode'a bağlı çalışma zamanı parçaları
+│       ├── agent/                        AgentCore, agentLoop, agentHost, toolPipeline
+│       │                                 denetleyicisi, session/workflow/verification
+│       │                                 denetleyicileri, terminalExecution, SessionRegistry
+│       ├── lsp/LspClient.ts              Gerçek dil sunucusu istemcisi; @ahicode/core'un
+│       │                                 LspClientPort biçimini yapısal olarak karşılar
+│       ├── mcp/McpHub.ts                 MCP istemcilerini webview mesajlamasına bağlayan merkez
+│       ├── memory/HistoryManager.ts      Workspace kalıcılığı (vscode Memento)
+│       └── workspace/workspaceRoot.ts    Aktif editör / workspace klasörü çözümlemesi
+├── packages/
+│   ├── core/                             @ahicode/core — vscode'dan bağımsız motor
+│   │   └── src/
+│   │       ├── index.ts                  Varil (barrel) girişi
+│   │       ├── shared/                   Sözleşmeler (types, constants, version), komut
+│   │       │                             politikası, maskeleme, metin yardımcıları, ajan kaydı
+│   │       ├── providers/                LLM adaptörleri (Ollama, EVREN, OpenRouter, OpenAI)
+│   │       ├── tools/                    Araçlar (SSRF bekçisi, yol hapsi, ayrıştırıcılar,
+│   │       │                             shell, git, knowledge, web)
+│   │       ├── feedback/                 Opt-in GitHub hata bildiricisi
+│   │       └── core/                     Motor servisleri: toolRunner, prompts, permission,
+│   │                                     context, knowledge, memory, callgraph, multiagent,
+│   │                                     plan, verification, routing, audit, snapshot,
+│   │                                     checkpoint, worktree, rules, skills, workflow,
+│   │                                     hooks, git, spec, mcp istemcisi
+│   │       └── core/lsp/port.ts          LspClientPort: motor vscode modülünü asla görmez
+│   └── cli/                              @ahicode/cli — terminal ajanı (`ahi`)
+│       └── src/index.ts                  @ahicode/core üzerinde ReAct döngüsü + readline arayüzü
+├── webview-ui/                           React 18 + Tailwind CSS + Lucide webview
+│   ├── src/
+│   │   ├── App.tsx                       Ana görünüm yönlendirme ve mesaj dağıtıcı
+│   │   ├── index.css                     Tasarım sistemi: token, bileşen, yerleşim
+│   │   ├── components/                   Ekranlar, kartlar, besteci, başlıklar
+│   │   ├── components/ui/                Button, IconButton, alanlar, Card, Toggle
+│   │   ├── components/Markdown.tsx       Güvenli markdown işleyici
+│   │   └── utils/                        vscode postMessage köprüsü, plan ilerlemesi
+│   └── test/                             React bileşen testleri (JSDOM)
+├── test/
+│   ├── unit/                             Çekirdek birim testleri
+│   ├── support/                          VS Code API sahteleri ve test kancaları
+│   └── e2e/                              Gerçek VS Code tümleşik testleri
+├── resources/                            Marka varlıkları (logo, ikon, favicon varyantları)
+└── scripts/                              Yaşam döngüsü, doğrulama, paketleme betikleri
 ```
 
 ---

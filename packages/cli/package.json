@@ -1,0 +1,14 @@
+{
+  "name": "@ahicode/cli",
+  "version": "0.0.2",
+  "private": true,
+  "description": "AhiCode terminal ajanı: tek dosyalık `ahi` komutu (ağırlıksız ReAct döngüsü).",
+  "main": "./src/index.ts",
+  "bin": {
+    "ahi": "./dist/cli.js"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "build": "node ../../scripts/build-cli.mjs"
+  }
+}

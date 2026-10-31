@@ -6,9 +6,9 @@
  * VS Code depolama erişimi yalnızca burada; sağlayıcı bellekteki kopyayı tutar.
  */
 import * as vscode from 'vscode';
-import { UserSettings, VsCodeThemeConfig } from '../shared/types';
-import { API_KEY_PROVIDERS, DEFAULT_USER_SETTINGS, VALID_PROVIDERS } from '../shared/constants';
-import { normalizeRole } from '../shared/agents/routing';
+import { UserSettings, VsCodeThemeConfig } from '@ahicode/core/shared/types';
+import { API_KEY_PROVIDERS, DEFAULT_USER_SETTINGS, VALID_PROVIDERS } from '@ahicode/core/shared/constants';
+import { normalizeRole } from '@ahicode/core/shared/agents/routing';
 import { maskApiKeys, mergeApiKeys } from './apiKeys';
 
 const SETTINGS_KEY = 'ahi_settings';

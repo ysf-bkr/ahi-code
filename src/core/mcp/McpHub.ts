@@ -1,12 +1,12 @@
 import * as vscode from 'vscode';
-import { AHI_DIR, AHI_FILES } from '../../shared/constants';
+import { AHI_DIR, AHI_FILES } from '@ahicode/core/shared/constants';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { McpClient, McpServerConfig, McpServerStatus } from './McpClient';
-import { fingerprintOf, requestFingerprintApproval } from '../permission/fingerprintApproval';
-import { ToolDefinition } from '../../tools/base';
-import { errorMessage } from '../../shared/errors';
-import { logError, logWarning } from '../../shared/logging';
+import { McpClient, McpServerConfig, McpServerStatus } from '@ahicode/core/core/mcp/McpClient';
+import { fingerprintOf, requestFingerprintApproval } from '@ahicode/core/core/permission/fingerprintApproval';
+import { ToolDefinition } from '@ahicode/core/tools/base';
+import { errorMessage } from '@ahicode/core/shared/errors';
+import { logError, logWarning } from '@ahicode/core/shared/logging';
 
 export interface McpConfigFile {
   mcpServers: Record<string, McpServerConfig>;

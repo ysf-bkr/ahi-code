@@ -6,8 +6,8 @@ import {
   serializeSessionMarkdown,
   SessionArchiveError,
   SESSION_ARCHIVE_SCHEMA
-} from '../../src/core/memory/sessionArchive';
-import { TaskState } from '../../src/shared/types';
+} from '@ahicode/core/core/memory/sessionArchive';
+import { TaskState } from '@ahicode/core/shared/types';
 
 function makeTask(overrides: Partial<TaskState> = {}): TaskState {
   return {

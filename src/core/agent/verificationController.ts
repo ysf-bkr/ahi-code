@@ -4,9 +4,9 @@
  * Tur içi hızlı doğrulama (tip/lint) ve görev sonu tam doğrulama burada.
  * Onarım bütçesi kararı saf `repairPolicy` modülünden gelir.
  */
-import { decideRepair } from '../verification/repairPolicy';
+import { decideRepair } from '@ahicode/core/core/verification/repairPolicy';
 import type { AgentHost } from './agentHost';
-import type { ProjectMemoryStatus } from '../memory/ProjectMemoryManager';
+import type { ProjectMemoryStatus } from '@ahicode/core/core/memory/ProjectMemoryManager';
 
 export class VerificationController {
   constructor(private host: AgentHost) {}

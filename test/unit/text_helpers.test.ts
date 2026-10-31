@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { limitWithMarker, stripAnsi } from '../../src/shared/text';
+import { limitWithMarker, stripAnsi } from '@ahicode/core/shared/text';
 
 describe('text helpers: terminal output cleanup', () => {
   it('strips ANSI escape sequences', () => {

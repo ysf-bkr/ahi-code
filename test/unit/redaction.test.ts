@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { redactForAudit, redactSecrets } from '../../src/shared/redaction';
+import { redactForAudit, redactSecrets } from '@ahicode/core/shared/redaction';
 
 describe('redaction: audit log redaction', () => {
   it('masks bearer token and known key formats', () => {

@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { ModulePlanner } from '../../src/core/plan/ModulePlanner';
-import { TaskPlanner } from '../../src/core/plan/TaskPlanner';
+import { ModulePlanner } from '@ahicode/core/core/plan/ModulePlanner';
+import { TaskPlanner } from '@ahicode/core/core/plan/TaskPlanner';
 
 /**
  * Plan ↔ modül ↔ kriter bağı.

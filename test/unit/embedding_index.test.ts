@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { cosineSimilarity, EmbeddingIndex } from '../../src/core/knowledge/EmbeddingIndex';
+import { cosineSimilarity, EmbeddingIndex } from '@ahicode/core/core/knowledge/EmbeddingIndex';
 
 describe('EmbeddingIndex: cosine similarity', () => {
   it('returns 1 with eigenvectors, 0 with orthogonal vectors', () => {

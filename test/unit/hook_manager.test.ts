@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { HookManager } from '../../src/core/hooks/HookManager';
+import { HookManager } from '@ahicode/core/core/hooks/HookManager';
 
 describe('HookManager: security and environment cleanup', () => {
   let root: string;

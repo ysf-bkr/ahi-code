@@ -3,7 +3,12 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { SpecStore, SpecValidationError, renderSpecMarkdown, SPECS_DIR } from '../../src/core/spec/SpecStore';
+import {
+  SpecStore,
+  SpecValidationError,
+  renderSpecMarkdown,
+  SPECS_DIR
+} from '@ahicode/core/core/spec/SpecStore';
 import {
   MAX_INTAKE_QUESTIONS,
   canTransition,
@@ -13,7 +18,7 @@ import {
   gateForStage,
   isReadOnlyStage,
   stageAllowsCommands
-} from '../../src/core/workflow/TaskWorkflow';
+} from '@ahicode/core/core/workflow/TaskWorkflow';
 
 describe('SpecStore: validation and persistence', () => {
   let root: string;

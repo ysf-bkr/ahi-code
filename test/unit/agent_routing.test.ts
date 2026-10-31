@@ -8,8 +8,8 @@ import {
   roleForText,
   rolesForStep,
   rolesForChangedFiles
-} from '../../src/shared/agents/routing';
-import { PlanStep } from '../../src/shared/types';
+} from '@ahicode/core/shared/agents/routing';
+import { PlanStep } from '@ahicode/core/shared/types';
 
 /**
  * Rol yönlendirmesi: "kim neyi yapacak" kararı.

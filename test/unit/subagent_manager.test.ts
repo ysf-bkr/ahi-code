@@ -1,11 +1,11 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { SubagentManager } from '../../src/core/multiagent/SubagentManager';
-import { ModelProvider, ProviderMessage } from '../../src/providers/base';
-import { PermissionManager } from '../../src/core/permission/PermissionManager';
-import { UserSettings } from '../../src/shared/types';
-import type { CallGraphManager } from '../../src/core/callgraph/CallGraphManager';
-import type { SkillManager } from '../../src/core/skills/SkillManager';
+import { SubagentManager } from '@ahicode/core/core/multiagent/SubagentManager';
+import { ModelProvider, ProviderMessage } from '@ahicode/core/providers/base';
+import { PermissionManager } from '@ahicode/core/core/permission/PermissionManager';
+import { UserSettings } from '@ahicode/core/shared/types';
+import type { CallGraphManager } from '@ahicode/core/core/callgraph/CallGraphManager';
+import type { SkillManager } from '@ahicode/core/core/skills/SkillManager';
 
 const provider: ModelProvider = {
   id: 'test',

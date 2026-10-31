@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { decideRepair } from '../../src/core/verification/repairPolicy';
+import { decideRepair } from '@ahicode/core/core/verification/repairPolicy';
 
 const base = {
   status: 'failed' as const,

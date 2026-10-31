@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
-import { parsePlanUpdateInput, parseSubagentTaskParams } from '../../src/tools/parsers';
+import { parsePlanUpdateInput, parseSubagentTaskParams } from '@ahicode/core/tools/parsers';
 
 describe('parsers: araç argümanlarını güvenli ayrıştırma', () => {
   it('plan adımlarını doğrular ve geçersiz alanları atlar', () => {

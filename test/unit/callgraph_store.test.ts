@@ -11,8 +11,8 @@ import {
   emptyDocument,
   loadCallGraph,
   saveCallGraph
-} from '../../src/core/callgraph/store';
-import { hashContent } from '../../src/core/callgraph/builder';
+} from '@ahicode/core/core/callgraph/store';
+import { hashContent } from '@ahicode/core/core/callgraph/builder';
 
 const roots: string[] = [];
 

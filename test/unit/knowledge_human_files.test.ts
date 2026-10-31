@@ -3,7 +3,7 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { KnowledgeStore } from '../../src/core/knowledge/KnowledgeStore';
+import { KnowledgeStore } from '@ahicode/core/core/knowledge/KnowledgeStore';
 
 /**
  * `.ahi` bilgi tabanı sözleşmesi.

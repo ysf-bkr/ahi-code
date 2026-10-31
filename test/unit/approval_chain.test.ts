@@ -3,9 +3,9 @@ import * as assert from 'node:assert';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import * as fs from 'node:fs/promises';
-import { PermissionManager } from '../../src/core/permission/PermissionManager';
-import { assessCommand } from '../../src/shared/commandPolicy';
-import { UserSettings } from '../../src/shared/types';
+import { PermissionManager } from '@ahicode/core/core/permission/PermissionManager';
+import { assessCommand } from '@ahicode/core/shared/commandPolicy';
+import { UserSettings } from '@ahicode/core/shared/types';
 
 const everythingAuto: UserSettings = {
   selectedProvider: 'ollama',

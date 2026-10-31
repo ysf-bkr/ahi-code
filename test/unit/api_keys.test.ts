@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert';
 import { MASKED_KEY, maskApiKeys, mergeApiKeys } from '../../src/webview/apiKeys';
-import { isChatConfigured } from '../../src/shared/constants';
+import { isChatConfigured } from '@ahicode/core/shared/constants';
 
 describe('apiKeys: masking and merging', () => {
   it('masks real keys to the UI', () => {

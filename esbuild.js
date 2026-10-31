@@ -1,12 +1,19 @@
 const esbuild = require('esbuild');
+const path = require('path');
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
+
+// Motor paketi kaynak olarak demlenir: alias, '@ahicode/core/...' derin
+// importlarını packages/core/src altına çözer (npm workspaces sembolik
+// bağı ve tsconfig yollarıyla birebir aynı hedef).
+const coreAlias = { '@ahicode/core': path.resolve(__dirname, 'packages/core/src') };
 
 async function main() {
   const ctx = await esbuild.context({
     entryPoints: ['src/extension.ts'],
     bundle: true,
+    alias: coreAlias,
     format: 'cjs',
     minify: production,
     sourcemap: !production,

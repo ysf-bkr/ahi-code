@@ -5,7 +5,7 @@ import {
   formatTaskGraphResults,
   type TaskNode,
   type TaskGraphResult
-} from '../../src/core/multiagent/parallelScheduler';
+} from '@ahicode/core/core/multiagent/parallelScheduler';
 
 function nodes(defs: Array<[string, string[]]>): TaskNode<string>[] {
   return defs.map(([id, dependsOn]) => ({ id, role: id, payload: id, dependsOn }));

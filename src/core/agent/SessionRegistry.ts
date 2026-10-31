@@ -1,7 +1,7 @@
 import type * as vscode from 'vscode';
 import { AgentCore, AgentCoreDependencies, SharedServices } from './AgentCore';
-import type { TaskState, UserSettings } from '../../shared/types';
-import { logWarning } from '../../shared/logging';
+import type { TaskState, UserSettings } from '@ahicode/core/shared/types';
+import { logWarning } from '@ahicode/core/shared/logging';
 
 /** Kayıt defterindeki bir oturumun arayüze bakan özeti. */
 export interface SessionSnapshot {

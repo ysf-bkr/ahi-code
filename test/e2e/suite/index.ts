@@ -377,7 +377,7 @@ export async function run(): Promise<void> {
   });
 
   await test('repository hooks require an explicit approval', async () => {
-    const { HookManager } = await import('../../../src/core/hooks/HookManager');
+    const { HookManager } = await import('@ahicode/core/core/hooks/HookManager');
     const fs = await import('node:fs/promises');
     const folder = vscode.workspace.workspaceFolders?.[0];
     assert.ok(folder, 'no workspace folder');

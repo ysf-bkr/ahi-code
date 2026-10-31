@@ -22,6 +22,23 @@ npm ci
 npm --prefix webview-ui ci
 ```
 
+### Monorepo Layout (npm workspaces)
+AhiCode is a single-repository npm workspace with three packages plus the
+extension host. `npm ci` at the root links every workspace at once.
+
+| Path | Package | Role |
+| --- | --- | --- |
+| `packages/core/` | `@ahicode/core` | The vscode-free engine: providers, tools, permission, context, knowledge, callgraph, multiagent. Never imports `vscode`. |
+| `packages/cli/` | `@ahicode/cli` | The `ahi` terminal agent. Rides only on `@ahicode/core` (no VS Code). |
+| `src/` | extension host | Every file that touches the `vscode` API (activation, webview, AgentCore runtime, real LSP client). |
+| `webview-ui/` | React app | The chat webview. |
+
+Import contract, enforced by `test/unit/architecture.test.ts`: `@ahicode/core`
+may not import `vscode` or the extension `src/`; `@ahicode/cli` may not import
+the extension `src/`. The engine reaches the language server through the
+`LspClientPort` interface, which the host's `LspClient` satisfies structurally.
+Run the terminal agent from source with `npm run cli -- --prompt "..."`.
+
 ### Build and Verification Scripts
 AhiCode maintains a strict suite of verification scripts to guarantee code quality and test isolation:
 
@@ -121,8 +138,9 @@ marker until the plan is approved.
 ## 4. MCP (Model Context Protocol) Support
 
 AhiCode supports the Model Context Protocol to integrate external developer
-tools and data sources dynamically. The client lives in `src/core/mcp/` and
-speaks JSON-RPC over stdio or HTTP/SSE transports.
+tools and data sources dynamically. The client lives in
+`packages/core/src/core/mcp/` (the vscode-free engine side) and speaks
+JSON-RPC over stdio or HTTP/SSE transports.
 
 ### Configuration
 
