@@ -179,6 +179,24 @@ describe('KnowledgeStore: indexing and persistence', () => {
   });
 });
 
+describe('KnowledgeStore: eşzamanlı tazeleme kilidi', () => {
+  it('aynı depoda koşan ensureFresh çağrılarını tek taramada birleştirir', async () => {
+    const root = await makeWorkspace();
+    await write(root, 'src/a.ts', 'export const a = 1;');
+    const store = new KnowledgeStore();
+    let indexCalls = 0;
+    const original = store.indexWorkspace.bind(store);
+    store.indexWorkspace = async (r, o) => {
+      indexCalls += 1;
+      return original(r, o);
+    };
+    const [first, second] = await Promise.all([store.ensureFresh(root), store.ensureFresh(root)]);
+    assert.strictEqual(indexCalls, 1, 'tek tarama beklenirdi');
+    assert.ok(first.ready && second.ready);
+    assert.strictEqual(first.fileCount, second.fileCount);
+  });
+});
+
 describe('KnowledgeStore: incremental refresh (git)', () => {
   let root: string;
 

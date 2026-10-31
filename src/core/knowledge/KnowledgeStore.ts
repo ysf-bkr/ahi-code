@@ -56,6 +56,9 @@ export class KnowledgeStore {
   private symbols: KnowledgeSymbolRecord[] = [];
   private state?: KnowledgeIndexState;
   private human: Partial<Record<HumanKnowledgeFile, string>> = {};
+  /** Eşzamanlı ensureFresh çağrılarını tek taramada birleştiren kilit. */
+  private ensureFreshInFlight?: Promise<KnowledgeStatus>;
+  private ensureFreshRoot?: string;
 
   /**
    * Üretilen bilgiyi varsayılan olarak yerelde tutar. Yalnızca insan
@@ -598,11 +601,28 @@ export class KnowledgeStore {
     workspaceRoot: string,
     options: KnowledgeIndexOptions = {}
   ): Promise<KnowledgeStatus> {
-    if (!this.state || this.state.root !== workspaceRoot) {
-      const loaded = await this.load(workspaceRoot);
-      if (!loaded) return this.indexWorkspace(workspaceRoot, options);
+    // Görev başlangıcındaki ısıtma ile get_project_knowledge aynı anda
+    // koşarsa depo iki kez taranmasın; aynı depo için tek beklemede iş.
+    if (this.ensureFreshInFlight && this.ensureFreshRoot === workspaceRoot) {
+      return this.ensureFreshInFlight;
     }
-    return this.refresh(workspaceRoot, options);
+    this.ensureFreshRoot = workspaceRoot;
+    const run = (async () => {
+      if (!this.state || this.state.root !== workspaceRoot) {
+        const loaded = await this.load(workspaceRoot);
+        if (!loaded) return this.indexWorkspace(workspaceRoot, options);
+      }
+      return this.refresh(workspaceRoot, options);
+    })();
+    this.ensureFreshInFlight = run;
+    try {
+      return await run;
+    } finally {
+      if (this.ensureFreshInFlight === run) {
+        this.ensureFreshInFlight = undefined;
+        this.ensureFreshRoot = undefined;
+      }
+    }
   }
 
   public findSymbols(query: string, limit = 50): KnowledgeSymbolRecord[] {

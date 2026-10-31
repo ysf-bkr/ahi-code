@@ -164,13 +164,23 @@ export class AgentLoop {
     }
 
     const customizationContext = `${this.host.skillManager.getPromptContext()}${this.host.workspaceRules.formatForPrompt()}`;
+    // Bilgi tabanını arka planda ısıt: özet sonraki turların istemine girer.
+    // Eşzamanlı çağrılar depoda tek taramada birleşir; görevi beklemez.
+    if (workspaceRoot) this.host.warmKnowledgeBase(workspaceRoot);
     const projectMemoryContext = await this.host.projectMemory.formatForPrompt(workspaceRoot);
     const lastUser = [...this.host.state.messages].reverse().find((m) => m.role === 'user');
     const userPromptText = lastUser?.content || this.host.state.prompt;
     const vectorMemoryContext = workspaceRoot
       ? await this.host.vectorMemory.formatForPrompt(workspaceRoot, userPromptText, 4)
       : '';
-    const knowledgeContext = this.host.knowledgeStore.formatForPrompt();
+    // İlk tur soğuk boşluğu: ısıtme yeni başladıysa özet henüz boş olabilir.
+    // Modele taramadan önce bekleyip indeksleyecek aracı açıkça göster.
+    const knowledgeContext = this.host.knowledgeStore.getStatus().ready
+      ? this.host.knowledgeStore.formatForPrompt()
+      : '\n\n=== PROJECT KNOWLEDGE BASE (indexing) ===\n' +
+        'The knowledge base is being indexed in the background right now. Before any project-wide ' +
+        'scan (list_directory/read_file sweeps), call get_project_knowledge once — it waits for the ' +
+        'index and returns the repo map, so most reads become unnecessary.';
     const workflow = this.host.workflow.getWorkflow();
     const workflowContext =
       formatWorkflowForPrompt(workflow, this.host.state.mode) +

@@ -63,6 +63,8 @@ export interface AgentHost {
   contextManager: ContextManager;
   /** "Aynı dosyayı tekrar okuma" döngüsünü engelleyen bekçi. */
   readDeduper: ReadDeduper;
+  /** Bilgi tabanını görev başında arka planda ısıtır (yalnızca yerel tarama). */
+  warmKnowledgeBase(workspaceRoot: string): void;
   projectMemory: ProjectMemoryManager;
   planner: TaskPlanner;
   /** Kod yazmadan önce çıkarılan katmanlı modül haritası. */

@@ -153,6 +153,30 @@ export class AgentCore implements AgentHost {
   public contextManager: ContextManager;
   /** "Aynı dosyayı tekrar okuma" döngüsünü engelleyen bekçi (araç hattında çalışır). */
   public readDeduper = new ReadDeduper();
+  private knowledgeWarmedRoot?: string;
+
+  /**
+   * Görev başlangıcında bilgi tabanını arka planda ısıtır: "bir şeyler
+   * oluşturuluyor ama bakılmıyor" hâlinin kökü, indeksin hiçbir zaman
+   * kendiliğinden kurulmamasıydı — sistem istemine giren özet o yüzden hep
+   * boştu. Isıtma hiç model çağrısı yapmaz (yalnızca yerel tarama) ve görevi
+   * bekleterek başlamaz; ilk tur eksikse get_project_knowledge zaten kendi
+   * tazelemesini yapar, sonraki turlar özetle açılır.
+   */
+  public warmKnowledgeBase(workspaceRoot: string): void {
+    if (!workspaceRoot || this.knowledgeWarmedRoot === workspaceRoot) return;
+    this.knowledgeWarmedRoot = workspaceRoot;
+    void this.knowledgeStore
+      .ensureFresh(workspaceRoot)
+      .then(() => {
+        // Bilgi tabanı ekranı ve rozetleri taze durumu hemen görsün.
+        this.emitState();
+      })
+      .catch((err) => {
+        this.knowledgeWarmedRoot = undefined; // sonraki görevde yeniden dene
+        logWarning('Knowledge base auto-indexing failed', err);
+      });
+  }
   public projectMemory = new ProjectMemoryManager();
   public planner = new TaskPlanner();
   public modulePlanner = new ModulePlanner();
