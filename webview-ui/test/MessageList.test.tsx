@@ -169,6 +169,30 @@ describe('MessageList: tur akordeonu', () => {
     assert.ok(details, 'araç adımları bölümü bulunmalı');
     assert.equal(details.open, true, 'onay kartı görünür doğmalı');
   });
+
+  it('uzun adım listesi kendi içinde kaydırılır — akordeon sayfayı boy vermez', () => {
+    const many = Array.from({ length: 40 }, (_, i) => ({
+      id: `call_${i}`,
+      name: 'read_file' as const,
+      args: { path: `src/f${i}.ts` },
+      requiresApproval: false,
+      status: 'completed' as const,
+      result: 'içerik'
+    }));
+    const messages: ChatMessage[] = [
+      { id: 'u1', role: 'user', content: 'denetimi', timestamp: 1, turnId: 't1' },
+      { id: 'a1', role: 'assistant', content: 'Bitti.', timestamp: 2, turnId: 't1', toolCalls: many }
+    ];
+    render(<MessageList messages={messages} />);
+
+    const details = toolStepsDetails();
+    assert.ok(details);
+    details.open = true;
+    const list = details.querySelector('summary')?.parentElement?.querySelector('div.overflow-y-auto');
+    assert.ok(list, 'adım listesi kaydırma alanı olmalı (max-h + overflow-y-auto)');
+    assert.match(list.className, /max-h-/, 'yükseklik sınırı taşınmalı');
+    assert.match(list.className, /overscroll-contain/, 'kaydırma sohbeti ezmemeli');
+  });
 });
 
 describe('MessageList: hatalı turu aynı sohbette yeniden deneme', () => {

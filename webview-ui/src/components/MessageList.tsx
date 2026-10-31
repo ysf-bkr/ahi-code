@@ -400,7 +400,10 @@ const ToolSteps: React.FC<{ toolCalls: ToolCall[]; pendingToolCall?: ToolCall }>
       defaultOpen={needsAttention || openedAtMount}
       className="ahi-soft-card rounded-md border ahi-border-surface px-2.5 py-1.5"
     >
-      <div className="mt-1.5 space-y-1 border-t ahi-border-surface pt-1.5">
+      {/* Uzun görevlerde yüzlerce adım birikiyor: liste kendi yükseklik
+          sınırlı kaydırma alanıda çizilir, akordeon sayfayı boy veremez.
+          overscroll-contain: adım içinde tekerlek, sohbeti kaydırmasın. */}
+      <div className="mt-1.5 max-h-72 space-y-1 overflow-y-auto overscroll-contain border-t ahi-border-surface pt-1.5 pr-1">
         {toolCalls.map((toolCall, index) => (
           <ActionStepCard
             key={toolCall.id}
