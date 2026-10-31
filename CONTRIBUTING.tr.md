@@ -59,10 +59,14 @@ Faydalı tekil komutlar:
 
 - Ajan yönergeleri İngilizce kalır: `AGENTS.md` ve `.agents/**` altındaki tüm
   `.md` dosyaları.
-- Proje belgeleri iki dillidir: İngilizce asıl dosyalar (`README.md`,
-  `docs/*.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`)
-  GitHub/Marketplace otomatik tanıması için standart adlarını korur; Türkçe
-  karşılıkları (`*.tr.md`) yanlarında yer alır.
+- GitHub karşılama sayfası ve Marketplace listesi Türkçedir: kök `README.md`
+  Türkçe karşılama belgesidir (Marketplace tek dillidir) ve `package.json`
+  içindeki `displayName`/`description` yalnızca Türkçedir. İngilizce
+  karşılama metni `README.en.md` dosyasındadır.
+- Geliştirici belgeleri iki dillidir: İngilizce asıl dosyalar (`docs/*.md`,
+  `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) GitHub otomatik
+  tanıması için standart adlarını korur; Türkçe karşılıkları (`*.tr.md`)
+  yanlarında yer alır.
 - `CHANGELOG.md`, kod yorumları ve kullanıcıya görünen arayüz (VS Code ayar
   açıklamaları dahil) Türkçedir.
 - Kod tanımlayıcıları, testler, loglar ve dosya adları İngilizce kalır; böylece

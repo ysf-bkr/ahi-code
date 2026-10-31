@@ -1,6 +1,6 @@
 # Marketplace Publishing Guide
 
-[🇹🇷 Türkçe](PUBLISHING.tr.md) | **English**
+**English** · [Türkçe](PUBLISHING.tr.md)
 
 This repository contains a tag-triggered GitHub Actions workflow that publishes
 to the Visual Studio Marketplace. Until the extension is published there, the
@@ -23,6 +23,15 @@ repository `README.md`. The core values are defined in this project:
 | Detailed data-handling notice | [`docs/PRIVACY.md`](./PRIVACY.md) |
 | Change history | [`CHANGELOG.md`](../CHANGELOG.md) |
 | Source code and issue tracker | `repository`, `homepage`, `bugs` in `package.json` |
+
+The Marketplace listing is single-locale: it renders `displayName`,
+`description` and the root `README.md` as-is, with no language switcher.
+The product's audience is Turkish, so all three are Turkish-only; the
+`README.md` at the repository root is the Turkish landing document for both
+GitHub and the Marketplace. The English copy lives in `README.en.md` for
+developers and international readers, and English search stays covered by
+the `ai`, `coding-agent` and `autonomous-agent` keywords. Never put English
+prose into `displayName` or `description`.
 
 No PAT or secret is needed for this metadata. Only `VSCE_PAT`, required by the
 release automation, is stored as a secret under **Settings → Secrets and

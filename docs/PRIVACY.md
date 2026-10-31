@@ -1,6 +1,6 @@
 # Privacy Notice
 
-[🇹🇷 Türkçe](PRIVACY.tr.md) | **English**
+**English** · [Türkçe](PRIVACY.tr.md)
 
 **Last updated:** October 30, 2026
 

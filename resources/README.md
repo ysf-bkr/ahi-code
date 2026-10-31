@@ -1,6 +1,6 @@
 # AhiCode Visual and Brand Assets
 
-[🇹🇷 Türkçe](README.tr.md) | **English**
+**English** · [Türkçe](README.tr.md)
 
 This directory holds the official visual assets used by the AhiCode extension,
 web interface, and promotional channels.

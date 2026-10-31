@@ -1,6 +1,6 @@
 # AhiCode Mimari ve Geliştirici Kılavuzu
 
-**Türkçe** | [🇬🇧 English](ARCHITECTURE.md)
+**Türkçe** · [English](ARCHITECTURE.md)
 
 Bu belge, AhiCode eklentisinin iç mimarisini, dizin yapısını, veri akışını, geliştirici araç zincirini ve test stratejisini detaylandırmaktadır.
 

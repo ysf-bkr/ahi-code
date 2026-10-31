@@ -1,6 +1,6 @@
 # AhiCode Geliştirici Kılavuzu
 
-**Türkçe** | [🇬🇧 English](DEVELOPMENT.md)
+**Türkçe** · [English](DEVELOPMENT.md)
 
 Bu belge, AhiCode eklentisine katkı sağlayan, iç mekanizmalarını inceleyen ve yerel ortamda eklentiyi derleyip genişleten geliştiriciler için hazırlanmıştır.
 

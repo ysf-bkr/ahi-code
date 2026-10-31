@@ -1,6 +1,6 @@
 # Marketplace Yayını
 
-**Türkçe** | [🇬🇧 English](PUBLISHING.md)
+**Türkçe** · [English](PUBLISHING.md)
 
 Bu depo, VS Code Marketplace'e yayın için etiket tabanlı bir GitHub Actions iş akışı içerir.
 Uzantı Marketplace'te yayımlanana kadar Marketplace kurulum bağlantısı kullanılamaz.
@@ -22,6 +22,15 @@ Bu projede temel bilgiler tanımlıdır:
 | Ayrıntılı veri işleme açıklaması | [`docs/PRIVACY.md`](./PRIVACY.md) |
 | Değişiklik geçmişi | [`CHANGELOG.md`](../CHANGELOG.md) |
 | Kaynak kodu ve hata bildirme | `package.json` içindeki `repository`, `homepage` ve `bugs` |
+
+Marketplace listesi tek dillidir: `displayName`, `description` ve kök
+`README.md` içeriğini dil seçici olmadan aynen gösterir. Ürünün hedef
+kitlesi Türkçe olduğu için bu üç alan yalnızca Türkçedir; depodaki kök
+`README.md`, GitHub ve Marketplace için Türkçe karşılama belgesidir.
+İngilizce metin geliştiriciler ve uluslararası okuyucular için `README.en.md`
+içindedir; İngilizce arama `ai`, `coding-agent` ve `autonomous-agent`
+anahtar kelimeleriyle kapsanır. `displayName` veya `description` içine
+İngilizce metin konulmamalıdır.
 
 Bu bilgiler için ayrıca GitHub'a PAT veya gizli anahtar eklenmez. Yalnızca yayın otomasyonu için
 gereken `VSCE_PAT`, GitHub deposunda **Settings → Secrets and variables → Actions** altında

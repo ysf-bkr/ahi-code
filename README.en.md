@@ -9,7 +9,7 @@
 
 **Autonomous AI coding agent for VS Code, built with the Ahilik craftsmanship discipline and engineering rigor.**
 
-[🇹🇷 Türkçe](README.tr.md) | **English**
+**English** · [Türkçe](README.md)
 
 > _"Master your hand, your waist, and your tongue."_ — The Ahilik Craftsmanship Ethos  
 > **Hand (Craftsmanship):** Meticulous code writing and architectural analysis · **Waist (Belt of Discipline):** Unbreakable permission guardrails and directory jail · **Tongue (Ethics):** Honest status reporting and hash-chained audit trails.
@@ -123,9 +123,9 @@ Configure the following settings in VS Code Settings (`settings.json`) or inside
 
 Internal architecture, module boundaries, testing instructions, and contribution guides are documented separately:
 
-- **[Developer Guide (docs/DEVELOPMENT.md)](./docs/DEVELOPMENT.md)** · **[🇹🇷 Türkçe](./docs/DEVELOPMENT.tr.md):** Build from source, test suites, design tokens, and MCP integration.
-- **[Architecture Guide (docs/ARCHITECTURE.md)](./docs/ARCHITECTURE.md)** · **[🇹🇷 Türkçe](./docs/ARCHITECTURE.tr.md):** ReAct loop, tool pipeline, audit ledger, and language services.
-- **[Privacy Notice (docs/PRIVACY.md)](./docs/PRIVACY.md)** · **[🇹🇷 Türkçe](./docs/PRIVACY.tr.md):** Data privacy, local-first principles, and telemetry policies.
+- **[Developer Guide (docs/DEVELOPMENT.md)](./docs/DEVELOPMENT.md)** · **[Türkçe](./docs/DEVELOPMENT.tr.md):** Build from source, test suites, design tokens, and MCP integration.
+- **[Architecture Guide (docs/ARCHITECTURE.md)](./docs/ARCHITECTURE.md)** · **[Türkçe](./docs/ARCHITECTURE.tr.md):** ReAct loop, tool pipeline, audit ledger, and language services.
+- **[Privacy Notice (docs/PRIVACY.md)](./docs/PRIVACY.md)** · **[Türkçe](./docs/PRIVACY.tr.md):** Data privacy, local-first principles, and telemetry policies.
 
 ---
 

@@ -59,10 +59,14 @@ Useful individual commands:
 
 - Agent-facing instructions stay in English: `AGENTS.md` and every `.md`
   file under `.agents/**`.
-- Project documentation is bilingual: English canonical files (`README.md`,
-  `docs/*.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) keep
-  their standard names for GitHub/Marketplace auto-detection, with Turkish
-  counterparts (`*.tr.md`) next to them.
+- The GitHub landing and the Marketplace listing are Turkish: the root
+  `README.md` is the Turkish landing document (the Marketplace is
+  single-locale), and `displayName`/`description` in `package.json` are
+  Turkish-only. The English landing copy lives in `README.en.md`.
+- Developer documentation is bilingual: English canonical files
+  (`docs/*.md`, `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`) keep
+  their standard names for GitHub auto-detection, with Turkish counterparts
+  (`*.tr.md`) next to them.
 - `CHANGELOG.md`, code comments, and user-facing application UI (including
   VS Code setting descriptions) are in Turkish.
 - Code identifiers, tests, logs, and filenames stay in English so tooling,

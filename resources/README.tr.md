@@ -1,6 +1,6 @@
 # AhiCode Görsel ve Marka Varlıkları
 
-**Türkçe** | [🇬🇧 English](README.md)
+**Türkçe** · [English](README.md)
 
 Bu dizin, AhiCode eklentisi, web arayüzü ve tanıtım mecralarında kullanılan resmi
 görsel varlıkları barındırır.

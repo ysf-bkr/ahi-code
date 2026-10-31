@@ -9,7 +9,7 @@
 
 **VS Code içinde çalışan, Ahilik zanaat disipliniyle güçlendirilmiş otonom yazılım geliştirme ajanı.**
 
-**Türkçe** | [🇬🇧 English](README.md)
+**Türkçe** · [English](README.en.md)
 
 > _"Eline, beline, diline sahip ol."_ — Ahilik Zanaat Ahlakı  
 > **El (Zanaat):** Titiz kod yazımı ve mimari analiz · **Bel (Şed Kuşağı):** Kırılmaz izin kalkanı ve dizin hapsi · **Dil (Ahlak):** Dürüst durum bildirimi ve hash zincirli denetim.

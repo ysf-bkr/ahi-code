@@ -1,6 +1,6 @@
 # AhiCode Developer Guide
 
-[🇹🇷 Türkçe](DEVELOPMENT.tr.md) | **English**
+**English** · [Türkçe](DEVELOPMENT.tr.md)
 
 This guide is intended for developers contributing to the AhiCode extension, inspecting its internals, or building and extending it locally.
 

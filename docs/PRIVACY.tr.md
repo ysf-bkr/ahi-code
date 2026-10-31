@@ -1,6 +1,6 @@
 # Gizlilik Bildirimi
 
-**Türkçe** | [🇬🇧 English](PRIVACY.md)
+**Türkçe** · [English](PRIVACY.md)
 
 **Son güncelleme:** 30 Ekim 2026
 

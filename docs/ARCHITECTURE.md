@@ -1,6 +1,6 @@
 # AhiCode Architecture and Developer Guide
 
-[🇹🇷 Türkçe](ARCHITECTURE.tr.md) | **English**
+**English** · [Türkçe](ARCHITECTURE.tr.md)
 
 This document details the internal architecture, directory structure, data flow, developer toolchain, and testing strategy of the AhiCode extension.
 
