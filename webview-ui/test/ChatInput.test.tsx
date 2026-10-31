@@ -138,7 +138,10 @@ describe('ChatInput', () => {
       />
     );
 
-    assert.equal((screen.getByRole('button', { name: 'Kodlama' }) as HTMLButtonElement).disabled, true);
+    assert.equal(
+      (screen.getByRole('button', { name: 'Görev modu: Kodlama' }) as HTMLButtonElement).disabled,
+      true
+    );
     fireEvent.click(screen.getByRole('button', { name: 'Görevi durdur' }));
 
     assert.deepEqual(messages, [{ type: 'CANCEL_TASK' }]);
@@ -181,15 +184,26 @@ describe('ChatInput', () => {
       />
     );
 
-    const group = screen.getByRole('group', { name: 'Otonomi seviyesi' });
-    assert.ok(group, 'sohbette otonomi grubu olmalı');
-    assert.equal(
-      (screen.getByRole('button', { name: /Elle/ }) as HTMLButtonElement).getAttribute('aria-pressed'),
-      'true'
-    );
+    // Kapalı seçici yalnızca ikonu gösterir: seçenek etiketleri çizilmez.
+    assert.equal(screen.queryByText('Yönlendir'), null, 'etiketler menü açıkken görünmeli');
+    const trigger = screen.getByRole('button', { name: 'Otonomi seviyesi: Elle' });
+    assert.ok(trigger, 'seçili seviye erişilebilir adta taşınmalı');
 
-    fireEvent.click(screen.getByRole('button', { name: /Otonom/ }));
+    fireEvent.click(trigger);
+    assert.ok(screen.getByRole('listbox', { name: 'Otonomi seviyesi' }), 'etiketli menü açılmalı');
+    fireEvent.click(screen.getByRole('option', { name: /Otonom/ }));
     assert.deepEqual(changes, ['auto'], 'seviye değişimi bildirilmeli');
+    assert.equal(screen.queryByRole('listbox'), null, 'seçim sonrası menü kapanmalı');
+  });
+
+  it('mod seçicisi kapalıyken etiket göstermez, tıklayınca açılır', () => {
+    const modes: string[] = [];
+    render(<ChatInput state={createTaskState()} onSend={() => {}} onModeChange={(m) => modes.push(m)} />);
+
+    assert.equal(screen.queryByText('Planlama'), null, 'kapalı çubukta mod etiketi çizilmemeli');
+    fireEvent.click(screen.getByRole('button', { name: 'Görev modu: Kodlama' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Planlama' }));
+    assert.deepEqual(modes, ['plan']);
   });
 });
 

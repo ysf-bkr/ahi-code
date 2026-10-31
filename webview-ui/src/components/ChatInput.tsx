@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Send, Square, CornerDownLeft, Compass, Code2, Hand, Gauge, Zap } from 'lucide-react';
 import { AgentMode, AutonomyLevel, TaskState } from '@shared/types';
 import { vscode } from '../utils/vscode';
-import { Button, Segmented, Textarea } from './ui';
+import { Button, IconPicker, Textarea } from './ui';
 
 interface ChatInputProps {
   state: TaskState;
@@ -172,12 +172,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
         <div className="ahi-composer__bar">
           <div className="flex min-w-0 items-center gap-1.5">
-            <Segmented<AgentMode>
+            <IconPicker<AgentMode>
               aria-label="Görev modu"
               value={state.mode}
               onChange={onModeChange}
               disabled={isRunning || !isConfigured}
-              items={MODES.map((mode) => ({
+              disabledTitle="Görev çalışırken mod değiştirilemez"
+              options={MODES.map((mode) => ({
                 id: mode.id,
                 label: mode.label,
                 icon: mode.icon,
@@ -185,12 +186,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               }))}
             />
             {onAutonomyChange && (
-              <Segmented<AutonomyLevel>
+              <IconPicker<AutonomyLevel>
                 aria-label="Otonomi seviyesi"
                 value={autonomy}
                 onChange={onAutonomyChange}
                 disabled={!isConfigured}
-                items={AUTONOMY_LEVELS.map((level) => ({
+                options={AUTONOMY_LEVELS.map((level) => ({
                   id: level.id,
                   label: level.label,
                   icon: level.icon,

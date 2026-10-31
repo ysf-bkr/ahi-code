@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { cx } from './cx';
 
@@ -174,6 +174,94 @@ export function Segmented<T extends string>({
           <span className="ahi-segmented__label">{option.label}</span>
         </button>
       ))}
+    </div>
+  );
+}
+
+export interface IconPickerProps<T extends string> {
+  'aria-label': string;
+  value: T;
+  options: SegmentedOption<T>[];
+  onChange: (value: T) => void;
+  disabled?: boolean;
+  disabledTitle?: string;
+}
+
+/**
+ * İkon öncelikli seçici: kapalıyken yalnızca seçili seçeneğin ikonu görünür
+ * (besteci çubuğu etiket metinleriyle şişmez), tıklanınca etiketli menü yukarı
+ * açılır. Dışarı tıklama ve Escape menüyü kapatır; seçim yapınca kapanır.
+ */
+export function IconPicker<T extends string>({
+  'aria-label': ariaLabel,
+  value,
+  options,
+  onChange,
+  disabled = false,
+  disabledTitle
+}: IconPickerProps<T>): React.ReactElement {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: MouseEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
+  const current = options.find((option) => option.id === value) ?? options[0];
+  return (
+    <div ref={rootRef} className="relative">
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={current ? `${ariaLabel}: ${current.label}` : ariaLabel}
+        title={disabled && disabledTitle ? disabledTitle : (current?.title ?? current?.label)}
+        disabled={disabled}
+        onClick={() => setOpen((isOpen) => !isOpen)}
+        className="flex items-center gap-1 rounded-md border ahi-border-surface px-2 py-1 ahi-text-fg hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {current?.icon}
+      </button>
+      {open && (
+        <div
+          role="listbox"
+          aria-label={ariaLabel}
+          className="absolute bottom-full left-0 z-40 mb-1 min-w-[200px] rounded-md border ahi-border-base ahi-bg-surface p-1 shadow-lg"
+        >
+          {options.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              role="option"
+              aria-selected={option.id === value}
+              title={option.title ?? option.label}
+              onClick={() => {
+                onChange(option.id);
+                setOpen(false);
+              }}
+              className={cx(
+                'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs hover:opacity-80',
+                option.id === value ? 'ahi-bg-brand-soft ahi-text-brand font-medium' : 'ahi-text-fg'
+              )}
+            >
+              {option.icon}
+              <span className="min-w-0 flex-1 truncate">{option.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -10,7 +10,16 @@ export { Toggle } from './Toggle';
 export type { ToggleProps } from './Toggle';
 export { Card, Section, SectionTitle, EmptyState } from './Card';
 export type { CardProps, SectionProps, SectionTitleProps, EmptyStateProps } from './Card';
-export { Badge, Chip, LinkButton, ListButton, Segmented, NavButton, Disclosure } from './Controls';
+export {
+  Badge,
+  Chip,
+  LinkButton,
+  ListButton,
+  Segmented,
+  IconPicker,
+  NavButton,
+  Disclosure
+} from './Controls';
 export type {
   BadgeProps,
   BadgeTone,
@@ -19,6 +28,7 @@ export type {
   ListButtonProps,
   SegmentedProps,
   SegmentedOption,
+  IconPickerProps,
   NavButtonProps,
   DisclosureProps
 } from './Controls';
